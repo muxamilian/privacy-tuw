@@ -329,7 +329,7 @@ The method minimizes the adversarial sample's distance so that the network's dec
 \begin{equation}
 d(X,\tilde X) + \epsilon  \max(Z(\tilde X), -0.2),
 \end{equation}
-i.e. we require a slight level of confidence that our adversarial samples are not classified as attack traffic \todo{What is 0.2 in probability and not in logits? Logits are hard to imagine}.
+i.e. we require a slight level of confidence that our adversarial samples are not classified as attack traffic. A logit value of $-0.2$ corresponds to a confidence of 45\% for the sample to be an attack.
 
 \subsection{$\ell_\infty$-bounded Projected Gradient Descent}
 \cite{madry2017towards} use a method for generating adversarial samples which uses PGD  to minimize the network's negative loss function while constraining the achieved $\ell_\infty$ distance from the original samples.
@@ -416,8 +416,9 @@ The plots show that primarily features at the beginning of flows are modified. I
 \end{figure*}
 
 
-\subsection{Defences}
+\section{Defences}
 
+\subsection{Reducing features}
 The most obvious defence, which is only possible because of the nature of the dataset, is to simply leave out features which the attacker can manipulate. For this, we try two different approaches:
 \begin{itemize}
 \item Leaving out all features that are manipulable: packet size and interarrival time
@@ -426,7 +427,24 @@ The most obvious defence, which is only possible because of the nature of the da
 
 Both approaches lead to complete resistance to adversarial samples (as we left out all manipulable features), except for botnets, which can still operate when only leaving out manipulable features in one direction. The results in \autoref{tab:performance_results_no_manipulable} show that -- surprisingly -- there is only a small difference in classification performance when only computing the accuracy for the last packet of each flow (flow accuracy). However, when looking at the packet accuracy, which considers all packets of all flows, there is a significant difference. Thus, apparently the interarrival time and packet size are especially important for determining whether a flow is malicious in the first packets of a flow.
 
-In addition to omitting manipulable features we tried to make our network more robust against adversarial samples by augmenting the training set by adversarial flows generated using the Carlini-Wagner method, labeled as additional attacks. However, against our expectations, this approach did not lead to satisfactory results in the sense that the network would learn to classify adversarial samples as attacks. In fact, classification accuracy stayed about constant during the training of the network.
+\subsection{Adversarial training}
+In addition to omitting manipulable features we tried to make our network more robust against adversarial samples by augmenting the training set by adversarial flows generated using the Carlini-Wagner method, labeled as additional attacks.
+
+For this purpose, we added one adversarial sample per attack sample to the training set. Note that, since our used method for obtaining adversarial samples is deterministic, this is the maximum number of adversarial samples possible. With this training set we then alternated retraining of the neural network and optimization of the adversarial samples using gradient descent.
+
+One question which occurs in this process, is how many CPU cycles to spend on network training and adversarial sample optimization. As a natural approach, we decided to use as many backpropagation steps for neural network training as we use for adversarial sample optimization.  For each adversarial sample optimization step, we performed 10 iterations of gradient descent. Hence, all adversarial samples were optimized each 10 epochs of neural network training.
+
+\autoref{fig:avdistance} shows the average distance of a block of adversarial samples from to original, unmodified attack samples throughout the adversarial training procedure. The figure clearly indicates that adversarial training is effective, as the distance gradually increases. Hence, an attacker would have to modify attack samples more and more, eventually rendering the attack unpractical.
+
+However, the figure also shows that an increase of distance can only be achieved after a considerable amount of training. It is, hence, questionable if the gained increase in robustness is enough for reliable attack detection.
+
+\begin{figure}
+\includegraphics[width=\columnwidth]{../plots/adv_training/avdistance.pdf}
+\caption{Distance of adversarial samples from original attack samples throughout adversarial training.}
+\label{fig:avdistance}
+\end{figure}
+
+%However, against our expectations, this approach did not lead to satisfactory results in the sense that the network would learn to classify adversarial samples as attacks. In fact, classification accuracy stayed about constant during the training of the network.
 
 A possible explanation for this observation might be that the adversarial samples assumed too much the shape of normal flows, so that the network could not reliable tell them apart.
 
