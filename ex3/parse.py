@@ -25,7 +25,7 @@ with open("categories_mapping.json", "w") as f:
 
 minimal = False
 quic = False
-only_unchangeable = True
+only_unchangeable = False
 
 def read_list(l):
 	if isinstance(l, float) and np.isnan(l): return []
