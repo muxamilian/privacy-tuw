@@ -736,10 +736,27 @@ def adv_internal(in_training = False):
 
 	# with open('adv_samples.pickle', 'wb') as outfile:
 	# 	pickle.dump(adv_samples, outfile)
+	if not in_training:
+		yield (modified_flows_by_attack_number, results_by_attack_number)
 
 def adv():
 	# hack for running the function although it's a generator
 	list(adv_internal(False))
+
+def adv_until_more_than_half():
+	MAX = 100
+	i = 0
+	prev_results = []
+	while True:
+		# FIXME: Hack: Shouldn't assign input parameter I guess
+		opt.tradeoff = i
+		modified_flows_by_attack, modified_results_by_attack = list(adv_internal(False))
+		ratio_modified_by_attack_number = np.array([np.mean(numpy_sigmoid(np.array([item[-1] for item in modified_results]))) for modified_result in modified_flows_by_attack])
+		prev_results.append((modified_flows_by_attack, modified_results_by_attack))
+		print("i", i, "ratios", ratio_modified_by_attack_number)
+		if i+1==MAX or (ratio_modified_by_attack_number >= 0.5).all():
+			break
+		i += 1
 
 def eval_nn(data):
 
