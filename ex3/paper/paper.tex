@@ -73,6 +73,10 @@ firstname.lastname@tuwien.ac.at}}
 \newacronym{dl}{DL}{Deep Learning}
 \newacronym{aml}{AML}{Adversarial Machine Learning}
 \newacronym{ids}{IDS}{Intrusion Detection System}
+\newacronym{rnn}{RNN}{Recurrent Neural Network}
+\newacronym{fgsm}{FGSM}{Fast Gradient Sign Method}
+\newacronym{cw}{CW}{Carlini-Wagner method}
+\newacronym{pgd}{PGD}{Projected Gradient Descent}
 
 \begin{abstract}
 
@@ -112,11 +116,12 @@ Then we investigate the question whether adversarial samples can be found for th
 \item only certain features can be manipulated (for example the destination port cannot be manipulated)
 \end{enumerate*}.
 
-We can confirm that adversarial samples can be found even when considering the tight constraints mentioned before. Especially the first packets of a flow are critical for determining the decision of a recurrent \gls{ids}. We develop a simple methods for defending against adversaries who can manipulate arbitrary packets by simply leaving out potentially manipulable information from the classification process. The resulting classifier has slightly reduces accuracy but is still useful to be deployed in a real scenario. Finally we develop a custom adversarial training procedure which especially focuses on easy of use and low resource consumption and aims to keep the number of additionally introduced training hyperparameters low. With this novel strategy we can reduce attack surface and harden the resulting \gls{ids} while keeping similar classification performance like for the original \gls{ml} model. 
+We can confirm that adversarial samples can be found even when considering the tight constraints mentioned before. Especially the first packets of a flow are critical for determining the decision of a recurrent \gls{ids}. We develop a simple methods for defending against adversaries who can manipulate arbitrary packets by simply leaving out potentially manipulable information from the classification process. The resulting classifier is slightly less accurate but is still useful to be deployed in a real scenario. Finally we develop a custom adversarial training procedure which especially focuses on easy of use and low resource consumption and aims to keep the number of additionally introduced training hyperparameters low. With this novel strategy we can reduce attack surface and harden the resulting \gls{ids} while keeping similar classification performance like for the original \gls{ml} model. 
 
 \section{Related work}
 
-
+\cite{szegedy_intriguing_2014} show that it is possible to create adversarial samples for an image, which look similar to the original image but are classified wrongly. \cite{goodfellow_explaining_2015} develop the \gls{fgsm}, which makes easy generation of adversarial samples possible. 
+\cite{papernot_crafting_2016} explore the use of \gls{aml} for \glspl{rnn}
 
 \section{RNN-based classifier}
 
@@ -130,7 +135,7 @@ Normal                                                         & $0.747468$ \\
 DoS / DDoS:DoS Hulk                                            & $0.101014$ \\
 PortScan:PortScan - Firewall off                               & $0.069020$ \\
 DDoS:LOIT                                                      & $0.040784$ \\
-Infiltration:Dropbox download & $0.032982$ \\
+Infiltration:Dropbox download                                  & $0.032982$ \\
 DoS / DDoS:DoS GoldenEye                                       & $0.003224$ \\
 DoS / DDoS:DoS Slowhttptest                                    & $0.001819$ \\
 DoS / DDoS:DoS slowloris                                       & $0.001680$ \\
@@ -305,7 +310,7 @@ Youden	&	0.9920 & 0.9896 & 0.9861 \\
 \section{Adversarial attacks}
 \label{sec:adv}
 
-As we saw in the previous section in \autoref{fig:plot_features}, some attack types do have a characteristic pattern of interarrival times and packet lengths. Furthermore, \autoref{fig:pred_plots2} shows after the first couple of packets, the classifier becomes so sure in its decision, that a change in features doesn't seem to have any after the first packets. The hypothesis that follows is that by manipulating the interarrival times and packet lengths of the first packets, the classifier might be fooled. However, our scenario is quite different from how generating adversarial samples usually works: We have significantly less features than in, for example, an image. Furthermore, only two out of those few features can be manipulated. And even these features cannot manipulated freely: Besides the constraints that packet size and interarrival time cannot become negative there are also more problem-specific constraints:
+Since most features such as the TCP flags cannot be easily be manipulated because it might violate the TCP and thus cause communication to fails, we experiment whether by manipulating the interarrival times and packet lengths of the first packets, the classifier might be fooled. However, our scenario is quite different from how generating adversarial samples usually works: We have significantly less features than in, for example, an image. Furthermore, only two out of those few features can be manipulated. And even these features cannot manipulated freely: Besides the constraints that packet size and interarrival time cannot become negative there are also more problem-specific constraints:
 \begin{itemize}
 \item Only packets can be manipulated which are transmitted by the attacker. This means the attacker can only control one direction (except for botnets where both sides are attackers).
 \item Packets must not be smaller than initially, as otherwise less information could be transmitted or packets might be rendered syntactically invalid.
@@ -317,13 +322,13 @@ Several methods for generating adversarial samples have been proposed in the rec
 We implemented the following methods for generating adversarial flows.
 
 \subsection{Carlini-Wagner}
-In particular, we implemented the method by \citeauthor{carlini2017towards}~\cite{carlini2017towards}, which performs gradient descent on the optimization objective
+In particular, we implemented \gls{cw} \cite{carlini_towards_2017}, which performs gradient descent on the optimization objective
 \begin{equation} \label{eq:carliniWagner}
 d(X,\tilde X) + \epsilon  \max(Z(\tilde X), 0).
 \end{equation}
 Here, $d(\cdot)$ is a distance metric, $\epsilon \in \mathbb R^+$ is a parameter governing the tradeoff achieved between attack success and distance from the original flow. Furthermore, $Z(\cdot)$ denotes the neural network's logit output, $X$ denotes the original flow and $\tilde X$ the adversarial flow under optimization.
 
-We used $\ell_1$ norm as distance metric and deployed projected gradient descent (PGD) for meeting the real-world constraints discussed above.
+We used $\ell_1$ norm as distance metric and \gls{pgd} for meeting the real-world constraints discussed above.
 
 The method minimizes the adversarial sample's distance so that the network's decision is just between attack and normal traffic. In the present context, we need to make sure that the classifier's prediction would actually be normal traffic, even though a certain level of noise will be added to interarrival times due to the network between attacker and victim. Instead of the above equation \ref{eq:carliniWagner} we therefore used the optimization objective
 \begin{equation}
@@ -332,10 +337,10 @@ d(X,\tilde X) + \epsilon  \max(Z(\tilde X), -0.2),
 i.e. we require a slight level of confidence that our adversarial samples are not classified as attack traffic \todo{What is 0.2 in probability and not in logits? Logits are hard to imagine}.
 
 \subsection{$\ell_\infty$-bounded Projected Gradient Descent}
-\cite{madry2017towards} use a method for generating adversarial samples which uses PGD  to minimize the network's negative loss function while constraining the achieved $\ell_\infty$ distance from the original samples.
+\cite{madry_towards_2018} use a method for generating adversarial samples which uses \gls{pgd}  to minimize the network's negative loss function while constraining the achieved $\ell_\infty$ distance from the original samples.
 
 \subsection{Fast Gradient Sign Method}
-Finally, we also tested the Fast Gradient Sign Method (FGSM), which was initially proposed in \cite{goodfellow2014explaining} and perhaps is the most frequently used method for generating adversarial sampling. FGSM can be considered a single pass of PGD on the loss function with an equality constraint on the $\ell_\infty$ distance, i.e. the adversarial sample is found as
+Finally, we also tested the Fast Gradient Sign Method (FGSM), which was initially proposed in \cite{goodfellow_explaining_2015} and perhaps is the most frequently used method for generating adversarial sampling. FGSM can be considered a single pass of \gls{pgd} on the loss function with an equality constraint on the $\ell_\infty$ distance, i.e. the adversarial sample is found as
 \begin{equation}
 \tilde X = X + \epsilon \text{sgn}( \nabla_X L(X)),
 \end{equation}
@@ -345,7 +350,7 @@ where $L(X)$ denotes the network's loss function and $\epsilon$ denotes the achi
 \begin{figure*}
 \includegraphics[width=0.45\textwidth]{adv_plots/cwl1.pdf}
 \includegraphics[width=0.45\textwidth]{adv_plots/cwl2.pdf}
-\caption{Performance of the Carlini-Wagner method with different $\epsilon$ values for $\ell_1$ and $\ell_2$ distances.}
+\caption{Performance of the \gls{cw} with different $\epsilon$ values for $\ell_1$ and $\ell_2$ distances.}
 \label{fig:adv_cw}
 \end{figure*}
 \autoref{fig:adv_cw} depicts the ratio of attack flows which were successfully misclassified as normal traffic with respect to the final packet along with the resulting distance from the original sample. Evidently, the larger the $\epsilon$ parameter, the better the attack works, but also the distances become larger.
@@ -361,7 +366,7 @@ The figure suggests that a tradeoff value between 0.5 and 1 would be ideal to fi
 \centering
 \begin{tabular}{lllllllll}
 \toprule
-Attack type & FGSM & Carlini-Wagner, $\ell_1$ & Carlini-Wagner, $\ell_2$ & $\ell_\infty$-bounded PGD \\
+Attack type & FGSM & Carlini-Wagner, $\ell_1$ & Carlini-Wagner, $\ell_2$ & $\ell_\infty$-bounded \gls{pgd} \\
 \midrule
 Botnet:ARES	&	0.0000 / 0.0000	&	0.0000 / 0.0000	&	0.0000 / 0.0000	&	0.0000 / 0.0000	\\
 Brute Force:FTP-Patator	&	0.2800 / 0.5800	&	0.1600 / 0.5800	&	0.1600 / 0.5800	&	0.2800 / 0.5800	\\
@@ -385,22 +390,22 @@ Web Attack:XSS	&	0.6700 / 0.9500	&	0.7200 / 0.9500	&	0.6200 / 0.9500	&	0.6700 / 
 It is interesting to note that for very large values of $\epsilon$ the success ratio starts to decrease again.This phenomenon might be due to numerical effects and might be preventable by a smaller learning rate.
 
 
-\autoref{fig:fgsm} depicts the performance for FGSM and $\ell_\infty$-bounded PGD. As expected, while FGSM is the fastest of all algorithms, it delivers the worst performance.
+\autoref{fig:fgsm} depicts the performance for FGSM and $\ell_\infty$-bounded \gls{pgd}. As expected, while FGSM is the fastest of all algorithms, it delivers the worst performance.
 
-Of the investigated algorithms, thus the Carlini-Wagner method with $\ell_2$ distance delivered the best performance.
+Of the investigated algorithms, thus the \gls{cw} with $\ell_2$ distance delivered the best performance.
 
-\autoref{tab:adv_per_family} depicts how successful the attack is for individual attack families. For this table we used a $\ell_\infty$ bound of 0.3 for FGSM and $\ell_\infty$-bounded PGD and a tradeoff of 0.5 for Carlini-Wagner. The table shows significant for detecting different attack families in the first place. However, also for generating adversarial flows some attack families are more susceptible than others.
+\autoref{tab:adv_per_family} depicts how successful the attack is for individual attack families. For this table we used a $\ell_\infty$ bound of 0.3 for FGSM and $\ell_\infty$-bounded \gls{pgd} and a tradeoff of 0.5 for Carlini-Wagner. The table shows significant for detecting different attack families in the first place. However, also for generating adversarial flows some attack families are more susceptible than others.
 
 \begin{figure*}
 \includegraphics[width=0.45\textwidth]{adv_plots/fgsm.pdf}
 \includegraphics[width=0.45\textwidth]{adv_plots/l_inf_pgd.pdf}
-\caption{Performance of FSGM and $\ell_\infty$-bounded PGD for different bounds.}
+\caption{Performance of FSGM and $\ell_\infty$-bounded \gls{pgd} for different bounds.}
 \label{fig:fgsm}
 \end{figure*}
 
 Finally, we investigated what adversarial flows look like and which features are manipulated to circumvent detection by the neural network.
 
-To this end, we generated adversarial flows with the Carlini-Wagner method with $\ell_2$ distance and a tradeoff of 0.5. \autoref{adv_plots} depicts how the method manipulates flows for some exemplary attack categories. Depicted is the mean of both unmodified flows and adversarial flows  of samples of individual attack families considering both interarrival time and packet length.
+To this end, we generated adversarial flows with the \gls{cw} with $\ell_2$ distance and a tradeoff of 0.5. \autoref{adv_plots} depicts how the method manipulates flows for some exemplary attack categories. Depicted is the mean of both unmodified flows and adversarial flows  of samples of individual attack families considering both interarrival time and packet length.
 
 The plots show that primarily features at the beginning of flows are modified. It is remarkable that it seems most promising to modify single packets while leaving most of the flow unchanged. In other cases, however, like depicted for the infiltration attack at the bottom, adversarial flows assume a complex pattern to circumvent detection.
 
@@ -411,7 +416,7 @@ The plots show that primarily features at the beginning of flows are modified. I
 \includegraphics[width=0.48\textwidth]{../plots/plot_adv/4.pdf}
 \includegraphics[width=0.48\textwidth]{../plots/plot_adv/5.pdf}
 \includegraphics[width=0.48\textwidth]{../plots/plot_adv/6.pdf}
-\caption{Successful manipulations performed by the Carlini-Wagner method.}
+\caption{Successful manipulations performed by the \gls{cw}.}
 \label{adv_plots}
 \end{figure*}
 
@@ -426,7 +431,7 @@ The most obvious defence, which is only possible because of the nature of the da
 
 Both approaches lead to complete resistance to adversarial samples (as we left out all manipulable features), except for botnets, which can still operate when only leaving out manipulable features in one direction. The results in \autoref{tab:performance_results_no_manipulable} show that -- surprisingly -- there is only a small difference in classification performance when only computing the accuracy for the last packet of each flow (flow accuracy). However, when looking at the packet accuracy, which considers all packets of all flows, there is a significant difference. Thus, apparently the interarrival time and packet size are especially important for determining whether a flow is malicious in the first packets of a flow.
 
-In addition to omitting manipulable features we tried to make our network more robust against adversarial samples by augmenting the training set by adversarial flows generated using the Carlini-Wagner method, labeled as additional attacks. However, against our expectations, this approach did not lead to satisfactory results in the sense that the network would learn to classify adversarial samples as attacks. In fact, classification accuracy stayed about constant during the training of the network.
+In addition to omitting manipulable features we tried to make our network more robust against adversarial samples by augmenting the training set by adversarial flows generated using the \gls{cw}, labeled as additional attacks. However, against our expectations, this approach did not lead to satisfactory results in the sense that the network would learn to classify adversarial samples as attacks. In fact, classification accuracy stayed about constant during the training of the network.
 
 A possible explanation for this observation might be that the adversarial samples assumed too much the shape of normal flows, so that the network could not reliable tell them apart.
 
