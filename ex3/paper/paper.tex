@@ -60,7 +60,7 @@ firstname.lastname@tuwien.ac.at}}
 % \IEEEoverridecommandlockouts
 % \IEEEpubid{\begin{minipage}[t]{\textwidth}\ \\[10pt]
 %         \centering\normalsize{xxx-x-xxxx-xxxx-x/xx/\$31.00 \copyright 2018 IEEE}
-% \end{minipage}} 
+% \end{minipage}}
 
 % \renewcommand*{\bibfont}{\footnotesize}
 
@@ -80,7 +80,7 @@ firstname.lastname@tuwien.ac.at}}
 
 \begin{abstract}
 
-With the rise of ubiquitous \gls{ml} systems, malicious actors have been catching up quickly to find new ways to exploit them for profit. Recently developed \gls{aml} techniques focus on computer vision and their applicability to network traffic is not straightforward: Network traffic is not only sequential but there are also many constraints that have to be considered when attacking/defending an \gls{ml}-based Intrusion Detection System. For example, attackers can only modify certain features to evade detection and certain features, like packet interarrival time cannot become less than zero. We show that already the first couple of packets of a flow are of crucial importance and are likely going to be targeted by attackers. As a countermeasure we develop an easy-to-use training procedure and can confirm that it significantly and successfully reduces the attack surface. 
+With the rise of ubiquitous \gls{ml} systems, malicious actors have been catching up quickly to find new ways to exploit them for profit. Recently developed \gls{aml} techniques focus on computer vision and their applicability to network traffic is not straightforward: Network traffic is not only sequential but there are also many constraints that have to be considered when attacking/defending an \gls{ml}-based Intrusion Detection System. For example, attackers can only modify certain features to evade detection and certain features, like packet interarrival time cannot become less than zero. We show that already the first couple of packets of a flow are of crucial importance and are likely going to be targeted by attackers. As a countermeasure we develop an easy-to-use training procedure and can confirm that it significantly and successfully reduces the attack surface.
 
 \end{abstract}
 
@@ -109,18 +109,18 @@ More recently, with the rise of omnipresent encryption, available features have 
 When analyzing flows, not only the aforementioned features are available but also features related to the timing of the individual packets as well as their size. For example, a specific attack might require the attacker to send three small packets and the victim to reply with two large packets followed by a small one the attacker. Various approaches have been proposed to extract features from flows and then perform anomaly detection with the results \cite{meghdouri_analysis_2018}. While this approach works well, it is problematic that first the whole flow has to be received and only afterwards it can be determined if there was an anomaly.
 
 Thus, we design a network anomaly detection system that operates on a per-packet basis and decides if a packet is anomalous based on features that are available for traffic that is encrypted above the transport layer, like for example TLS or QUIC.
-We show that our system has similar performance to other flow-based anomaly detection systems but can commonly detect anomalies before the flow is over. 
+We show that our system has similar performance to other flow-based anomaly detection systems but can commonly detect anomalies before the flow is over.
 
 Then we investigate the question whether adversarial samples can be found for this type of data. This is not a trivially answerable question since adversarial samples have mostly been analyzed in the context of computer vision. Our scenario significantly deviates from this in several ways because \begin{enumerate*}
 \item the number of features is significantly smaller and
 \item only certain features can be manipulated (for example the destination port cannot be manipulated)
 \end{enumerate*}.
 
-We can confirm that adversarial samples can be found even when considering the tight constraints mentioned before. Especially the first packets of a flow are critical for determining the decision of a recurrent \gls{ids}. We develop a simple methods for defending against adversaries who can manipulate arbitrary packets by simply leaving out potentially manipulable information from the classification process. The resulting classifier is slightly less accurate but is still useful to be deployed in a real scenario. Finally we develop a custom adversarial training procedure which especially focuses on easy of use and low resource consumption and aims to keep the number of additionally introduced training hyperparameters low. With this novel strategy we can reduce attack surface and harden the resulting \gls{ids} while keeping similar classification performance like for the original \gls{ml} model. 
+We can confirm that adversarial samples can be found even when considering the tight constraints mentioned before. Especially the first packets of a flow are critical for determining the decision of a recurrent \gls{ids}. We develop a simple methods for defending against adversaries who can manipulate arbitrary packets by simply leaving out potentially manipulable information from the classification process. The resulting classifier is slightly less accurate but is still useful to be deployed in a real scenario. Finally we develop a custom adversarial training procedure which especially focuses on easy of use and low resource consumption and aims to keep the number of additionally introduced training hyperparameters low. With this novel strategy we can reduce attack surface and harden the resulting \gls{ids} while keeping similar classification performance like for the original \gls{ml} model.
 
 \section{Related work}
 
-\cite{szegedy_intriguing_2014} show that it is possible to create adversarial samples for an image, which look similar to the original image but are classified wrongly. \cite{goodfellow_explaining_2015} develop the \gls{fgsm}, which makes easy generation of adversarial samples possible. 
+\cite{szegedy_intriguing_2014} show that it is possible to create adversarial samples for an image, which look similar to the original image but are classified wrongly. \cite{goodfellow_explaining_2015} develop the \gls{fgsm}, which makes easy generation of adversarial samples possible.
 \cite{papernot_crafting_2016} explore the use of \gls{aml} for \glspl{rnn}
 
 \section{RNN-based classifier}
@@ -334,7 +334,7 @@ The method minimizes the adversarial sample's distance so that the network's dec
 \begin{equation}
 d(X,\tilde X) + \epsilon  \max(Z(\tilde X), -0.2),
 \end{equation}
-i.e. we require a slight level of confidence that our adversarial samples are not classified as attack traffic \todo{What is 0.2 in probability and not in logits? Logits are hard to imagine}.
+i.e. we require a slight level of confidence that our adversarial samples are not classified as attack traffic. A logit value of $-0.2$ corresponds to a confidence of 45\% for the sample to be an attack.
 
 \subsection{$\ell_\infty$-bounded Projected Gradient Descent}
 \cite{madry_towards_2018} use a method for generating adversarial samples which uses \gls{pgd}  to minimize the network's negative loss function while constraining the achieved $\ell_\infty$ distance from the original samples.
@@ -421,8 +421,9 @@ The plots show that primarily features at the beginning of flows are modified. I
 \end{figure*}
 
 
-\subsection{Defences}
+\section{Defences}
 
+\subsection{Reducing features}
 The most obvious defence, which is only possible because of the nature of the dataset, is to simply leave out features which the attacker can manipulate. For this, we try two different approaches:
 \begin{itemize}
 \item Leaving out all features that are manipulable: packet size and interarrival time
@@ -431,7 +432,24 @@ The most obvious defence, which is only possible because of the nature of the da
 
 Both approaches lead to complete resistance to adversarial samples (as we left out all manipulable features), except for botnets, which can still operate when only leaving out manipulable features in one direction. The results in \autoref{tab:performance_results_no_manipulable} show that -- surprisingly -- there is only a small difference in classification performance when only computing the accuracy for the last packet of each flow (flow accuracy). However, when looking at the packet accuracy, which considers all packets of all flows, there is a significant difference. Thus, apparently the interarrival time and packet size are especially important for determining whether a flow is malicious in the first packets of a flow.
 
-In addition to omitting manipulable features we tried to make our network more robust against adversarial samples by augmenting the training set by adversarial flows generated using the \gls{cw}, labeled as additional attacks. However, against our expectations, this approach did not lead to satisfactory results in the sense that the network would learn to classify adversarial samples as attacks. In fact, classification accuracy stayed about constant during the training of the network.
+\subsection{Adversarial training}
+In addition to omitting manipulable features we tried to make our network more robust against adversarial samples by augmenting the training set by adversarial flows generated using the Carlini-Wagner method, labeled as additional attacks.
+
+For this purpose, we added one adversarial sample per attack sample to the training set. Note that, since our used method for obtaining adversarial samples is deterministic, this is the maximum number of adversarial samples possible. With this training set we then alternated retraining of the neural network and optimization of the adversarial samples using gradient descent.
+
+One question which occurs in this process, is how many CPU cycles to spend on network training and adversarial sample optimization. As a natural approach, we decided to use as many backpropagation steps for neural network training as we use for adversarial sample optimization.  For each adversarial sample optimization step, we performed 10 iterations of gradient descent. Hence, all adversarial samples were optimized each 10 epochs of neural network training.
+
+\autoref{fig:avdistance} shows the average distance of a block of adversarial samples from to original, unmodified attack samples throughout the adversarial training procedure. The figure clearly indicates that adversarial training is effective, as the distance gradually increases. Hence, an attacker would have to modify attack samples more and more, eventually rendering the attack unpractical.
+
+However, the figure also shows that an increase of distance can only be achieved after a considerable amount of training. It is, hence, questionable if the gained increase in robustness is enough for reliable attack detection.
+
+\begin{figure}
+\includegraphics[width=\columnwidth]{../plots/adv_training/avdistance.pdf}
+\caption{Distance of adversarial samples from original attack samples throughout adversarial training.}
+\label{fig:avdistance}
+\end{figure}
+
+%However, against our expectations, this approach did not lead to satisfactory results in the sense that the network would learn to classify adversarial samples as attacks. In fact, classification accuracy stayed about constant during the training of the network.
 
 A possible explanation for this observation might be that the adversarial samples assumed too much the shape of normal flows, so that the network could not reliable tell them apart.
 
