@@ -556,8 +556,8 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 
 			orig_mask = (index_tensor <= selection_tensor).byte().to(device)
 			# mask_exact = (index_tensor == selection_tensor).byte().to(device)
-			wrong_direction = (seqs[:,:,5]!=forward_direction)
-			matching_cats = [(cats==bidirectional_cat).squeeze() for bidirectional_cat in bidirectional_categories]
+			wrong_direction = (seqs[:,:,5]!=forward_direction).byte()
+			matching_cats = [(cats==bidirectional_cat).squeeze().byte() for bidirectional_cat in bidirectional_categories]
 			# print("matching_cats.shape", [item.shape for item in matching_cats])
 			not_bidirectional = ~reduce(lambda acc, x: acc | x, matching_cats, torch.ByteTensor([False]).to(device))
 			# print(orig_mask.shape, wrong_direction.shape, not_bidirectional.shape)
@@ -1102,7 +1102,8 @@ if __name__=="__main__":
 		categories_mapping_content = json.load(f)
 	categories_mapping, mapping = categories_mapping_content["categories_mapping"], categories_mapping_content["mapping"]
 
-	all_data = [item[:opt.maxLength,:] for item in all_data] # if np.random.rand() < 0.005]
+	# a few flows have have invalid IATs due to dataset issues. Sort those out.
+	all_data = [item[:opt.maxLength,:] for item in all_data if np.all(item[:,4]>=0)]
 	if opt.removeChangeable:
 		all_data = [overwrite_manipulable_entries(item) for item in all_data]
 	random.shuffle(all_data)
