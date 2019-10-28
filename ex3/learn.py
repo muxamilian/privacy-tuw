@@ -439,13 +439,15 @@ def feature_importance():
 
 	# print("results_by_attack_number", [(index, len(item)) for index, item in enumerate(results_by_attack_number)])
 
-def adv_internal(in_training = False):
+def adv_internal(in_training = False, attack_types_which_are_not_investigated_anymore=[]):
 	# FIXME: They suggest at least 10000 iterations with some specialized optimizer (Adam)
 	# with SGD we probably need even more.
 	if opt.advMethod == 'fgsm':
 		ITERATION_COUNT = 1
 	else:
-		ITERATION_COUNT = 10 if in_training else 1000
+		ITERATION_COUNT = 10 if in_training else opt.iterationCount
+
+	lstm_module.train()
 
 	# generate adversarial samples using Carlini Wagner method
 	n_fold = opt.nFold
@@ -469,9 +471,10 @@ def adv_internal(in_training = False):
 
 	zero_scaled = (0 - means[4])/stds[4]
 
-	orig_indices, attack_indices = zip(*[(orig, i) for orig, i in zip(indices, range(len(subset_with_all_traffic))) if subset_with_all_traffic[i][1][0,0] == 1])
+	orig_indices, attack_indices = zip(*[(orig, i) for orig, i in zip(indices, range(len(subset_with_all_traffic))) if subset_with_all_traffic[i][1][0,0] == 1 and subset_with_all_traffic[i][2][0,0].item() not in attack_types_which_are_not_investigated_anymore])
 
 	subset = torch.utils.data.Subset(dataset, orig_indices)
+	print("len(subset)", len(subset))
 
 	loader = torch.utils.data.DataLoader(subset, batch_size=opt.batchSize, shuffle=False, collate_fn=custom_collate)
 
@@ -711,6 +714,7 @@ def adv_internal(in_training = False):
 
 	for orig_index, (orig_flow,_,cat), (adv_flow,_,_), orig_result, result in zip(orig_indices, original_dataset, subset, original_results, results):
 		# print("cat", cat)
+		assert len(orig_flow) > 0
 		correct_cat = int(cat[0][0])
 		orig_flows_by_attack_number[correct_cat].append(orig_flow)
 		modified_flows_by_attack_number[correct_cat].append(adv_flow)
@@ -731,32 +735,66 @@ def adv_internal(in_training = False):
 		print("Attack type: {}; number of samples: {}, average dist: {}, packet confidence: {}/{}, flow confidence: {}/{}".format(reverse_mapping[attack_number], len(per_attack_results), dist, per_packet_accuracy, per_packet_orig_accuracy, per_flow_accuracy, per_flow_orig_accuracy))
 
 	file_name = opt.dataroot[:-7]+"_adv_{}{}_outcomes_{}_{}.pickle".format(opt.tradeoff, "_notBidirectional" if not opt.canManipulateBothDirections else "", opt.fold, opt.nFold)
+	results_dict = {"results_by_attack_number": results_by_attack_number, "orig_results_by_attack_number": orig_results_by_attack_number, "modified_flows_by_attack_number": modified_flows_by_attack_number, "orig_flows_by_attack_number": orig_flows_by_attack_number}
 	with open(file_name, "wb") as f:
-		pickle.dump({"results_by_attack_number": results_by_attack_number, "orig_results_by_attack_number": orig_results_by_attack_number, "modified_flows_by_attack_number": modified_flows_by_attack_number, "orig_flows_by_attack_number": orig_flows_by_attack_number}, f)
+		pickle.dump(results_dict, f)
 
 	# with open('adv_samples.pickle', 'wb') as outfile:
 	# 	pickle.dump(adv_samples, outfile)
 	if not in_training:
-		yield (modified_flows_by_attack_number, results_by_attack_number)
+		yield results_dict
 
 def adv():
 	# hack for running the function although it's a generator
 	list(adv_internal(False))
 
-def adv_until_more_than_half():
+def adv_until_less_than_half():
 	MAX = 100
+	SCALING = 0.5
+	THRESHOLD = 0.5
 	i = 0
 	prev_results = []
+	prev_flows = []
+	orig_results = None
+	orig_flows = None
+	prev_ratios = []
+	next_filter = []
 	while True:
 		# FIXME: Hack: Shouldn't assign input parameter I guess
-		opt.tradeoff = i
-		modified_flows_by_attack, modified_results_by_attack = list(adv_internal(False))
-		ratio_modified_by_attack_number = np.array([np.mean(numpy_sigmoid(np.array([item[-1] for item in modified_results]))) for modified_result in modified_flows_by_attack])
-		prev_results.append((modified_flows_by_attack, modified_results_by_attack))
+		opt.tradeoff = i*SCALING
+		results_dict = list(adv_internal(False, next_filter))[0]
+		modified_flows_by_attack, modified_results_by_attack, original_flows_by_attack, original_results_by_attack = results_dict["modified_flows_by_attack_number"], results_dict["results_by_attack_number"], results_dict["orig_flows_by_attack_number"], results_dict["orig_results_by_attack_number"]
+		ratio_modified_by_attack_number = np.array([np.mean(numpy_sigmoid(np.array([item[-1] for item in modified_results]))) if len(modified_results)>0 else -float("inf") for modified_results in modified_results_by_attack])
+		next_filter = [index for index, item in enumerate(ratio_modified_by_attack_number) if item <= THRESHOLD]
+		if i==0:
+			orig_results = original_results_by_attack
+			orig_flows = original_flows_by_attack
+		prev_results.append(modified_results_by_attack)
+		prev_flows.append(modified_flows_by_attack)
+		prev_ratios.append(ratio_modified_by_attack_number)
 		print("i", i, "ratios", ratio_modified_by_attack_number)
-		if i+1==MAX or (ratio_modified_by_attack_number >= 0.5).all():
+		if i+1==MAX or (ratio_modified_by_attack_number <= THRESHOLD).all() or (len(prev_ratios) > 1 and (prev_ratios[-2] <= prev_ratios[-1]).all()):
 			break
 		i += 1
+
+	reverse_mapping = {v: k for k, v in mapping.items()}
+	distances_packets = [None]*len(orig_results)
+	distances_flows = [None]*len(orig_results)
+	final_ratios = [None]*len(orig_results)
+	for i in range(len(prev_results)):
+		# print("i", i)
+		for attack_index, ratio in enumerate(prev_ratios[i]):
+			# print("attack_index", attack_index, "ratio", ratio)
+			if ratio > -float("inf"):
+				# print("prev_flows[i]", prev_flows[i])
+				final_ratios[attack_index] = ratio
+				distances = [np.linalg.norm(orig_flows[attack_index][flow_index]-flow, ord=2) for flow_index, flow in enumerate(prev_flows[i][attack_index])]
+				distances_per_packet = [dist/len(flow) for dist, flow in zip(distances, prev_flows[i][attack_index])]
+				distances_flows[attack_index] = np.mean(distances)
+				distances_packets[attack_index] = np.mean(distances_per_packet)
+
+	for attack_index in range(len(distances_packets)):
+		print("attack_type", reverse_mapping[attack_index], "ratio", final_ratios[attack_index], "flow_distance", distances_flows[attack_index], "packet_distance", distances_packets[attack_index])
 
 def eval_nn(data):
 
@@ -1032,7 +1070,7 @@ if __name__=="__main__":
 	parser.add_argument('--dataroot', required=True, help='path to dataset')
 	parser.add_argument('--normalizationData', default="", type=str, help='normalization data to use')
 	parser.add_argument('--fold', type=int, default=0, help='fold to use')
-	parser.add_argument('--nFold', type=int, default=10, help='total number of folds')
+	parser.add_argument('--nFold', type=int, default=3, help='total number of folds')
 	parser.add_argument('--batchSize', type=int, default=128, help='input batch size')
 	parser.add_argument('--net', default='', help="path to net (to continue training)")
 	parser.add_argument('--function', default='train', help='the function that is going to be called')
@@ -1048,6 +1086,7 @@ if __name__=="__main__":
 	parser.add_argument('--allowIATReduction', action='store_true', help='allow reducing IAT below original value')
 	parser.add_argument('--order', type=int, default=1, help='order of the norm for adversarial sample generation')
 	parser.add_argument('--advMethod', type=str, default="cw", help='which adversarial samples method to use; options are: "cw", "pgd"')
+	parser.add_argument('--iterationCount', type=int, default=100, help='number of iterations for creating adversarial samples')
 
 	opt = parser.parse_args()
 	print(opt)
