@@ -788,13 +788,32 @@ def adv_until_less_than_half():
 			if ratio > -float("inf"):
 				# print("prev_flows[i]", prev_flows[i])
 				final_ratios[attack_index] = ratio
-				distances = [np.linalg.norm(orig_flows[attack_index][flow_index]-flow, ord=2) for flow_index, flow in enumerate(prev_flows[i][attack_index])]
-				distances_per_packet = [dist/len(flow) for dist, flow in zip(distances, prev_flows[i][attack_index])]
-				distances_flows[attack_index] = np.mean(distances)
+
+				successfully_changed_flows_mask = (np.round(numpy_sigmoid(np.array([item[-1] for item in prev_results[i][attack_index]]))) == 0).flatten()
+				distances = np.array([np.linalg.norm(orig_flows[attack_index][flow_index]-flow, ord=2) for flow_index, flow in enumerate(prev_flows[i][attack_index])])
+				argsorted_distances = np.argsort(distances)
+				correct_indices = argsorted_distances[successfully_changed_flows_mask[argsorted_distances]]
+				lower_part = correct_indices[:int(math.ceil(len(correct_indices)*min(ratio, THRESHOLD)))]
+
+				distances_per_packet = [dist/len(flow) for dist, flow in zip(distances[lower_part], prev_flows[i][attack_index])]
+				distances_flows[attack_index] = np.mean(distances[lower_part])
 				distances_packets[attack_index] = np.mean(distances_per_packet)
 
 	for attack_index in range(len(distances_packets)):
-		print("attack_type", reverse_mapping[attack_index], "ratio", final_ratios[attack_index], "flow_distance", distances_flows[attack_index], "packet_distance", distances_packets[attack_index])
+		if len(orig_results[attack_index]) <= 0:
+			continue
+		# print(f"orig_results[{attack_index}]", orig_results[attack_index])
+		# import pdb; pdb.set_trace()
+		print(
+			"attack_type", reverse_mapping[attack_index],
+			"ratio", final_ratios[attack_index],
+			"flow_accuracy", np.mean(numpy_sigmoid(np.array([item[-1] for item in orig_results[attack_index]]))),
+			"packet_accuracy", np.mean(numpy_sigmoid(np.array([sublist for l in orig_results[attack_index] for sublist in l]))),
+			"flow_distance", distances_flows[attack_index],
+			"packet_distance", distances_packets[attack_index]
+		)
+
+	# import pdb; pdb.set_trace()
 
 def eval_nn(data):
 
