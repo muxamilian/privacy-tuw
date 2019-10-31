@@ -456,18 +456,12 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 	if not opt.canManipulateBothDirections:
 		bidirectional_categories = [torch.FloatTensor([mapping[key]]).to(device) for key in categories_mapping["Botnet"]]
 
-	# print("bidirectional_categories", bidirectional_categories)
-
 	#initialize sample
 	train_indices, test_indices = get_nth_split(dataset, n_fold, fold)
 	indices = train_indices if in_training else test_indices
 	subset_with_all_traffic = torch.utils.data.Subset(dataset, indices)
 
 	feature_ranges = get_feature_ranges(subset_with_all_traffic, sampling_density=2)
-	# max_packet_length = feature_ranges[0][0]
-
-	# common_mtu_scaled = (1500 - means[3])/stds[3]
-	# maximum_length = common_mtu_scaled
 
 	zero_scaled = (0 - means[4])/stds[4]
 
@@ -514,14 +508,6 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 			optimizer = optim.SGD(lstm_module.parameters(), lr=opt.lr)
 			criterion = nn.BCEWithLogitsLoss(reduction="mean")
 
-		# index_tensor = torch.arange(0, len(input_data.batch_sizes), dtype=torch.int64).unsqueeze(1).unsqueeze(2).repeat(1, input_data.batch_sizes[0], 1)
-
-		# _, seq_lens = torch.nn.utils.rnn.pad_packed_sequence(input_data)
-
-		# selection_tensor = seq_lens.unsqueeze(0).unsqueeze(2).repeat(index_tensor.shape[0], 1, index_tensor.shape[2])-1
-
-		# mask = (index_tensor <= selection_tensor).byte().to(device)
-
 		orig_batch = input_data.data.clone()
 		orig_batch_padded, orig_batch_lengths = torch.nn.utils.rnn.pad_packed_sequence(input_data)
 		orig_batch_padded, orig_batch_lengths = orig_batch_padded.detach(), orig_batch_lengths.detach()
@@ -560,6 +546,9 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 			matching_cats = [(cats==bidirectional_cat).squeeze().byte() for bidirectional_cat in bidirectional_categories]
 			# print("matching_cats.shape", [item.shape for item in matching_cats])
 			not_bidirectional = ~reduce(lambda acc, x: acc | x, matching_cats, torch.ByteTensor([False]).to(device))
+			if not_bidirectional.shape != orig_mask.shape:
+				not_bidirectional = not_bidirectional[:,None]
+				not_bidirectional = not_bidirectional.repeat(1,orig_mask.shape[-1])
 			# print(orig_mask.shape, wrong_direction.shape, not_bidirectional.shape)
 			mask = orig_mask & wrong_direction & not_bidirectional
 
@@ -596,11 +585,7 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 					distance = torch.stack([torch.dist(orig_batch_unpadded_item, unpadded_seqs_item, p=opt.order) for orig_batch_unpadded_item, unpadded_seqs_item in zip(orig_batch_unpadded, unpadded_seqs)]).sum()
 				else:
 					distance = torch.dist(orig_batch, input_data.data, p=opt.order)
-				#regularizer = .5*(torch.max(output[other_attacks]) - output[target_attack])
-				#regularizer = .5*output[-1,0]
 				regularizer = opt.tradeoff*torch.max(output, zero_tensor).sum()
-				#if regularizer <= 0:
-					#break
 				criterion = distance + regularizer
 				if opt.penaltyTradeoff > 0:
 					seqs, lengths = torch.nn.utils.rnn.pad_packed_sequence(input_data)
@@ -657,22 +642,8 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 			seqs[0,:,4] = zero_scaled
 			input_data.data.data = torch.nn.utils.rnn.pack_padded_sequence(seqs, lengths, enforce_sorted=False).data.data
 
-			# detached_batch = input_data.data.detach()
-
-			# # Packet lengths cannot become smaller than original
-			# mask = detached_batch[:,3] < orig_batch[:,3]
-			# detached_batch[mask,3] = orig_batch[mask,3]
-
-			# # IAT cannot become smaller 0
-			# mask = detached_batch[:,4] * stds[4] + means[4] < 0
-			# detached_batch[mask,4] = float(-means[4]/stds[4])
-
-			# if i % 1000 == 0:
-			# 	print('Iteration: %d, Distance: %f, regularizer: %f' % (i, distance, regularizer))
-
 		seqs, lengths = torch.nn.utils.rnn.pad_packed_sequence(input_data)
 
-		# adv_samples = [ seqs[:lengths[batch_index],batch_index,:].detach().cpu().numpy()*stds + means for batch_index in range(seqs.shape[1]) ]
 		adv_samples = [ seqs[:lengths[batch_index],batch_index,:].detach().cpu().numpy() for batch_index in range(seqs.shape[1]) ]
 
 		finished_adv_samples[total_sample:(total_sample+len(adv_samples))] = adv_samples
@@ -683,7 +654,6 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 				yield finished_adv_samples, finished_categories, sum(distances)/len(distances)
 				distances = []
 
-	# print("samples", samples)
 	assert len(finished_adv_samples) == len(subset), "len(finished_adv_samples): {}, len(subset): {}".format(len(finished_adv_samples), len(subset))
 
 	original_dataset = OurDataset(*zip(*[[subitem.numpy() for subitem in item] for item in list(subset)]))
@@ -713,7 +683,6 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 	sample_indices_by_attack_number = [list() for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 
 	for orig_index, (orig_flow,_,cat), (adv_flow,_,_), orig_result, result in zip(orig_indices, original_dataset, subset, original_results, results):
-		# print("cat", cat)
 		assert len(orig_flow) > 0
 		correct_cat = int(cat[0][0])
 		orig_flows_by_attack_number[correct_cat].append(orig_flow)
@@ -739,8 +708,6 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 	with open(file_name, "wb") as f:
 		pickle.dump(results_dict, f)
 
-	# with open('adv_samples.pickle', 'wb') as outfile:
-	# 	pickle.dump(adv_samples, outfile)
 	if not in_training:
 		yield results_dict
 
@@ -782,11 +749,8 @@ def adv_until_less_than_half():
 	distances_flows = [None]*len(orig_results)
 	final_ratios = [None]*len(orig_results)
 	for i in range(len(prev_results)):
-		# print("i", i)
 		for attack_index, ratio in enumerate(prev_ratios[i]):
-			# print("attack_index", attack_index, "ratio", ratio)
 			if ratio > -float("inf"):
-				# print("prev_flows[i]", prev_flows[i])
 				final_ratios[attack_index] = ratio
 
 				successfully_changed_flows_mask = (np.round(numpy_sigmoid(np.array([item[-1] for item in prev_results[i][attack_index]]))) == 0).flatten()
@@ -802,8 +766,6 @@ def adv_until_less_than_half():
 	for attack_index in range(len(distances_packets)):
 		if len(orig_results[attack_index]) <= 0:
 			continue
-		# print(f"orig_results[{attack_index}]", orig_results[attack_index])
-		# import pdb; pdb.set_trace()
 		print(
 			"attack_type", reverse_mapping[attack_index],
 			"ratio", final_ratios[attack_index],
@@ -812,8 +774,6 @@ def adv_until_less_than_half():
 			"flow_distance", distances_flows[attack_index],
 			"packet_distance", distances_packets[attack_index]
 		)
-
-	# import pdb; pdb.set_trace()
 
 def eval_nn(data):
 
@@ -1106,6 +1066,7 @@ if __name__=="__main__":
 	parser.add_argument('--order', type=int, default=1, help='order of the norm for adversarial sample generation')
 	parser.add_argument('--advMethod', type=str, default="cw", help='which adversarial samples method to use; options are: "cw", "pgd"')
 	parser.add_argument('--iterationCount', type=int, default=100, help='number of iterations for creating adversarial samples')
+	# parser.add_argument('--nSamples', type=int, default=1, help='number of items to sample for the feature importance metric')
 
 	opt = parser.parse_args()
 	print(opt)
