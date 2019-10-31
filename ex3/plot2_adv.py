@@ -22,6 +22,7 @@ with open("flows_full_no_ttl_normalization_data.pickle", "rb") as f:
 	means, stds = pickle.load(f)
 
 file_name = sys.argv[1]
+adv = "adv" in file_name
 with open(file_name, "rb") as f:
 	loaded = pickle.load(f)
 results_by_attack_number = loaded["results_by_attack_number"]
@@ -133,7 +134,7 @@ for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, re
 		plt.ylabel(feature_name)
 
 		legend = "{}".format(feature_name)
-		plt.pcolormesh(np.array(range(actual_flow_means.shape[0]+1))-0.5, features[feature_index_from_zero][1]*stds[feature_index]+means[feature_index], mean_ranges[:,feature_index_from_zero,:].transpose(), cmap=colors_rgb_ranges[feature_index_from_zero], vmin=0, vmax=1)
+		plt.pcolormesh(np.array(range(actual_flow_means.shape[0]+1))-0.5, (features[feature_index_from_zero] if not adv else features[attack_type][feature_index_from_zero])[1]*stds[feature_index]+means[feature_index], mean_ranges[:,feature_index_from_zero,:].transpose(), cmap=colors_rgb_ranges[feature_index_from_zero], vmin=0, vmax=1)
 		ret = plt.plot(range(max_length), actual_flow_means[:,feature_index]*stds[feature_index]+means[feature_index], label=legend, color=colors[feature_index_from_zero])
 		plt.legend()
 		all_legends += ret

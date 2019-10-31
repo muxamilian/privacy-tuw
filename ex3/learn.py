@@ -810,6 +810,38 @@ def get_feature_ranges(dataset, sampling_density=100):
 		# print("feature", feat_name, "min", feat_min, "max", feat_max, "min_rescaled", feat_min*stds[feat_ind] + means[feat_ind], "max_rescaled", feat_max*stds[feat_ind] + means[feat_ind])
 	return features
 
+def get_feature_ranges_from_adv(sampling_density=100):
+	features = []
+
+	with open(opt.pathToAdvOutput, "rb") as f:
+		adv_loaded = pickle.load(f)
+		adv_modified_flows_by_attack_number = adv_loaded["modified_flows_by_attack_number"]
+		adv_orig_flows_by_attack_number = adv_loaded["orig_flows_by_attack_number"]
+
+	# iat & length
+	for attack_type in range(len(adv_modified_flows_by_attack_number)):
+
+		features.append([])
+		if len(adv_modified_flows_by_attack_number[attack_type]) == 0:
+			continue
+		print("attack_type", attack_type)
+		for feat_name, feat_ind in zip(["length", "iat"], [3, 4]):
+			feat_min_orig = min( sample[i][feat_ind] for sample in adv_orig_flows_by_attack_number[attack_type] for i in range(len(sample)))
+			feat_max_orig = max( sample[i][feat_ind] for sample in adv_orig_flows_by_attack_number[attack_type] for i in range(len(sample)))
+
+			feat_min_modified = min( sample[i][feat_ind] for sample in adv_modified_flows_by_attack_number[attack_type] for i in range(len(sample)))
+			feat_max_modified = max( sample[i][feat_ind] for sample in adv_modified_flows_by_attack_number[attack_type] for i in range(len(sample)))
+
+			print("feat_min_orig", feat_min_orig, "feat_min_modified", feat_min_modified)
+			feat_min = min(feat_min_orig, feat_min_modified)
+			print("feat_max_orig", feat_max_orig, "feat_max_modified", feat_max_modified)
+			feat_max = min(feat_max_orig, feat_max_modified)
+
+			features[attack_type].append((feat_ind,np.linspace(feat_min, feat_max, sampling_density)))
+
+		# print("feature", feat_name, "min", feat_min, "max", feat_max, "min_rescaled", feat_min*stds[feat_ind] + means[feat_ind], "max_rescaled", feat_max*stds[feat_ind] + means[feat_ind])
+	return features
+
 def pred_plots():
 	OUT_DIR='pred_plots'
 	os.makedirs(OUT_DIR, exist_ok=True)
@@ -893,7 +925,10 @@ def pred_plots2():
 	_, test_indices = get_nth_split(dataset, n_fold, fold)
 	subset = torch.utils.data.Subset(dataset, test_indices)
 
-	features = get_feature_ranges(subset, sampling_density=100)
+	if opt.pathToAdvOutput == "":
+		features = get_feature_ranges(subset, sampling_density=100)
+	else:
+		features = get_feature_ranges_from_adv(sampling_density=100)
 	# print("features", features)
 
 	attack_numbers = mapping.values()
@@ -918,14 +953,14 @@ def pred_plots2():
 		lstm_module.init_hidden(1)
 
 		predictions = np.zeros((flow.shape[0],))
-		prediction_ranges = np.zeros((flow.shape[0], len(features), (len(features[0][1])-1)))
+		prediction_ranges = np.zeros((flow.shape[0], max([len(item) for item in features]), max([(len(item[0][1])-1) if len(item) > 0 else 0 for item in features])))
 
 		for i in range(flow.shape[0]):
 
 			lstm_module.forgetting = True
 
-			input_data = torch.FloatTensor(flow[i,:][None,None,:]).repeat(1,len(features)*(len(features[0][1])-1),1)
-			for k, (feat_ind, values) in enumerate(features):
+			input_data = torch.FloatTensor(flow[i,:][None,None,:]).repeat(1,max([len(item) for item in features])*max([(len(item[0][1])-1) if len(item) > 0 else 0 for item in features]),1)
+			for k, (feat_ind, values) in enumerate(features[cat] if opt.pathToAdvOutput!="" else features):
 
 				for j in range(values.size-1):
 					# print("input_data.shape", input_data.shape, "k*values.size+j", k*values.size+j)
@@ -940,7 +975,7 @@ def pred_plots2():
 			output, _ = lstm_module(packed_input)
 			sigmoided = torch.sigmoid(output[0,:,0]).detach().cpu().tolist()
 
-			for k, (feat_ind, values) in enumerate(features):
+			for k, (feat_ind, values) in enumerate(features[cat] if opt.pathToAdvOutput!="" else features):
 				for j in range(values.size-1):
 					prediction_ranges[i,k,:] = sigmoided[k*(values.size-1):(k+1)*(values.size-1)]
 
@@ -959,7 +994,7 @@ def pred_plots2():
 		# assert result_ranges_by_attack_number[cat][-1].__class__.__name__=="ndarray" and flows_by_attack_number[cat][-1].__class__.__name__=="ndarray" and result_ranges_by_attack_number[cat][-1].__class__.__name__=="ndarray" and sample_indices_by_attack_number[cat][-1].__class__.__name__=="int", "{}, {}, {}, {}".format(result_ranges_by_attack_number[cat][-1].__class__.__name__, flows_by_attack_number[cat][-1].__class__.__name__, result_ranges_by_attack_number[cat][-1].__class__.__name__, sample_indices_by_attack_number[cat][-1].__class__.__name__)
 
 	print("It took {} seconds per sample".format((time.time()-start_iterating)/len(subset)))
-	file_name = opt.dataroot[:-7]+"_pred_plots2_outcomes_{}_{}.pickle".format(opt.fold, opt.nFold)
+	file_name = opt.dataroot[:-7]+"_pred_plots2_outcomes{}_{}_{}.pickle".format("_"+opt.pathToAdvOutput if opt.pathToAdvOutput!="" else "", opt.fold, opt.nFold)
 	with open(file_name, "wb") as f:
 		pickle.dump({"results_by_attack_number": results_by_attack_number, "flows_by_attack_number": flows_by_attack_number, "result_ranges_by_attack_number": result_ranges_by_attack_number, "sample_indices_by_attack_number": sample_indices_by_attack_number, "features": features}, f)
 
@@ -1054,7 +1089,7 @@ if __name__=="__main__":
 	parser.add_argument('--net', default='', help="path to net (to continue training)")
 	parser.add_argument('--function', default='train', help='the function that is going to be called')
 	parser.add_argument('--manualSeed', default=0, type=int, help='manual seed')
-	parser.add_argument('--maxLength', type=int, default=1000, help='max length')
+	parser.add_argument('--maxLength', type=int, default=100, help='max length')
 	parser.add_argument('--maxSize', type=int, default=sys.maxsize, help='limit of samples to consider')
 	parser.add_argument("--categoriesMapping", type=str, default="categories_mapping.json", help="mapping of attack categories; see parse.py")
 	parser.add_argument('--removeChangeable', action='store_true', help='when training remove all features that an attacker could manipulate easily without changing the attack itself')
@@ -1066,6 +1101,7 @@ if __name__=="__main__":
 	parser.add_argument('--order', type=int, default=1, help='order of the norm for adversarial sample generation')
 	parser.add_argument('--advMethod', type=str, default="cw", help='which adversarial samples method to use; options are: "cw", "pgd"')
 	parser.add_argument('--iterationCount', type=int, default=100, help='number of iterations for creating adversarial samples')
+	parser.add_argument('--pathToAdvOutput', type=str, default="", help='path to adv output to be used in pred_plots2')
 	# parser.add_argument('--nSamples', type=int, default=1, help='number of items to sample for the feature importance metric')
 
 	opt = parser.parse_args()
