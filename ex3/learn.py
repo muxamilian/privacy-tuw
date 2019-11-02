@@ -832,12 +832,14 @@ def get_feature_ranges_from_adv(sampling_density=100):
 			feat_min_modified = min( sample[i][feat_ind] for sample in adv_modified_flows_by_attack_number[attack_type] for i in range(len(sample)))
 			feat_max_modified = max( sample[i][feat_ind] for sample in adv_modified_flows_by_attack_number[attack_type] for i in range(len(sample)))
 
-			print("feat_min_orig", feat_min_orig, "feat_min_modified", feat_min_modified)
+			# print("feat_min_orig", feat_min_orig*stds[feat_ind] + means[feat_ind], "feat_min_modified", feat_min_modified*stds[feat_ind] + means[feat_ind])
 			feat_min = min(feat_min_orig, feat_min_modified)
-			print("feat_max_orig", feat_max_orig, "feat_max_modified", feat_max_modified)
-			feat_max = min(feat_max_orig, feat_max_modified)
+			# print("feat_max_orig", feat_max_orig*stds[feat_ind] + means[feat_ind], "feat_max_modified", feat_max_modified*stds[feat_ind] + means[feat_ind])
+			feat_max = max(feat_max_orig, feat_max_modified)
 
-			features[attack_type].append((feat_ind,np.linspace(feat_min, feat_max, sampling_density)))
+			grid = np.linspace(feat_min, feat_max, sampling_density)
+			# print("grid", max(grid*stds[feat_ind] + means[feat_ind]))
+			features[attack_type].append((feat_ind,grid))
 
 		# print("feature", feat_name, "min", feat_min, "max", feat_max, "min_rescaled", feat_min*stds[feat_ind] + means[feat_ind], "max_rescaled", feat_max*stds[feat_ind] + means[feat_ind])
 	return features

@@ -10,6 +10,7 @@ import os
 import json
 import pickle
 from learn import numpy_sigmoid
+import math
 
 DIR_NAME = "plots/plot2_adv"
 
@@ -128,19 +129,28 @@ for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, re
 	plt.title(reverse_mapping[attack_type])
 
 	for feature_index_from_zero, (feature_name, feature_index) in enumerate(zip(FEATURE_NAMES, (3, 4))):
+		print("feature_index", feature_index)
 		plt.subplot("{}{}{}".format(len(FEATURE_NAMES), 1, feature_index_from_zero+1))
 		if feature_index_from_zero == len(FEATURE_NAMES)-1:
 			plt.xlabel('Sequence index')
 		plt.ylabel(feature_name)
 
 		legend = "{}".format(feature_name)
-		plt.pcolormesh(np.array(range(actual_flow_means.shape[0]+1))-0.5, (features[feature_index_from_zero] if not adv else features[attack_type][feature_index_from_zero])[1]*stds[feature_index]+means[feature_index], mean_ranges[:,feature_index_from_zero,:].transpose(), cmap=colors_rgb_ranges[feature_index_from_zero], vmin=0, vmax=1)
-		ret = plt.plot(range(max_length), actual_flow_means[:,feature_index]*stds[feature_index]+means[feature_index], label=legend, color=colors[feature_index_from_zero])
+		y_colormesh = (features[feature_index_from_zero] if not adv else features[attack_type][feature_index_from_zero])[1]*stds[feature_index]+means[feature_index]
+		print("y_colormesh", max(y_colormesh))
+		plt.pcolormesh(np.array(range(actual_flow_means.shape[0]+1))-0.5, y_colormesh, mean_ranges[:,feature_index_from_zero,:].transpose(), cmap=colors_rgb_ranges[feature_index_from_zero], vmin=0, vmax=1)
+
+		y_plt = actual_flow_means[:,feature_index]*stds[feature_index]+means[feature_index]
+		print("max plt", max(y_plt))
+		ret = plt.plot(range(max_length), y_plt, label=legend, color=colors[feature_index_from_zero])
 		plt.legend()
 		all_legends += ret
 
+		y_adv = adv_flow_means[:,1,feature_index]*stds[feature_index]+means[feature_index]
 		legend = "{}, {}".format(ORDERING[1], feature_name)
-		ret = plt.plot(range(adv_max_length), adv_flow_means[:,1,feature_index]*stds[feature_index]+means[feature_index], label=legend, linestyle="dashed", color=colors[feature_index_from_zero])
+		print("max adv", max(y_adv))
+		assert math.ceil(max(y_colormesh)) >= math.ceil(max(y_adv)) and math.ceil(max(y_colormesh)) >= math.ceil(max(y_plt))
+		ret = plt.plot(range(adv_max_length), y_adv, label=legend, linestyle="dashed", color=colors[feature_index_from_zero])
 		all_legends += ret
 
 	plt.figure(attack_type)
