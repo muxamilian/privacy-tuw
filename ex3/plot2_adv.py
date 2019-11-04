@@ -57,33 +57,9 @@ brightness_map = list(np.linspace(1.0, 0.5, num=COLOR_MAP_ELEMENTS))
 colors_rgb_ranges = [matplotlib.colors.ListedColormap([brighten(color, item) for item in brightness_map]) for color in colors_rgb]
 FEATURE_NAMES = ["packet length", "iat"]
 
+
 for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, result_ranges_by_attack_number_item, sample_indices_by_attack_number_item, adv_results_by_attack_number_item, adv_orig_results_by_attack_number_item, adv_modified_flows_by_attack_number_item, adv_orig_flows_by_attack_number_item) in enumerate(zip(results_by_attack_number, flows_by_attack_number, result_ranges_by_attack_number, sample_indices_by_attack_number, adv_results_by_attack_number, adv_orig_results_by_attack_number, adv_modified_flows_by_attack_number, adv_orig_flows_by_attack_number)):
 	print("attack", attack_type)
-
-	assert len(results_by_attack_number_item) == len(flows_by_attack_number_item) == len(result_ranges_by_attack_number_item) == len(sample_indices_by_attack_number_item)
-	if len(results_by_attack_number_item) <= 0:
-		continue
-
-	sorted_seq_indices = [item[0] for item in sorted(enumerate(flows_by_attack_number_item), key=lambda x: x[1].shape[0], reverse=True)]
-
-	max_length = flows_by_attack_number_item[sorted_seq_indices[0]].shape[0]
-	print("max_length", max_length)
-
-	indices_by_length = []
-
-	for i in range(max_length):
-		indices_by_length.append([])
-		for index in sorted_seq_indices:
-			if flows_by_attack_number_item[index].shape[0] < i+1:
-				break
-
-			indices_by_length[i].append(index)
-
-	actual_flow_means = np.stack([np.mean(np.concatenate([flows_by_attack_number_item[index][position:position+1,:] for index in item]), axis=0) for position, item in enumerate(indices_by_length)])
-
-	mean_ranges = np.stack([np.mean(np.concatenate([result_ranges_by_attack_number_item[index][position:position+1,:,:] for index in item]), axis=0) for position, item in enumerate(indices_by_length)])
-
-
 
 	assert len(adv_results_by_attack_number_item) == len(adv_orig_results_by_attack_number_item) == len(adv_modified_flows_by_attack_number_item) == len(adv_orig_flows_by_attack_number_item)
 	if len(adv_results_by_attack_number_item) <= 0:
@@ -95,9 +71,14 @@ for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, re
 	adv_seqs = [np.stack((adv_orig, adv_modified)) for adv_orig, adv_modified in zip(adv_stacked_original, adv_stacked_modified)]
 
 	# Filter good seqs where the adversarial attack succeeded.
-	adv_filtered_seqs = [item for item in adv_seqs if int(np.round(np.mean(numpy_sigmoid(item[0,-1:,-1])))) == 1 and int(np.round(np.mean(numpy_sigmoid(item[1,-1:,-1])))) == 0]
+	adv_filtered_seq_indices = np.array([index for index, item in enumerate(adv_seqs) if int(np.round(np.mean(numpy_sigmoid(item[0,-1:,-1])))) == 1 and int(np.round(np.mean(numpy_sigmoid(item[1,-1:,-1])))) == 0])
 
-	print("Adv original seqs", len(adv_seqs), "filtered seqs", len(adv_filtered_seqs))
+	# print("adv_filtered_seq_indices", adv_filtered_seq_indices)
+	adv_filtered_seqs = [adv_seqs[index] for index in adv_filtered_seq_indices]
+
+	# print("Adv original seqs", len(adv_seqs), "filtered seqs", len(adv_filtered_seqs))
+	old_adv_seqs = adv_seqs
+	old_adv_filtered_seqs = adv_filtered_seqs
 	adv_seqs = adv_filtered_seqs
 
 	if len(adv_filtered_seqs) <= 0:
@@ -121,6 +102,45 @@ for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, re
 		adv_values_by_length[i] = np.concatenate(adv_values_by_length[i], axis=1)
 
 	adv_flow_means = np.array([np.mean(item, axis=1) for item in adv_values_by_length])
+
+
+
+	assert len(results_by_attack_number_item) == len(flows_by_attack_number_item) == len(result_ranges_by_attack_number_item) == len(sample_indices_by_attack_number_item)
+	if len(results_by_attack_number_item) <= 0:
+		continue
+
+	# print(f"results_lens: {[item.shape for item in results_by_attack_number_item]}, adv_lens: {[item.shape for item in old_adv_seqs]}")
+	results_by_attack_number_item = list(np.array(results_by_attack_number_item)[adv_filtered_seq_indices])
+	flows_by_attack_number_item = list(np.array(flows_by_attack_number_item)[adv_filtered_seq_indices])
+	result_ranges_by_attack_number_item = list(np.array(result_ranges_by_attack_number_item)[adv_filtered_seq_indices])
+	sample_indices_by_attack_number_item = list(np.array(sample_indices_by_attack_number_item)[adv_filtered_seq_indices])
+
+	results_lens = [len(item) for item in results_by_attack_number_item]
+	adv_lens = [len(item) for item in adv_seqs]
+	# print(f"results_lens: {[item.shape for item in results_by_attack_number_item]}, adv_lens: {[item.shape for item in old_adv_filtered_seqs]}")
+	assert [item.shape[0] for item in results_by_attack_number_item] == [item.shape[1] for item in old_adv_filtered_seqs]
+
+	sorted_seq_indices = [item[0] for item in sorted(enumerate(flows_by_attack_number_item), key=lambda x: x[1].shape[0], reverse=True)]
+
+	max_length = flows_by_attack_number_item[sorted_seq_indices[0]].shape[0]
+	print("max_length", max_length)
+
+	indices_by_length = []
+
+	for i in range(max_length):
+		indices_by_length.append([])
+		for index in sorted_seq_indices:
+			if flows_by_attack_number_item[index].shape[0] < i+1:
+				break
+
+			indices_by_length[i].append(index)
+
+	actual_flow_means = np.stack([np.mean(np.concatenate([flows_by_attack_number_item[index][position:position+1,:] for index in item]), axis=0) for position, item in enumerate(indices_by_length)])
+
+	mean_ranges = np.stack([np.mean(np.concatenate([result_ranges_by_attack_number_item[index][position:position+1,:,:] for index in item]), axis=0) for position, item in enumerate(indices_by_length)])
+
+
+
 
 
 
