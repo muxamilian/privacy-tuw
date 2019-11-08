@@ -9,6 +9,7 @@ import argparse
 import random
 import time
 from functools import reduce
+from tqdm import tqdm
 
 import collections
 import itertools
@@ -87,7 +88,7 @@ def custom_dropout(input_tensor, dim, p):
 	relevant_dim_len = input_tensor.shape[dim]
 	d = torch.distributions.bernoulli.Bernoulli(torch.tensor([p]*relevant_dim_len))
 	s = d.sample().to(device)
-	# FIXME: Hack; should be changed
+	# FIXME: Hack; should be changed by changing the probability
 	inverse_s = 1.0-s
 
 	for i in range(dim):
@@ -125,8 +126,9 @@ class OurLSTMModule(nn.Module):
 		torch.zeros(self.n_layers, batch_size, self.hidden_size).to(self.device))
 
 	def forward(self, batch):
+		assert not opt.function=="test" or not self.training
 		if opt.averageFeaturesToPruneDuringTraining!=-1:
-			p = self.feature_dropout_probability if self.training else 0
+			p = self.feature_dropout_probability if self.training else 0.0
 			batch.data.data = custom_dropout(batch.data.data, 1, p)
 		lstm_out, new_hidden = self.lstm(batch, self.hidden)
 		if not self.forgetting:
@@ -279,7 +281,7 @@ def test():
 	results_by_attack_number = [list() for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 	sample_indices_by_attack_number = [list() for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 
-	for input_data, labels, categories in test_loader:
+	for input_data, labels, categories in tqdm(test_loader):
 
 		batch_size = input_data.sorted_indices.shape[0]
 		assert batch_size <= opt.batchSize, "batch_size: {}, opt.batchSize: {}".format(batch_size, opt.batchSize)
@@ -351,11 +353,6 @@ def test():
 	with open(file_name, "wb") as f:
 		pickle.dump({"results_by_attack_number": results_by_attack_number, "sample_indices_by_attack_number": sample_indices_by_attack_number}, f)
 
-	# print("results_by_attack_number", [(index, len(item)) for index, item in enumerate(results_by_attack_number)])
-
-	# print("per-packet accuracy", np.mean(np.concatenate(all_accuracies)))
-	# print("per-flow end-accuracy", np.mean(np.concatenate(all_end_accuracies)))
-
 # Right now this function replaces all values of one feature by random values sampled from the distribution of all features and looks how the accuracy changes.
 def feature_importance():
 	
@@ -378,7 +375,7 @@ def feature_importance():
 
 	results_by_attack_number = [list() for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 	randomized_results_by_attack_number = [[list() for _ in range(test_x.shape[0])] for _ in range(min(attack_numbers), max(attack_numbers)+1)]
-	
+
 	minmax = {feat_ind: (min(min(sample[i,feat_ind] for i in range(sample.shape[0])) for sample in x), max(max(sample[i,feat_ind] for i in range(sample.shape[0])) for sample in x)) for feat_ind in range(test_x.shape[0]) }
 
 	# Joint pdf for feature values in individual time steps and confidence in the same time step
@@ -396,9 +393,7 @@ def feature_importance():
 		output, seq_lens = lstm_module(input_data)
 
 		index_tensor = torch.arange(0, output.shape[0], dtype=torch.int64).unsqueeze(1).unsqueeze(2).repeat(1, output.shape[1], output.shape[2])
-
 		selection_tensor = seq_lens.unsqueeze(0).unsqueeze(2).repeat(index_tensor.shape[0], 1, index_tensor.shape[2])-1
-
 		mask = (index_tensor <= selection_tensor).byte().to(device)
 		# mask_exact = (index_tensor == selection_tensor).byte().to(device)
 
@@ -409,8 +404,6 @@ def feature_importance():
 		assert output.shape == labels_padded.shape
 
 		sigmoided_output = torch.sigmoid(output.detach())
-		# accuracy_items = torch.round(sigmoided_output[mask]) == labels[mask]
-		# end_accuracy_items = torch.round(sigmoided_output[mask_exact]) == labels[mask_exact]
 
 		# Data is (Sequence Index, Batch Index, Feature Index)
 		for batch_index in range(output.shape[1]):
@@ -425,7 +418,6 @@ def feature_importance():
 			# Now draw individual feature values at random and query the nn for modified flows
 			lstm_module.init_hidden(batch_size)
 
-			# print("input_data.data.shape", input_data.data.shape, "input_data.data[:,feature_index].shape", input_data.data[:,feature_index].shape, "torch.FloatTensor(np.random.choice(test_x[feature_index], size=input_data.data.shape[0])).shape", torch.FloatTensor(np.random.choice(test_x[feature_index], size=input_data.data.shape[0])).shape)
 			input_data_cloned = torch.nn.utils.rnn.PackedSequence(input_data.data.detach().clone(), input_data.batch_sizes, input_data.sorted_indices, input_data.unsorted_indices)
 			if feature_index in constant_features:
 				input_data_padded, input_data_lens = torch.nn.utils.rnn.pad_packed_sequence(input_data_cloned)
@@ -435,22 +427,7 @@ def feature_importance():
 				input_data_cloned.data.data[:,feature_index] = torch.FloatTensor(np.random.choice(test_x[feature_index], size=(input_data_cloned.data.data.shape[0]))).to(device)
 			output, seq_lens = lstm_module(input_data_cloned)
 
-			# index_tensor = torch.arange(0, output.shape[0], dtype=torch.int64).unsqueeze(1).unsqueeze(2).repeat(1, output.shape[1], output.shape[2])
-
-			# selection_tensor = seq_lens.unsqueeze(0).unsqueeze(2).repeat(index_tensor.shape[0], 1, index_tensor.shape[2])-1
-
-			# mask = (index_tensor <= selection_tensor).byte().to(device)
-			# # mask_exact = (index_tensor == selection_tensor).byte().to(device)
-
-			# # input_data, _ = torch.nn.utils.rnn.pad_packed_sequence(input_data)
-			# labels_padded, _ = torch.nn.utils.rnn.pad_packed_sequence(labels)
-			# categories_padded, _ = torch.nn.utils.rnn.pad_packed_sequence(categories)
-
-			# assert output.shape == labels_padded.shape
-
 			sigmoided_output = torch.sigmoid(output.detach())
-			# accuracy_items = torch.round(sigmoided_output[mask]) == labels[mask]
-			# end_accuracy_items = torch.round(sigmoided_output[mask_exact]) == labels[mask_exact]
 
 			# Data is (Sequence Index, Batch Index, Feature Index)
 			for batch_index in range(output.shape[1]):
@@ -488,23 +465,21 @@ def feature_importance():
 	with open(opt.dataroot[:-7] + '_mutinfos.pickle', 'wb') as f:
 		pickle.dump(mutinfos, f)
 
-	# print("results_by_attack_number", [(index, len(item)) for index, item in enumerate(results_by_attack_number)])
-
 def compute_mutinfo(joint_pdf):
 	joint_pdf = joint_pdf / np.sum(joint_pdf)
 	marg_1 = np.sum(joint_pdf, axis=1)
 	marg_1 /= np.sum(marg_1)
 	marg_2 = np.sum(joint_pdf, axis=0)
 	marg_2 /= np.sum(marg_2)
-	
+
 	# For 0 values, joint_pdf is 0 as well. Prevent NaNs in this case
 	marg_1[marg_1==0] = 1
 	marg_2[marg_2==0] = 1
 	nonzero_joint_pdf = joint_pdf.copy()
 	nonzero_joint_pdf[joint_pdf==0] = 1
-	
+
 	return np.sum(joint_pdf * np.log2( nonzero_joint_pdf / (marg_1[:,None] * marg_2[None,:])))
-	
+
 def adv_internal(in_training = False, attack_types_which_are_not_investigated_anymore=[]):
 	# FIXME: They suggest at least 10000 iterations with some specialized optimizer (Adam)
 	# with SGD we probably need even more.
