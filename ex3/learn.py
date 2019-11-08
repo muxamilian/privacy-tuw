@@ -381,7 +381,7 @@ def feature_importance():
 	# Joint pdf for feature values in individual time steps and confidence in the same time step
 	per_packet_pdf = np.zeros([opt.maxLength,test_x.shape[0],PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
 	# Joint pdf for constant feature values and end confidence
-	per_flow_pdf = np.zeros([max(constant_features),PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
+	per_flow_pdf = np.zeros([max(constant_features)+1,PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
 
 	for input_data, labels, categories in test_loader:
 
