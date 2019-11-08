@@ -83,39 +83,56 @@ def get_nth_split(dataset, n_fold, index):
 	train_indices, test_indices = indices[0:bottom]+indices[top:], indices[bottom:top]
 	return train_indices[:opt.maxSize], test_indices[:opt.maxSize]
 
-class OurLSTMModule(nn.Module):
+def custom_dropout(input_tensor, dim, p):
+	relevant_dim_len = input_tensor.shape[dim]
+	d = torch.distributions.bernoulli.Bernoulli(torch.tensor([p]*relevant_dim_len))
+	s = d.sample().to(device)
+	# FIXME: Hack; should be changed
+	inverse_s = 1.0-s
 
+	for i in range(dim):
+		inverse_s = inverse_s.unsqueeze(0)
+	for i in range(dim+1, len(input_tensor.shape)):
+		inverse_s = inverse_s.unsqueeze(i)
+	assert len(inverse_s.shape) == len(input_tensor.shape)
+
+	repetition_sequence = [1 if dim==orig_dim else input_tensor.shape[orig_dim] for orig_dim in range(len(input_tensor.shape))]
+	inverse_s = inverse_s.repeat(*repetition_sequence)
+	assert list(inverse_s.shape) == list(input_tensor.shape)
+
+	input_tensor = torch.mul(input_tensor, inverse_s)
+	input_tensor = torch.cat((input_tensor, inverse_s), dim=dim)
+	return input_tensor
+
+class OurLSTMModule(nn.Module):
 	def __init__(self, num_inputs, num_outputs, hidden_size, n_layers, batch_size, device, forgetting=False):
 		super(OurLSTMModule, self).__init__()
+		if opt.averageFeaturesToPruneDuringTraining!=-1:
+			self.feature_dropout_probability = opt.averageFeaturesToPruneDuringTraining/num_inputs
 		self.hidden_size = hidden_size
 		self.n_layers = n_layers
-		self.num_inputs = num_inputs
+		self.num_inputs = num_inputs if opt.averageFeaturesToPruneDuringTraining==-1 else num_inputs*2
 		self.num_outputs = num_outputs
 		self.batch_size = batch_size
 		self.device = device
-		self.lstm = nn.LSTM(input_size=num_inputs, hidden_size=hidden_size, num_layers=n_layers)
+		self.lstm = nn.LSTM(input_size=num_inputs if opt.averageFeaturesToPruneDuringTraining==-1 else num_inputs*2, hidden_size=hidden_size, num_layers=n_layers)
 		self.hidden = None
-		# self.i2h = nn.Linear(num_inputs, hidden_size)
 		self.h2o = nn.Linear(hidden_size, num_outputs)
-		# self.softmax = nn.Softmax(dim=2)
 		self.forgetting = forgetting
-
-	# batch has seq * batch * input_dim
 
 	def init_hidden(self, batch_size):
 		self.hidden = (torch.zeros(self.n_layers, batch_size, self.hidden_size).to(self.device),
 		torch.zeros(self.n_layers, batch_size, self.hidden_size).to(self.device))
 
 	def forward(self, batch):
-		# preprocessed_batch = self.i2h(batch.view(-1,batch.shape[-1])).view(batch.shape[0], batch.shape[1], self.hidden_size)
-		# print("batch", batch)
+		if opt.averageFeaturesToPruneDuringTraining!=-1:
+			p = self.feature_dropout_probability if self.training else 0
+			batch.data.data = custom_dropout(batch.data.data, 1, p)
 		lstm_out, new_hidden = self.lstm(batch, self.hidden)
 		if not self.forgetting:
 			self.hidden = new_hidden
 		lstm_out, seq_lens = torch.nn.utils.rnn.pad_packed_sequence(lstm_out)
-		# output = self.h2o(lstm_out.view(-1, self.hidden_size)).view(*lstm_out.shape[:2], self.num_outputs)
 		output = self.h2o(lstm_out)
-		# output = self.softmax(output)
 		return output, seq_lens
 
 def get_one_hot_vector(class_indices, num_classes, batch_size):
@@ -124,9 +141,6 @@ def get_one_hot_vector(class_indices, num_classes, batch_size):
 	return y_onehot.scatter_(1, class_indices.unsqueeze(1), 1)
 
 def custom_collate(seqs, things=(True, True, True)):
-	# print("seqs", seqs)
-	# quit()
-	# seqs = [(item[0][:opt.maxLength,:], item[1][:opt.maxLength,:]) for item in seqs]
 	seqs, labels, categories = zip(*seqs)
 	assert len(seqs) == len(labels) == len(categories)
 	return [collate_things(item) for item, thing in zip((seqs, labels, categories), things) if thing]
@@ -745,7 +759,8 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 		per_packet_accuracy = (np.mean(np.round(numpy_sigmoid(np.concatenate([np.array(item) for item in per_attack_results], axis=0)))))
 		per_flow_orig_accuracy = (np.mean(np.round(numpy_sigmoid(np.array([item[-1] for item in per_attack_orig_results])))))
 		per_flow_accuracy = (np.mean(np.round(numpy_sigmoid(np.array([item[-1] for item in per_attack_results])))))
-		dist = np.array([np.linalg.norm(per_attack_orig_item-per_attack_modified_item, ord=1).mean() for per_attack_orig_item, per_attack_modified_item in zip(per_attack_orig, per_attack_modified)]).mean()
+		# TODO: l1 or l2 norm?
+		dist = np.array([np.linalg.norm((per_attack_orig_item-per_attack_modified_item).flatten(), ord=1).mean() for per_attack_orig_item, per_attack_modified_item in zip(per_attack_orig, per_attack_modified)]).mean()
 
 		print("Attack type: {}; number of samples: {}, average dist: {}, packet confidence: {}/{}, flow confidence: {}/{}".format(reverse_mapping[attack_number], len(per_attack_results), dist, per_packet_accuracy, per_packet_orig_accuracy, per_flow_accuracy, per_flow_orig_accuracy))
 
@@ -800,7 +815,8 @@ def adv_until_less_than_half():
 				final_ratios[attack_index] = ratio
 
 				successfully_changed_flows_mask = (np.round(numpy_sigmoid(np.array([item[-1] for item in prev_results[i][attack_index]]))) == 0).flatten()
-				distances = np.array([np.linalg.norm(orig_flows[attack_index][flow_index]-flow, ord=2) for flow_index, flow in enumerate(prev_flows[i][attack_index])])
+				# TODO: l1 or l2 norm?
+				distances = np.array([np.linalg.norm((orig_flows[attack_index][flow_index]-flow).flatten(), ord=1) for flow_index, flow in enumerate(prev_flows[i][attack_index])])
 				argsorted_distances = np.argsort(distances)
 				correct_indices = argsorted_distances[successfully_changed_flows_mask[argsorted_distances]]
 				lower_part = correct_indices[:int(math.ceil(len(correct_indices)*min(ratio, THRESHOLD)))]
@@ -1150,6 +1166,7 @@ if __name__=="__main__":
 	parser.add_argument('--advMethod', type=str, default="cw", help='which adversarial samples method to use; options are: "cw", "pgd"')
 	parser.add_argument('--iterationCount', type=int, default=100, help='number of iterations for creating adversarial samples')
 	parser.add_argument('--pathToAdvOutput', type=str, default="", help='path to adv output to be used in pred_plots2')
+	parser.add_argument('--averageFeaturesToPruneDuringTraining', type=int, default=-1, help='average number of features that should be "dropped out"; -1 to disable (default)')
 	# parser.add_argument('--nSamples', type=int, default=1, help='number of items to sample for the feature importance metric')
 
 	opt = parser.parse_args()
