@@ -345,6 +345,7 @@ def test():
 # Right now this function replaces all values of one feature by random values sampled from the distribution of all features and looks how the accuracy changes.
 def feature_importance():
 
+	# These features are constant throughout a flow
 	constant_features = [0,1,2]
 	n_fold = opt.nFold
 	fold = opt.fold
@@ -359,9 +360,15 @@ def feature_importance():
 
 	results_by_attack_number = [list() for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 	randomized_results_by_attack_number = [[list() for _ in range(test_x.shape[0])] for _ in range(min(attack_numbers), max(attack_numbers)+1)]
+	
+	minmax = {feat_ind: (min(min(sample[i,feat_ind] for i in range(sample.shape[0])) for sample in x), max(max(sample[i,feat_ind] for i in range(sample.shape[0])) for sample in x)) for feat_ind in range(test_x.shape[0]) }
+	joint_pdf_pp = np.zeros([test_x.shape[0],50,2])
+	joint_pdf_pip = np.zeros([opt.maxLength,test_x.shape[0],50,2])
+	joint_pdf_pf = np.zeros([3,50,2])
 
 	for input_data, labels, categories in test_loader:
 
+		# Query neural network for unmodified flows
 		batch_size = input_data.sorted_indices.shape[0]
 		assert batch_size <= opt.batchSize, "batch_size: {}, opt.batchSize: {}".format(batch_size, opt.batchSize)
 		lstm_module.init_hidden(batch_size)
@@ -395,12 +402,15 @@ def feature_importance():
 			results_by_attack_number[flow_category].append(flow_output)
 
 		for feature_index in range(test_x.shape[0]):
+			# Now draw individual feature values at random and query the nn for modified flows
 			lstm_module.init_hidden(batch_size)
 
 			# print("input_data.data.shape", input_data.data.shape, "input_data.data[:,feature_index].shape", input_data.data[:,feature_index].shape, "torch.FloatTensor(np.random.choice(test_x[feature_index], size=input_data.data.shape[0])).shape", torch.FloatTensor(np.random.choice(test_x[feature_index], size=input_data.data.shape[0])).shape)
 			input_data_cloned = torch.nn.utils.rnn.PackedSequence(input_data.data.detach().clone(), input_data.batch_sizes, input_data.sorted_indices, input_data.unsorted_indices)
 			if feature_index in constant_features:
-				input_data_cloned.data.data[:,feature_index] = torch.FloatTensor([ test_data[np.random.randint(0,len(test_data))][0][0,feature_index] ]).to(device)
+				input_data_padded, input_data_lens = torch.nn.utils.rnn.pad_packed_sequence(input_data_cloned)
+				input_data_padded[:,:,feature_index] = torch.FloatTensor(np.random.choice(test_x[feature_index], size=(1,input_data_padded.shape[1]))).to(device)
+				input_data_cloned = torch.nn.utils.rnn.pack_padded_sequence(input_data_padded, input_data_lens, enforce_sorted=False)
 			else:
 				input_data_cloned.data.data[:,feature_index] = torch.FloatTensor(np.random.choice(test_x[feature_index], size=(input_data_cloned.data.data.shape[0]))).to(device)
 			output, seq_lens = lstm_module(input_data_cloned)
@@ -425,6 +435,15 @@ def feature_importance():
 			# Data is (Sequence Index, Batch Index, Feature Index)
 			for batch_index in range(output.shape[1]):
 				flow_length = seq_lens[batch_index]
+				if feature_index < 3:
+					bin1 = int(torch.round((joint_pdf_pf.shape[1]-1) * (input_data_padded[0,batch_index,feature_index] - minmax[feature_index][0]) / (minmax[feature_index][1]-minmax[feature_index][0])))
+					bin2 = int(torch.round((joint_pdf_pf.shape[2]-1) * sigmoided_output[flow_length-1,batch_index,0]))
+					joint_pdf_pf[feature_index,bin1,bin2] += 1
+					
+				bin1 = (torch.round((joint_pdf_pp.shape[1]-1) * (input_data_padded[:flow_length,batch_index,feature_index] - minmax[feature_index][0]) / (minmax[feature_index][1]-minmax[feature_index][0]))).cpu().numpy().astype(int)
+				bin2 = (torch.round((joint_pdf_pp.shape[2]-1) * sigmoided_output[:flow_length,batch_index,0])).cpu().numpy().astype(int)
+				joint_pdf_pp[feature_index,bin1,bin2] += 1
+				joint_pdf_pip[np.arange(bin1.size),feature_index,bin1,bin2] += 1
 				flow_output = (torch.round(sigmoided_output[:flow_length,batch_index,:]) == labels_padded[:flow_length,batch_index,:]).detach().cpu().numpy()
 				assert (categories_padded[0, batch_index,:] == categories_padded[:flow_length, batch_index,:]).all()
 				flow_category = int(categories_padded[0, batch_index,:].squeeze().item())
@@ -433,12 +452,39 @@ def feature_importance():
 
 	accuracy = np.mean(np.concatenate([subitem for item in results_by_attack_number for subitem in item], axis=0))
 	print("accuracy", accuracy)
+	mutinfos = []
 	for feature_index in range(test_x.shape[0]):
 		accuracy_for_feature = np.mean(np.concatenate([feature for attack_type in randomized_results_by_attack_number for feature in attack_type[feature_index]]))
 		print("accuracy_for_feature", feature_index, accuracy_for_feature)
+		if feature_index < 3:
+			print("mutual information for pf feature", feature_index, compute_mutinfo(joint_pdf_pf[feature_index,:,:]))
+		print("mutual information for pp feature", feature_index, compute_mutinfo(joint_pdf_pp[feature_index,:,:]))
+		mutinfos.append([
+			compute_mutinfo(joint_pdf_pp[feature_index,:,:]),
+			[ compute_mutinfo(joint_pdf_pip[timestep,feature_index,:,:]) for timestep in range(opt.maxLength) ]
+		])
+		if feature_index < 3:
+			mutinfos[-1].append(compute_mutinfo(joint_pdf_pf[feature_index,:,:]))
+
+	pickle.dump(mutinfos, open('mutinfos.pickle', 'wb'))
 
 	# print("results_by_attack_number", [(index, len(item)) for index, item in enumerate(results_by_attack_number)])
 
+def compute_mutinfo(joint_pdf):
+	joint_pdf = joint_pdf / np.sum(joint_pdf)
+	marg_1 = np.sum(joint_pdf, axis=1)
+	marg_1 /= np.sum(marg_1)
+	marg_2 = np.sum(joint_pdf, axis=0)
+	marg_2 /= np.sum(marg_2)
+	
+	# For 0 values, joint_pdf is 0 as well. Prevent NaNs in this case
+	marg_1[marg_1==0] = 1
+	marg_2[marg_2==0] = 1
+	nonzero_joint_pdf = joint_pdf.copy()
+	nonzero_joint_pdf[joint_pdf==0] = 1
+	
+	return np.sum(joint_pdf * np.log2( nonzero_joint_pdf / (marg_1[:,None] * marg_2[None,:])))
+	
 def adv_internal(in_training = False, attack_types_which_are_not_investigated_anymore=[]):
 	# FIXME: They suggest at least 10000 iterations with some specialized optimizer (Adam)
 	# with SGD we probably need even more.
