@@ -358,6 +358,10 @@ def test():
 
 # Right now this function replaces all values of one feature by random values sampled from the distribution of all features and looks how the accuracy changes.
 def feature_importance():
+	
+	# Number of bins for probability density functions
+	PDF_FEATURE_BINS = 50
+	PDF_CONFIDENCE_BINS = 2
 
 	# These features are constant throughout a flow
 	constant_features = [0,1,2]
@@ -376,9 +380,11 @@ def feature_importance():
 	randomized_results_by_attack_number = [[list() for _ in range(test_x.shape[0])] for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 	
 	minmax = {feat_ind: (min(min(sample[i,feat_ind] for i in range(sample.shape[0])) for sample in x), max(max(sample[i,feat_ind] for i in range(sample.shape[0])) for sample in x)) for feat_ind in range(test_x.shape[0]) }
-	joint_pdf_pp = np.zeros([test_x.shape[0],50,2])
-	joint_pdf_pip = np.zeros([opt.maxLength,test_x.shape[0],50,2])
-	joint_pdf_pf = np.zeros([3,50,2])
+
+	# Joint pdf for feature values in individual time steps and confidence in the same time step
+	per_packet_pdf = np.zeros([opt.maxLength,test_x.shape[0],PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
+	# Joint pdf for constant feature values and end confidence
+	per_flow_pdf = np.zeros([max(constant_features),PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
 
 	for input_data, labels, categories in test_loader:
 
@@ -449,15 +455,14 @@ def feature_importance():
 			# Data is (Sequence Index, Batch Index, Feature Index)
 			for batch_index in range(output.shape[1]):
 				flow_length = seq_lens[batch_index]
-				if feature_index < 3:
-					bin1 = int(torch.round((joint_pdf_pf.shape[1]-1) * (input_data_padded[0,batch_index,feature_index] - minmax[feature_index][0]) / (minmax[feature_index][1]-minmax[feature_index][0])))
-					bin2 = int(torch.round((joint_pdf_pf.shape[2]-1) * sigmoided_output[flow_length-1,batch_index,0]))
-					joint_pdf_pf[feature_index,bin1,bin2] += 1
+				if feature_index in constant_features:
+					bin1 = int(torch.round((PDF_FEATURE_BINS-1) * (input_data_padded[0,batch_index,feature_index] - minmax[feature_index][0]) / (minmax[feature_index][1]-minmax[feature_index][0])))
+					bin2 = int(torch.round((PDF_CONFIDENCE_BINS-1) * sigmoided_output[flow_length-1,batch_index,0]))
+					per_flow_pdf[feature_index,bin1,bin2] += 1
 					
-				bin1 = (torch.round((joint_pdf_pp.shape[1]-1) * (input_data_padded[:flow_length,batch_index,feature_index] - minmax[feature_index][0]) / (minmax[feature_index][1]-minmax[feature_index][0]))).cpu().numpy().astype(int)
-				bin2 = (torch.round((joint_pdf_pp.shape[2]-1) * sigmoided_output[:flow_length,batch_index,0])).cpu().numpy().astype(int)
-				joint_pdf_pp[feature_index,bin1,bin2] += 1
-				joint_pdf_pip[np.arange(bin1.size),feature_index,bin1,bin2] += 1
+				bin1 = (torch.round((PDF_FEATURE_BINS-1) * (input_data_padded[:flow_length,batch_index,feature_index] - minmax[feature_index][0]) / (minmax[feature_index][1]-minmax[feature_index][0]))).cpu().numpy().astype(int)
+				bin2 = (torch.round((PDF_CONFIDENCE_BINS-1) * sigmoided_output[:flow_length,batch_index,0])).cpu().numpy().astype(int)
+				per_packet_pdf[np.arange(bin1.size),feature_index,bin1,bin2] += 1
 				flow_output = (torch.round(sigmoided_output[:flow_length,batch_index,:]) == labels_padded[:flow_length,batch_index,:]).detach().cpu().numpy()
 				assert (categories_padded[0, batch_index,:] == categories_padded[:flow_length, batch_index,:]).all()
 				flow_category = int(categories_padded[0, batch_index,:].squeeze().item())
@@ -470,17 +475,18 @@ def feature_importance():
 	for feature_index in range(test_x.shape[0]):
 		accuracy_for_feature = np.mean(np.concatenate([feature for attack_type in randomized_results_by_attack_number for feature in attack_type[feature_index]]))
 		print("accuracy_for_feature", feature_index, accuracy_for_feature)
-		if feature_index < 3:
-			print("mutual information for pf feature", feature_index, compute_mutinfo(joint_pdf_pf[feature_index,:,:]))
-		print("mutual information for pp feature", feature_index, compute_mutinfo(joint_pdf_pp[feature_index,:,:]))
+		if feature_index in constant_features:
+			print("mutual information for pf feature", feature_index, compute_mutinfo(per_flow_pdf[feature_index,:,:]))
+		print("mutual information for pp feature", feature_index, compute_mutinfo(np.sum(per_packet_pdf[:,feature_index,:,:],axis=0)))
 		mutinfos.append([
-			compute_mutinfo(joint_pdf_pp[feature_index,:,:]),
-			[ compute_mutinfo(joint_pdf_pip[timestep,feature_index,:,:]) for timestep in range(opt.maxLength) ]
+			compute_mutinfo(np.sum(per_packet_pdf[:,feature_index,:,:], axis=0)),
+			[ compute_mutinfo(per_packet_pdf[timestep,feature_index,:,:]) for timestep in range(opt.maxLength) ]
 		])
-		if feature_index < 3:
-			mutinfos[-1].append(compute_mutinfo(joint_pdf_pf[feature_index,:,:]))
+		if feature_index in constant_features:
+			mutinfos[-1].append(compute_mutinfo(per_flow_pdf[feature_index,:,:]))
 
-	pickle.dump(mutinfos, open('mutinfos.pickle', 'wb'))
+	with open(opt.dataroot[:-7] + '_mutinfos.pickle', 'wb') as f:
+		pickle.dump(mutinfos, f)
 
 	# print("results_by_attack_number", [(index, len(item)) for index, item in enumerate(results_by_attack_number)])
 
