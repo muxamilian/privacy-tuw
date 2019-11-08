@@ -9,6 +9,7 @@ import argparse
 import random
 import time
 from functools import reduce
+from tqdm import tqdm
 
 import collections
 import itertools
@@ -87,7 +88,7 @@ def custom_dropout(input_tensor, dim, p):
 	relevant_dim_len = input_tensor.shape[dim]
 	d = torch.distributions.bernoulli.Bernoulli(torch.tensor([p]*relevant_dim_len))
 	s = d.sample().to(device)
-	# FIXME: Hack; should be changed
+	# FIXME: Hack; should be changed by changing the probability
 	inverse_s = 1.0-s
 
 	for i in range(dim):
@@ -125,8 +126,9 @@ class OurLSTMModule(nn.Module):
 		torch.zeros(self.n_layers, batch_size, self.hidden_size).to(self.device))
 
 	def forward(self, batch):
+		assert not opt.function=="test" or not self.training
 		if opt.averageFeaturesToPruneDuringTraining!=-1:
-			p = self.feature_dropout_probability if self.training else 0
+			p = self.feature_dropout_probability if self.training else 0.0
 			batch.data.data = custom_dropout(batch.data.data, 1, p)
 		lstm_out, new_hidden = self.lstm(batch, self.hidden)
 		if not self.forgetting:
@@ -279,7 +281,7 @@ def test():
 	results_by_attack_number = [list() for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 	sample_indices_by_attack_number = [list() for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 
-	for input_data, labels, categories in test_loader:
+	for input_data, labels, categories in tqdm(test_loader):
 
 		batch_size = input_data.sorted_indices.shape[0]
 		assert batch_size <= opt.batchSize, "batch_size: {}, opt.batchSize: {}".format(batch_size, opt.batchSize)
