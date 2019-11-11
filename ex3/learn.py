@@ -84,32 +84,33 @@ def get_nth_split(dataset, n_fold, index):
 	train_indices, test_indices = indices[0:bottom]+indices[top:], indices[bottom:top]
 	return train_indices[:opt.maxSize], test_indices[:opt.maxSize]
 
-def custom_dropout(input_tensor, dim, p):
-	relevant_dim_len = input_tensor.shape[dim]
-	d = torch.distributions.bernoulli.Bernoulli(torch.tensor([p]*relevant_dim_len))
-	s = d.sample().to(device)
-	# FIXME: Hack; should be changed by changing the probability
-	inverse_s = 1.0-s
+# Shouldn't be used anymore
+# def custom_dropout(input_tensor, dim, p):
+# 	relevant_dim_len = input_tensor.shape[dim]
+# 	d = torch.distributions.bernoulli.Bernoulli(torch.tensor([p]*relevant_dim_len))
+# 	s = d.sample().to(device)
+# 	# FIXME: Hack; should be changed by changing the probability
+# 	inverse_s = 1.0-s
 
-	for i in range(dim):
-		inverse_s = inverse_s.unsqueeze(0)
-	for i in range(dim+1, len(input_tensor.shape)):
-		inverse_s = inverse_s.unsqueeze(i)
-	assert len(inverse_s.shape) == len(input_tensor.shape)
+# 	for i in range(dim):
+# 		inverse_s = inverse_s.unsqueeze(0)
+# 	for i in range(dim+1, len(input_tensor.shape)):
+# 		inverse_s = inverse_s.unsqueeze(i)
+# 	assert len(inverse_s.shape) == len(input_tensor.shape)
 
-	repetition_sequence = [1 if dim==orig_dim else input_tensor.shape[orig_dim] for orig_dim in range(len(input_tensor.shape))]
-	inverse_s = inverse_s.repeat(*repetition_sequence)
-	assert list(inverse_s.shape) == list(input_tensor.shape)
+# 	repetition_sequence = [1 if dim==orig_dim else input_tensor.shape[orig_dim] for orig_dim in range(len(input_tensor.shape))]
+# 	inverse_s = inverse_s.repeat(*repetition_sequence)
+# 	assert list(inverse_s.shape) == list(input_tensor.shape)
 
-	input_tensor = torch.mul(input_tensor, inverse_s)
-	input_tensor = torch.cat((input_tensor, inverse_s), dim=dim)
-	return input_tensor
+# 	input_tensor = torch.mul(input_tensor, inverse_s)
+# 	input_tensor = torch.cat((input_tensor, inverse_s), dim=dim)
+# 	return input_tensor
 
 class OurLSTMModule(nn.Module):
 	def __init__(self, num_inputs, num_outputs, hidden_size, n_layers, batch_size, device, forgetting=False):
 		super(OurLSTMModule, self).__init__()
-		if opt.averageFeaturesToPruneDuringTraining!=-1:
-			self.feature_dropout_probability = opt.averageFeaturesToPruneDuringTraining/num_inputs
+		# if opt.averageFeaturesToPruneDuringTraining!=-1:
+		# 	self.feature_dropout_probability = opt.averageFeaturesToPruneDuringTraining/num_inputs
 		self.hidden_size = hidden_size
 		self.n_layers = n_layers
 		self.num_inputs = num_inputs if opt.averageFeaturesToPruneDuringTraining==-1 else num_inputs*2
@@ -127,9 +128,9 @@ class OurLSTMModule(nn.Module):
 
 	def forward(self, batch):
 		assert not opt.function=="test" or not self.training
-		if opt.averageFeaturesToPruneDuringTraining!=-1:
-			p = self.feature_dropout_probability if self.training else 0.0
-			batch.data.data = custom_dropout(batch.data.data, 1, p)
+		# if opt.averageFeaturesToPruneDuringTraining!=-1:
+		# 	p = self.feature_dropout_probability if self.training else 0.0
+		# 	batch.data.data = custom_dropout(batch.data.data, 1, p)
 		lstm_out, new_hidden = self.lstm(batch, self.hidden)
 		if not self.forgetting:
 			self.hidden = new_hidden
@@ -145,13 +146,35 @@ def get_one_hot_vector(class_indices, num_classes, batch_size):
 def custom_collate(seqs, things=(True, True, True)):
 	seqs, labels, categories = zip(*seqs)
 	assert len(seqs) == len(labels) == len(categories)
-	return [collate_things(item) for item, thing in zip((seqs, labels, categories), things) if thing]
+	return [collate_things(item, index==0) for index, (item, thing) in enumerate(zip((seqs, labels, categories), things)) if thing]
 
 def unpad_padded_sequences(sequences, lengths):
 	unbound = [seq[:len] for seq, len in zip(torch.unbind(sequences, 1), lengths)]
 	return unbound
 
-def collate_things(seqs):
+def bernoullize_seq(seq, p):
+	relevant_dim_len = seq.shape[1]
+	d = torch.distributions.bernoulli.Bernoulli(torch.tensor([p]*relevant_dim_len))
+	s = d.sample()
+	# FIXME: Hack; should be changed by changing the probability
+	inverse_s = 1.0-s
+
+	inverse_s = inverse_s.unsqueeze(0)
+	inverse_s = inverse_s.repeat(seq.shape[0], 1)
+
+	seq = torch.mul(seq, inverse_s)
+	seq = torch.cat((seq, inverse_s), dim=1)
+
+	return seq
+
+def collate_things(seqs, is_seqs):
+	# import pdb; pdb.set_trace()
+	if is_seqs and opt.averageFeaturesToPruneDuringTraining!=-1:
+		assert not opt.function=="dropout_feature_importance" or not lstm_module.training
+		feature_dropout_probability = opt.averageFeaturesToPruneDuringTraining/seqs[0].shape[1]
+		p = feature_dropout_probability if lstm_module.training else 0.0
+		seqs = tuple(bernoullize_seq(item, p) for item in seqs)
+
 	seq_lengths = torch.LongTensor([len(seq) for seq in seqs]).to(device)
 	seq_tensor = torch.nn.utils.rnn.pad_sequence(seqs).to(device)
 
@@ -352,6 +375,90 @@ def test():
 
 	with open(file_name, "wb") as f:
 		pickle.dump({"results_by_attack_number": results_by_attack_number, "sample_indices_by_attack_number": sample_indices_by_attack_number}, f)
+
+# This function takes a model that was trained with feature dropout and can compute feature importance using that model.
+def dropout_feature_importance():
+
+	# These features are constant throughout a flow
+	n_fold = opt.nFold
+	fold = opt.fold
+	lstm_module.eval()
+
+	assert opt.averageFeaturesToPruneDuringTraining!=-1
+
+	_, test_indices = get_nth_split(dataset, n_fold, fold)
+	test_data = torch.utils.data.Subset(dataset, test_indices)
+	test_x = np.concatenate([item[0][:,:] for item in test_data], axis=0).transpose(1,0)
+	test_loader = torch.utils.data.DataLoader(test_data, batch_size=opt.batchSize, shuffle=False, collate_fn=custom_collate)
+
+	attack_numbers = mapping.values()
+
+	results_by_attack_number = [list() for _ in range(min(attack_numbers), max(attack_numbers)+1)]
+	dropout_results_by_attack_number = [[list() for _ in range(test_x.shape[0])] for _ in range(min(attack_numbers), max(attack_numbers)+1)]
+
+	for input_data, labels, categories in test_loader:
+
+		# Query neural network for unmodified flows
+		batch_size = input_data.sorted_indices.shape[0]
+		assert batch_size <= opt.batchSize, "batch_size: {}, opt.batchSize: {}".format(batch_size, opt.batchSize)
+		lstm_module.init_hidden(batch_size)
+
+		output, seq_lens = lstm_module(input_data)
+
+		index_tensor = torch.arange(0, output.shape[0], dtype=torch.int64).unsqueeze(1).unsqueeze(2).repeat(1, output.shape[1], output.shape[2])
+		selection_tensor = seq_lens.unsqueeze(0).unsqueeze(2).repeat(index_tensor.shape[0], 1, index_tensor.shape[2])-1
+		mask = (index_tensor <= selection_tensor).byte().to(device)
+		# mask_exact = (index_tensor == selection_tensor).byte().to(device)
+
+		# input_data, _ = torch.nn.utils.rnn.pad_packed_sequence(input_data)
+		labels_padded, _ = torch.nn.utils.rnn.pad_packed_sequence(labels)
+		categories_padded, _ = torch.nn.utils.rnn.pad_packed_sequence(categories)
+
+		assert output.shape == labels_padded.shape
+
+		sigmoided_output = torch.sigmoid(output.detach())
+
+		# Data is (Sequence Index, Batch Index, Feature Index)
+		for batch_index in range(output.shape[1]):
+			flow_length = seq_lens[batch_index]
+			flow_output = (torch.round(sigmoided_output[:flow_length,batch_index,:]) == labels_padded[:flow_length,batch_index,:]).detach().cpu().numpy()
+			assert (categories_padded[0, batch_index,:] == categories_padded[:flow_length, batch_index,:]).all()
+			flow_category = int(categories_padded[0, batch_index,:].squeeze().item())
+
+			results_by_attack_number[flow_category].append(flow_output)
+
+		for feature_index in range(test_x.shape[0]):
+			# Now draw individual feature values at random and query the nn for modified flows
+			lstm_module.init_hidden(batch_size)
+
+			input_data_cloned = torch.nn.utils.rnn.PackedSequence(input_data.data.detach().clone(), input_data.batch_sizes, input_data.sorted_indices, input_data.unsorted_indices)
+			input_data_cloned.data.data[:,feature_index] = 0.0
+			offset = input_data_cloned.data.data.shape[1]/2
+			assert offset == int(offset), f"{offset}, {int(offset)}"
+			input_data_cloned.data.data[:,int(offset)+feature_index] = 0.0
+
+			output, seq_lens = lstm_module(input_data_cloned)
+
+			sigmoided_output = torch.sigmoid(output.detach())
+
+			# Data is (Sequence Index, Batch Index, Feature Index)
+			for batch_index in range(output.shape[1]):
+				flow_length = seq_lens[batch_index]
+
+				flow_output = (torch.round(sigmoided_output[:flow_length,batch_index,:]) == labels_padded[:flow_length,batch_index,:]).detach().cpu().numpy()
+
+				assert (categories_padded[0, batch_index,:] == categories_padded[:flow_length, batch_index,:]).all()
+
+				flow_category = int(categories_padded[0, batch_index,:].squeeze().item())
+
+				dropout_results_by_attack_number[flow_category][feature_index].append(flow_output)
+
+	accuracy = np.mean(np.concatenate([subitem for item in results_by_attack_number for subitem in item], axis=0))
+	print("accuracy", accuracy)
+	mutinfos = []
+	for feature_index in range(test_x.shape[0]):
+		accuracy_for_feature = np.mean(np.concatenate([feature for attack_type in dropout_results_by_attack_number for feature in attack_type[feature_index]]))
+		print("accuracy_for_feature", feature_index, accuracy_for_feature)
 
 # Right now this function replaces all values of one feature by random values sampled from the distribution of all features and looks how the accuracy changes.
 def feature_importance():
