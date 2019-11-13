@@ -169,6 +169,7 @@ def collate_things(seqs, is_seqs):
 	# import pdb; pdb.set_trace()
 	if is_seqs and opt.averageFeaturesToPruneDuringTraining!=-1:
 		assert not opt.function=="dropout_feature_importance" or not lstm_module.training
+		assert not opt.function=="test" or not lstm_module.training
 		feature_dropout_probability = opt.averageFeaturesToPruneDuringTraining/seqs[0].shape[1]
 		p = feature_dropout_probability if lstm_module.training else 0.0
 		seqs = tuple(bernoullize_seq(item, p) for item in seqs)
@@ -300,6 +301,7 @@ def test():
 	reverse_mapping = {v: k for k, v in mapping.items()}
 
 	results_by_attack_number = [list() for _ in range(min(attack_numbers), max(attack_numbers)+1)]
+	label_by_attack_number = [list() for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 	sample_indices_by_attack_number = [list() for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 
 	for input_data, labels, categories in tqdm(test_loader):
@@ -339,8 +341,10 @@ def test():
 			flow_output = output[:flow_length,batch_index,:].detach().cpu().numpy()
 			assert (categories[0, batch_index,:] == categories[:flow_length, batch_index,:]).all()
 			flow_category = int(categories[0, batch_index,:].squeeze().item())
+			flow_label = int(labels[0, batch_index,:].squeeze().item())
 
 			results_by_attack_number[flow_category].append(np.concatenate((flow_input, flow_output), axis=-1))
+			label_by_attack_number[flow_category] = flow_label
 			sample_indices_by_attack_number[flow_category].append(test_indices[samples])
 
 			samples += 1
@@ -348,10 +352,7 @@ def test():
 	file_name = opt.dataroot[:-7]+"_prediction_outcomes_{}_{}.pickle".format(opt.fold, opt.nFold)
 
 	all_results_concatenated = [(np.concatenate(item, axis=0) if len(item) > 0 else []) for item in results_by_attack_number]
-	attack_by_attack_number = [[(0 if reverse_mapping[index]=="Normal" else 1)]*len(item) for index, item in enumerate(all_results_concatenated)]
-
-	# print("all_results_concatenated", [len(item) for item in all_results_concatenated])
-	# print("attack_by_attack_number", [len(item) for item in attack_by_attack_number])
+	attack_by_attack_number = [[label_by_attack_number[index]]*len(item) for index, item in enumerate(all_results_concatenated)]
 
 	all_predictions = (np.round(numpy_sigmoid(np.concatenate([item for item in all_results_concatenated if item!=[]], axis=0))).astype(int))[:,-1]
 	all_labels = [subitem for item in attack_by_attack_number for subitem in item]
@@ -360,10 +361,7 @@ def test():
 	output_scores(all_labels, all_predictions)
 
 	all_results_concatenated = [(np.concatenate([subitem[-1:,:] for subitem in item], axis=0) if len(item) > 0 else []) for item in results_by_attack_number]
-	attack_by_attack_number = [[(0 if reverse_mapping[index]=="Normal" else 1)]*len(item) for index, item in enumerate(all_results_concatenated)]
-
-	# print("all_results_concatenated", [len(item) for item in all_results_concatenated])
-	# print("attack_by_attack_number", [len(item) for item in attack_by_attack_number])
+	attack_by_attack_number = [[label_by_attack_number[index]]*len(item) for index, item in enumerate(all_results_concatenated)]
 
 	all_predictions = (np.round(numpy_sigmoid(np.concatenate([item for item in all_results_concatenated if item!=[]], axis=0))).astype(int))[:,-1]
 	all_labels = [subitem for item in attack_by_attack_number for subitem in item]
@@ -1406,7 +1404,7 @@ if __name__=="__main__":
 
 	dataset = OurDataset(x, y, categories)
 
-	batchSize = 1 if opt.function == 'pred_plots' else opt.batchSize # fixme
+	batchSize = 1 if opt.function == 'pred_plots' else opt.batchSize # FIXME Max: Why? What's wrong?
 	lstm_module = OurLSTMModule(x[0].shape[-1], y[0].shape[-1], HIDDEN_SIZE, N_LAYERS, batchSize, device).to(device)
 
 	if opt.net != '':
