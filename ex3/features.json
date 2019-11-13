@@ -1,0 +1,1 @@
+["sourceTransportPort", "destinationTransportPort", "protocolIdentifier", "accumulate(ipTotalLength)", "accumulate(_interPacketTimeNanoseconds)", "accumulate(flowDirection)", "SYN", "FIN", "RST", "PSH", "ACK", "URG", "ECE", "CWR", "NS"]

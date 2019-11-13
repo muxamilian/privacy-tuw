@@ -42,8 +42,6 @@ def numpy_sigmoid(x):
 
 class OurDataset(Dataset):
 	def __init__(self, data, labels, categories):
-		# assert not np.isnan(data).any(), "datum is nan: {}".format(data)
-		# assert not np.isnan(labels).any(), "labels is nan: {}".format(labels)
 		self.data = data
 		self.labels = labels
 		self.categories = categories
@@ -376,6 +374,97 @@ def test():
 	with open(file_name, "wb") as f:
 		pickle.dump({"results_by_attack_number": results_by_attack_number, "sample_indices_by_attack_number": sample_indices_by_attack_number}, f)
 
+# This function takes a model that was trained with feature dropout and can compute features that are contain overlapping information (currently it looks at all combinations of features).
+def dropout_feature_correlation():
+
+	baseline_accuracy, accuracy_by_feature = dropout_feature_importance()
+
+	# These features are constant throughout a flow
+	n_fold = opt.nFold
+	fold = opt.fold
+	lstm_module.eval()
+
+	assert opt.averageFeaturesToPruneDuringTraining!=-1
+
+	_, test_indices = get_nth_split(dataset, n_fold, fold)
+	test_data = torch.utils.data.Subset(dataset, test_indices)
+	test_x = np.concatenate([item[0][:,:] for item in test_data], axis=0).transpose(1,0)
+	test_loader = torch.utils.data.DataLoader(test_data, batch_size=opt.batchSize, shuffle=False, collate_fn=custom_collate)
+
+	attack_numbers = mapping.values()
+
+	dropout_results_by_attack_number = [{(i,j):[] for i in range(test_x.shape[0]) for j in range(i+1, test_x.shape[0])} for _ in range(min(attack_numbers), max(attack_numbers)+1)]
+
+	for input_data, labels, categories in test_loader:
+
+		batch_size = input_data.sorted_indices.shape[0]
+		assert batch_size <= opt.batchSize, "batch_size: {}, opt.batchSize: {}".format(batch_size, opt.batchSize)
+
+		# input_data, _ = torch.nn.utils.rnn.pad_packed_sequence(input_data)
+		labels_padded, _ = torch.nn.utils.rnn.pad_packed_sequence(labels)
+		categories_padded, _ = torch.nn.utils.rnn.pad_packed_sequence(categories)
+
+		for feat1 in range(test_x.shape[0]):
+			for feat2 in range(feat1+1, test_x.shape[0]):
+				assert feat1!=feat2
+				# Now draw individual feature values at random and query the nn for modified flows
+				lstm_module.init_hidden(batch_size)
+
+				input_data_cloned = torch.nn.utils.rnn.PackedSequence(input_data.data.detach().clone(), input_data.batch_sizes, input_data.sorted_indices, input_data.unsorted_indices)
+				input_data_cloned.data.data[:,feat1] = 0.0
+				input_data_cloned.data.data[:,feat2] = 0.0
+				offset = input_data_cloned.data.data.shape[1]/2
+				assert offset == int(offset), f"{offset}, {int(offset)}"
+				input_data_cloned.data.data[:,int(offset)+feat1] = 0.0
+				input_data_cloned.data.data[:,int(offset)+feat2] = 0.0
+
+				output, seq_lens = lstm_module(input_data_cloned)
+				assert output.shape == labels_padded.shape
+
+				sigmoided_output = torch.sigmoid(output.detach())
+
+				# Data is (Sequence Index, Batch Index, Feature Index)
+				for batch_index in range(output.shape[1]):
+					flow_length = seq_lens[batch_index]
+					flow_output = (torch.round(sigmoided_output[:flow_length,batch_index,:]) == labels_padded[:flow_length,batch_index,:]).detach().cpu().numpy()
+					assert (categories_padded[0, batch_index,:] == categories_padded[:flow_length, batch_index,:]).all()
+					flow_category = int(categories_padded[0, batch_index,:].squeeze().item())
+					dropout_results_by_attack_number[flow_category][(feat1, feat2)].append(flow_output)
+
+	with open("features.json", "r") as f:
+		feature_array = json.load(f)
+
+	# TODO: Rename correlations to something like "separate information"
+	correlations = {}
+	joint_accuracy = {}
+	print("all scores:")
+	for feat1 in range(test_x.shape[0]):
+		for feat2 in range(feat1+1, test_x.shape[0]):
+			accuracy_for_feature_1 = accuracy_by_feature[feat1]
+			accuracy_for_feature_2 = accuracy_by_feature[feat2]
+			accuracy_for_feature_combination = np.mean(np.concatenate([feature for attack_type in dropout_results_by_attack_number for feature in attack_type[(feat1,feat2)]]))
+			joint_accuracy[(feat1, feat2)] = accuracy_for_feature_combination
+			numerator = max(float(baseline_accuracy-accuracy_for_feature_combination), 0)
+			denominator = max(float(baseline_accuracy-accuracy_for_feature_1), 0) + max(float(baseline_accuracy-accuracy_for_feature_2), 0)
+			try:
+				overall_score = numerator/denominator
+			# accuracy doesn't fall if either feat1 or feat2 are omitted
+			except ZeroDivisionError:
+				# If the accuracy falls if for both features are omitted, they are kind of infinitely correlated?
+				if numerator > 0:
+					overall_score = float("inf")
+				# Otherwise, accuracy doesn't fall if both feat1 and feat2 are omitted and also not if either one is omitted, I'd say they are not correlated at all. It could be set to nan or 0 or 1 I guess. This happens if the features contain no information whatsoever...
+				else:
+					overall_score = float("nan")
+			correlations[(feat1, feat2)] = overall_score
+			print("feat1", feat1, feature_array[feat1], feat2, "feat2", feature_array[feat2], "acc_feat1", baseline_accuracy-accuracy_by_feature[feat1], "acc_feat2", baseline_accuracy-accuracy_by_feature[feat2], "joint_acc", joint_accuracy[(feat1, feat2)], "score", overall_score)
+
+	N_MOST_CORRELATED_TO_SHOW = len(list(correlations.items()))
+	sorted_correlations = list(sorted([item for item in list(correlations.items()) if not math.isnan(item[1])], key=lambda item: item[1], reverse=True))[:N_MOST_CORRELATED_TO_SHOW]
+	print("highest", N_MOST_CORRELATED_TO_SHOW, "scores:")
+	for (feat1, feat2), score in sorted_correlations:
+		print("feat1", feat1, feature_array[feat1], feat2, "feat2", feature_array[feat2], "acc_feat1", baseline_accuracy-accuracy_by_feature[feat1], "acc_feat2", baseline_accuracy-accuracy_by_feature[feat2], "joint_acc", joint_accuracy[(feat1, feat2)], "score", score)
+
 # This function takes a model that was trained with feature dropout and can compute feature importance using that model.
 def dropout_feature_importance():
 
@@ -454,15 +543,19 @@ def dropout_feature_importance():
 				dropout_results_by_attack_number[flow_category][feature_index].append(flow_output)
 
 	accuracy = np.mean(np.concatenate([subitem for item in results_by_attack_number for subitem in item], axis=0))
+	accuracy_for_features = []
+	with open("features.json", "r") as f:
+		feature_array = json.load(f)
 	print("accuracy", accuracy)
-	mutinfos = []
 	for feature_index in range(test_x.shape[0]):
 		accuracy_for_feature = np.mean(np.concatenate([feature for attack_type in dropout_results_by_attack_number for feature in attack_type[feature_index]]))
-		print("accuracy_for_feature", feature_index, accuracy_for_feature)
+		accuracy_for_features.append(accuracy_for_feature)
+		print("accuracy_for_feature", feature_index, feature_array[feature_index], accuracy-accuracy_for_feature)
+	return (accuracy, accuracy_for_features)
 
 # Right now this function replaces all values of one feature by random values sampled from the distribution of all features and looks how the accuracy changes.
 def feature_importance():
-	
+
 	# Number of bins for probability density functions
 	PDF_FEATURE_BINS = 50
 	PDF_CONFIDENCE_BINS = 2
@@ -483,12 +576,13 @@ def feature_importance():
 	results_by_attack_number = [list() for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 	randomized_results_by_attack_number = [[list() for _ in range(test_x.shape[0])] for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 
-	minmax = {feat_ind: (min(min(sample[i,feat_ind] for i in range(sample.shape[0])) for sample in x), max(max(sample[i,feat_ind] for i in range(sample.shape[0])) for sample in x)) for feat_ind in range(test_x.shape[0]) }
+	if opt.mutinfo:
+		minmax = {feat_ind: (min(min(sample[i,feat_ind] for i in range(sample.shape[0])) for sample in x), max(max(sample[i,feat_ind] for i in range(sample.shape[0])) for sample in x)) for feat_ind in range(test_x.shape[0]) }
 
-	# Joint pdf for feature values in individual time steps and confidence in the same time step
-	per_packet_pdf = np.zeros([opt.maxLength,test_x.shape[0],PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
-	# Joint pdf for constant feature values and end confidence
-	per_flow_pdf = np.zeros([max(constant_features)+1,PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
+		# Joint pdf for feature values in individual time steps and confidence in the same time step
+		per_packet_pdf = np.zeros([opt.maxLength,test_x.shape[0],PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
+		# Joint pdf for constant feature values and end confidence
+		per_flow_pdf = np.zeros([max(constant_features)+1,PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
 
 	for input_data, labels, categories in test_loader:
 
@@ -539,14 +633,17 @@ def feature_importance():
 			# Data is (Sequence Index, Batch Index, Feature Index)
 			for batch_index in range(output.shape[1]):
 				flow_length = seq_lens[batch_index]
-				if feature_index in constant_features:
-					bin1 = int(torch.round((PDF_FEATURE_BINS-1) * (input_data_padded[0,batch_index,feature_index] - minmax[feature_index][0]) / (minmax[feature_index][1]-minmax[feature_index][0])))
-					bin2 = int(torch.round((PDF_CONFIDENCE_BINS-1) * sigmoided_output[flow_length-1,batch_index,0]))
-					per_flow_pdf[feature_index,bin1,bin2] += 1
-					
-				bin1 = (torch.round((PDF_FEATURE_BINS-1) * (input_data_padded[:flow_length,batch_index,feature_index] - minmax[feature_index][0]) / (minmax[feature_index][1]-minmax[feature_index][0]))).cpu().numpy().astype(int)
-				bin2 = (torch.round((PDF_CONFIDENCE_BINS-1) * sigmoided_output[:flow_length,batch_index,0])).cpu().numpy().astype(int)
-				per_packet_pdf[np.arange(bin1.size),feature_index,bin1,bin2] += 1
+
+				if opt.mutinfo:
+					if feature_index in constant_features:
+						bin1 = int(torch.round((PDF_FEATURE_BINS-1) * (input_data_padded[0,batch_index,feature_index] - minmax[feature_index][0]) / (minmax[feature_index][1]-minmax[feature_index][0])))
+						bin2 = int(torch.round((PDF_CONFIDENCE_BINS-1) * sigmoided_output[flow_length-1,batch_index,0]))
+						per_flow_pdf[feature_index,bin1,bin2] += 1
+
+					bin1 = (torch.round((PDF_FEATURE_BINS-1) * (input_data_padded[:flow_length,batch_index,feature_index] - minmax[feature_index][0]) / (minmax[feature_index][1]-minmax[feature_index][0]))).cpu().numpy().astype(int)
+					bin2 = (torch.round((PDF_CONFIDENCE_BINS-1) * sigmoided_output[:flow_length,batch_index,0])).cpu().numpy().astype(int)
+					per_packet_pdf[np.arange(bin1.size),feature_index,bin1,bin2] += 1
+
 				flow_output = (torch.round(sigmoided_output[:flow_length,batch_index,:]) == labels_padded[:flow_length,batch_index,:]).detach().cpu().numpy()
 				assert (categories_padded[0, batch_index,:] == categories_padded[:flow_length, batch_index,:]).all()
 				flow_category = int(categories_padded[0, batch_index,:].squeeze().item())
@@ -554,23 +651,27 @@ def feature_importance():
 				randomized_results_by_attack_number[flow_category][feature_index].append(flow_output)
 
 	accuracy = np.mean(np.concatenate([subitem for item in results_by_attack_number for subitem in item], axis=0))
+	with open("features.json", "r") as f:
+		feature_array = json.load(f)
 	print("accuracy", accuracy)
 	mutinfos = []
 	for feature_index in range(test_x.shape[0]):
 		accuracy_for_feature = np.mean(np.concatenate([feature for attack_type in randomized_results_by_attack_number for feature in attack_type[feature_index]]))
-		print("accuracy_for_feature", feature_index, accuracy_for_feature)
-		if feature_index in constant_features:
-			print("mutual information for pf feature", feature_index, compute_mutinfo(per_flow_pdf[feature_index,:,:]))
-		print("mutual information for pp feature", feature_index, compute_mutinfo(np.sum(per_packet_pdf[:,feature_index,:,:],axis=0)))
-		mutinfos.append([
-			compute_mutinfo(np.sum(per_packet_pdf[:,feature_index,:,:], axis=0)),
-			[ compute_mutinfo(per_packet_pdf[timestep,feature_index,:,:]) for timestep in range(opt.maxLength) ]
-		])
-		if feature_index in constant_features:
-			mutinfos[-1].append(compute_mutinfo(per_flow_pdf[feature_index,:,:]))
+		print("accuracy_for_feature", feature_index, feature_array[feature_index], accuracy-accuracy_for_feature)
+		if opt.mutinfo:
+			if feature_index in constant_features:
+				print("mutual information for pf feature", feature_index, feature_array[feature_index], compute_mutinfo(per_flow_pdf[feature_index,:,:]))
+			print("mutual information for pp feature", feature_index, feature_array[feature_index], compute_mutinfo(np.sum(per_packet_pdf[:,feature_index,:,:],axis=0)))
+			mutinfos.append([
+				compute_mutinfo(np.sum(per_packet_pdf[:,feature_index,:,:], axis=0)),
+				[ compute_mutinfo(per_packet_pdf[timestep,feature_index,:,:]) for timestep in range(opt.maxLength) ]
+			])
+			if feature_index in constant_features:
+				mutinfos[-1].append(compute_mutinfo(per_flow_pdf[feature_index,:,:]))
 
-	with open(opt.dataroot[:-7] + '_mutinfos.pickle', 'wb') as f:
-		pickle.dump(mutinfos, f)
+	if opt.mutinfo:
+		with open(opt.dataroot[:-7] + '_mutinfos.pickle', 'wb') as f:
+			pickle.dump(mutinfos, f)
 
 def compute_mutinfo(joint_pdf):
 	joint_pdf = joint_pdf / np.sum(joint_pdf)
@@ -1255,6 +1356,7 @@ if __name__=="__main__":
 	parser.add_argument('--iterationCount', type=int, default=100, help='number of iterations for creating adversarial samples')
 	parser.add_argument('--pathToAdvOutput', type=str, default="", help='path to adv output to be used in pred_plots2')
 	parser.add_argument('--averageFeaturesToPruneDuringTraining', type=int, default=-1, help='average number of features that should be "dropped out"; -1 to disable (default)')
+	parser.add_argument('--mutinfo', action='store_true', help='also compute mutinfo during the feature_importance function')
 	# parser.add_argument('--nSamples', type=int, default=1, help='number of items to sample for the feature importance metric')
 
 	opt = parser.parse_args()
