@@ -22,9 +22,6 @@ from tensorboardX import SummaryWriter
 import matplotlib.pyplot as plt
 from sklearn.metrics import accuracy_score,recall_score, precision_score, f1_score, balanced_accuracy_score
 
-HIDDEN_SIZE = 512
-N_LAYERS = 3
-
 ADVERSARIAL_THRESH = 50
 
 def output_scores(y_true, y_pred):
@@ -172,6 +169,8 @@ def collate_things(seqs, is_seqs):
 		assert not opt.function=="test" or not lstm_module.training
 		feature_dropout_probability = opt.averageFeaturesToPruneDuringTraining/seqs[0].shape[1]
 		p = feature_dropout_probability if lstm_module.training else 0.0
+		# XXX Next line must be commented out!!!
+		# p = feature_dropout_probability
 		seqs = tuple(bernoullize_seq(item, p) for item in seqs)
 
 	seq_lengths = torch.LongTensor([len(seq) for seq in seqs]).to(device)
@@ -1355,6 +1354,9 @@ if __name__=="__main__":
 	parser.add_argument('--pathToAdvOutput', type=str, default="", help='path to adv output to be used in pred_plots2')
 	parser.add_argument('--averageFeaturesToPruneDuringTraining', type=int, default=-1, help='average number of features that should be "dropped out"; -1 to disable (default)')
 	parser.add_argument('--mutinfo', action='store_true', help='also compute mutinfo during the feature_importance function')
+	parser.add_argument('--hidden_size', type=int, default=512, help='number of neurons per layer')
+	parser.add_argument('--n_layers', type=int, default=3, help='number of LSTM layers')
+
 	# parser.add_argument('--nSamples', type=int, default=1, help='number of items to sample for the feature importance metric')
 
 	opt = parser.parse_args()
@@ -1405,7 +1407,7 @@ if __name__=="__main__":
 	dataset = OurDataset(x, y, categories)
 
 	batchSize = 1 if opt.function == 'pred_plots' else opt.batchSize # FIXME Max: Why? What's wrong?
-	lstm_module = OurLSTMModule(x[0].shape[-1], y[0].shape[-1], HIDDEN_SIZE, N_LAYERS, batchSize, device).to(device)
+	lstm_module = OurLSTMModule(x[0].shape[-1], y[0].shape[-1], opt.hidden_size, opt.n_layers, batchSize, device).to(device)
 
 	if opt.net != '':
 		print("Loading", opt.net)
