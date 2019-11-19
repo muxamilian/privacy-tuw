@@ -1005,7 +1005,7 @@ def adv_until_less_than_half():
 				distances = np.array([np.linalg.norm((orig_flows[attack_index][flow_index]-flow).flatten(), ord=1) for flow_index, flow in enumerate(prev_flows[i][attack_index])])
 				argsorted_distances = np.argsort(distances)
 				correct_indices = argsorted_distances[successfully_changed_flows_mask[argsorted_distances]]
-				lower_part = correct_indices[:int(math.ceil(len(correct_indices)*min(ratio, THRESHOLD)))]
+				lower_part = correct_indices[:int(math.ceil(len(distances)*min(ratio, THRESHOLD)))]
 
 				distances_per_packet = [dist/len(flow) for dist, flow in zip(distances[lower_part], prev_flows[i][attack_index])]
 				distances_flows[attack_index] = np.mean(distances[lower_part])
