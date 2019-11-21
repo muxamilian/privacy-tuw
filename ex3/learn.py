@@ -700,7 +700,7 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 	fold = opt.fold
 
 	if not opt.canManipulateBothDirections:
-		bidirectional_categories = [torch.FloatTensor([mapping[key]]).to(device) for key in categories_mapping["Botnet"]]
+		bidirectional_categories = [torch.FloatTensor([mapping[key]]).to(device) for category in ['Botnet','Backdoors'] if category in categories_mapping for key in categories_mapping[category] ]
 
 	#initialize sample
 	train_indices, test_indices = get_nth_split(dataset, n_fold, fold)
@@ -762,7 +762,7 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 
 		if finished_adv_samples[-1] is not None:
 			numpy_seqs = finished_adv_samples[total_sample:(total_sample+input_data.sorted_indices.shape[0])]
-			new_data = collate_things([ torch.FloatTensor(seq) for seq in numpy_seqs]).data
+			new_data = collate_things([ torch.FloatTensor(seq) for seq in numpy_seqs], False).data
 			assert input_data.data.shape == new_data.shape
 			input_data.data.data = new_data
 		input_data.data.requires_grad = True
@@ -896,7 +896,7 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 		if in_training:
 			distances.append(torch.dist(orig_batch, input_data.data, p=1)/seqs.shape[1])
 			# keep iterations for adversarial flows about the same as iterations for training
-			if finished_adv_samples[-1] is not None and len(distances) * ITERATION_COUNT >= len(subset) / opt.batchSize:
+			if finished_adv_samples[-1] is not None and len(distances) * ITERATION_COUNT >= len(subset_with_all_traffic) / opt.batchSize:
 				yield finished_adv_samples, finished_categories, sum(distances)/len(distances)
 				distances = []
 
@@ -1341,7 +1341,7 @@ if __name__=="__main__":
 	parser.add_argument('--manualSeed', default=0, type=int, help='manual seed')
 	parser.add_argument('--maxLength', type=int, default=100, help='max length')
 	parser.add_argument('--maxSize', type=int, default=sys.maxsize, help='limit of samples to consider')
-	parser.add_argument("--categoriesMapping", type=str, default="categories_mapping.json", help="mapping of attack categories; see parse.py")
+#	parser.add_argument("--categoriesMapping", type=str, default="categories_mapping.json", help="mapping of attack categories; see parse.py")
 	parser.add_argument('--removeChangeable', action='store_true', help='when training remove all features that an attacker could manipulate easily without changing the attack itself')
 	parser.add_argument('--tradeoff', type=float, default=0.5, help='max length')
 	parser.add_argument('--penaltyTradeoff', type=float, default=0, help='Tradeoff to enforce constant flow duration')
@@ -1369,9 +1369,10 @@ if __name__=="__main__":
 	with open (opt.dataroot, "rb") as f:
 		all_data = pickle.load(f)
 
-	with open("categories_mapping.json", "r") as f:
+	with open(opt.dataroot[:-7]+"_categories_mapping.json", "r") as f:
 		categories_mapping_content = json.load(f)
 	categories_mapping, mapping = categories_mapping_content["categories_mapping"], categories_mapping_content["mapping"]
+	assert min(mapping.values()) == 0
 
 	# a few flows have have invalid IATs due to dataset issues. Sort those out.
 	all_data = [item[:opt.maxLength,:] for item in all_data if np.all(item[:,4]>=0)]

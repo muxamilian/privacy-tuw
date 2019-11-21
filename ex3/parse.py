@@ -19,6 +19,11 @@ for key in mapping.keys():
 			if not category in categories_mapping:
 				categories_mapping[category] = []
 			categories_mapping[category].append(key)
+			break
+	else:
+		if not key in categories_mapping:
+			categories_mapping[key] = []
+		categories_mapping[key].append(key)
 
 with open("categories_mapping.json", "w") as f:
 	json.dump({"categories_mapping": categories_mapping, "mapping": mapping}, f)
