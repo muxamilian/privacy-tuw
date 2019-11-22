@@ -10,10 +10,12 @@ hidden_size = 512
 n_layers = 3
 absolute_values = True
 
-with open('features.json', 'r') as f:
-	features = json.load(f)
+assert len(sys.argv) > 1, 'No model specified'
 
 parameters = torch.load(sys.argv[1])
+
+with open('features.json', 'r') as f:
+	features = json.load(f)
 
 #	parameters = lstm_module.state_dict()
 weights_hh = [ parameters['lstm.weight_hh_l%d' % layer].cpu().numpy().reshape(4,hidden_size,hidden_size).sum(axis=0) for layer in range(n_layers) ]
