@@ -48,7 +48,7 @@
 %%
 %% The "title" command has an optional parameter,
 %% allowing the author to define a "short title" to be used in page headers.
-\title{Packet-by-Packet Hardening of Intrusion Detection Systems against Smart Adversaries}
+\title{An in-depth study of Explainability and Adversarial Robustness in RNNs}
 
 \author{\IEEEauthorblockN{Alexander Hartl,
 Maximilian Bachl, Joachim Fabini, Tanja Zseby}
@@ -178,134 +178,132 @@ Youden	&	0.9920 & 0.9896 & 0.9861 \\
 \bottomrule
 \end{tabular}
 \end{table}
-%
-%\section{Explaining Recurrent Neural Networks}
-%From a naive perspective, one might be tempted to reuse explainability methods for recurrent neural networks by considering a flow the sum of its packet features.
-%We identify several problems which occur when trying to explain decisions made by recurrent neural networks.
-%
-%\begin{itemize}
-%\item
-%\textbf{Feature quantity.}
-%The number of features that is fed into a recurrent neural network is found as the product of packet features with the total length of the flow. For long flows, the total number of inputs can therefore grow to a substantial size.
-%
-%\item
-%\textbf{Variable sequence lengths.}
-%The length of different flows might differ tremendously. Hence, features which are important for the network's outcome for one sequence might not even exist for other flows. Furthermore, the question arises how the distance between flows of different length can be computed.
-%
-%\item
-%\textbf{Lack of a distance measure.}
-%However, even if we restricted our analysis to flows of a constant length, a flow is different from the plain concatenation of its packet features.
-%If we, for example, consider a classification problem as in this document, we expect that after a certain amount of time steps the classifier is able to perform the classification with a certain confidence. Arguably, features at the beginning of a flow are thus more important for the classifier. Giving differences at the end of a sequence the same weight as differences at its beginning, therefore seems incorrect.
-%
-%\item
-%\textbf{Multiple prediction outputs.}
-%Often a recurrent neural network produces an output at each time step. When trying to apply explainability methods, hence, the question arises which prediction to base the methods on.
-%
-%The natural choice is to base the methods on the prediction output which occurs at the same time step as the feature under investigation. Not only does this approach require a substantially lower amount of computational resources compared to predictions occurring at a later time step, but we also expect the immediately occurring prediction outcome to exhibit a stronger correlation to the feature under investigation than a prediction outcome which occurring many time steps later. However, due to the complex decision processes that can occur for deep neural networks, it is absolutely  uncertain if the network's final prediction is correctly depicted when following this approach.
-%\end{itemize}
+\section{Explaining Recurrent Neural Networks}
+From a naive perspective, one might be tempted to reuse explainability methods for recurrent neural networks by considering a flow the sum of its packet features.
+We identify several problems which occur when trying to explain decisions made by recurrent neural networks.
 
-%\subsection{Feature Importance Metrics}
-%\begin{table}
-%\caption{Accuracy drop when replacing feature values with random data.}
-%\label{tab:feat_importance}
-%\centering
-%\begin{tabular}{l r}
-%\toprule
-%Feature & Accuracy drop \\ \midrule
-%Protocol	&	0.1323	\\
-%Packet Length	&	0.1203	\\
-%SYN Flag	&	0.1067	\\
-%ACK Flag	&	0.0805	\\
-%Destination port	&	0.0796	\\
-%PSH Flag	&	0.0767	\\
-%Direction	&	0.0732	\\
-%Source port	&	0.0254	\\
-%Interarrival time	&	0.0200	\\
-%RST Flag	&	0.0116	\\
-%FIN Flag	&	0.0100	\\
-%ECE	Flag &	0.0000	\\
-%URG Flag	&	0.0000	\\
-%CWR Flag	&	0.0000	\\
-%NS Flag	&	0.0000	\\
-%\bottomrule
-%\end{tabular}
-%\end{table}
-%As a first step to understanding the neural network's decisions, we tried to estimate how important individual features are for the model's predictions.
-%
-%To this end, we evaluated by what extent detection accuracy drops when withholding individual features from the classifier. We thus replaced values of individual features by values randomly drawn from the same distribution as the real feature values. We ensured that features which stay constant for a flow, i.e. source port, destination port and protocol, also stay constant for the distorted flows.
-%
-%\autoref{tab:feat_importance} shows our results. The results match to a large extent with the expectations one has when classifying network flows. In particular,  the most important features turn out to be the used protocol, packet length and the SYN TCP flag. While the first two features are essential for characterizing flows, a high number of packets with set SYN flag is an important characteristic for port scanning or certain DoS attacks.
-%
-%Also the fact that most of TCP flags do not play an important role in our dataset, was expected.
-%It is interesting to note, however, that the interarrival time of packets does not play a crucial role for the detection of attacks.
-%
-%\subsection{Explainability Plots}
-%During flow extraction we used a usual 5-tuple flow key, which distinguishes flows based on the protocol they use and their source and destination port and IP address. Hence, these features are constant for all packets in one flow, which allows us to use explainability methods which have been proposed for non-recurrent classification methods.
-%
-%In particular,  in literature the use of Partial Dependency Plots (PDP) is proposed. If $\boldsymbol X \in \mathbb R ^n$ denotes a random vector drawn from feature space and $f(X) \in [0,1]$ denotes the neural network's prediction, the PDP for feature $i$ can be defined as
-%\begin{equation} \label{eq:pdp}
-%\text{PDP}_i(y) = \mathbb E_{\boldsymbol X}\left(f(X_1,\ldots,X_{i-1},y,X_{i+1},\ldots X_n)\right)
-%\end{equation}
-%
-%
-%To inspect attack types in detail, in this research we experiment with a modified definition of the PDP  (with C being the attack classes):
-%\begin{equation} \label{eq:pdp_conditional}
-%\text{PDP}_{c,i}(y) = \mathbb E_{\boldsymbol X | C = c} \left(f \left( X_1,\ldots,X_{i-1},y,X_{i+1},\ldots X_n \right) \right)
-%\end{equation}
-%
-%\begin{figure*}
-%\includegraphics[width=0.48\textwidth]{{"../plots/plot_pdp/flows_full_no_ttl_pdp_outcomes_0_3.pickle_8_DoS - DDoS-Heartbleed"}.pdf}
-%\includegraphics[width=0.48\textwidth]{{"../plots/plot_pdp/flows_full_no_ttl_pdp_outcomes_0_3.pickle_10_Normal"}.pdf}
-%
-%\caption{Examples of conditional PD plots for source and destination port. We only analyze these features with the PDP since it is not straightforward to define the PDP for features that can vary for each packet in a flow. The y-axis shows the probability for malicious traffic. }
-%\label{fig:pdp}
-%\end{figure*}
-%
-%In this variant of the PDP that we call conditional PDP, we don't take the whole dataset for the computation for the PDP but only a subset that belongs to a certain class. Specifically, we take each attack class and compute the PDP only over samples of this attack class. The results in \autoref{fig:pdp} show that for some attack classes the port numbers play an important role. When looking at the class of normal traffic (non-attack traffic) it becomes apparent that traffic destined to a high source port is generally indicative of an attack. We argue that this is because most services that regular users use have low port numbers. A known issue about PDPs in general is that dependencies of the feature under investigation and the remaining variables are not considered, hence potentially querying the neural network for feature combinations which cannot possibly occur.
-%
-%As apparent from \autoref{eq:pdp}, for a certain value of the $i$th feature, the whole dataset is used for averaging the neural network's outcome.
-%
-%For this reason, Accumulated Local Effects (ALE) plots have been proposed in literature. The basic idea for ALE is that instead of using all samples, only the closest samples are used for assessing the effects of one feature. ALE plots therefore inherently require a distance measure for finding the closest samples, which, as revealed in the above discussion, in our case is not possible in a straight-forward manner.
+\begin{itemize}
+\item
+\textbf{Feature quantity.}
+The number of features that is fed into a recurrent neural network is found as the product of packet features with the total length of the flow. For long flows, the total number of inputs can therefore grow to a substantial size.
 
-%\subsection{Plots for Sequences}
-%
-%As apparent from the above discussion, trying to explain how packet features influence the model's predictions, poses various difficulties. As a first step to explaining our model's predictions, we investigate how important features at different time steps are for the model's decisions. Intuitively, features at the beginning of a flow should be the most important while the model's predictions should not vary significantly anymore, as soon as the model has come to a decision.
-%
-%\begin{figure*}
-%\includegraphics[width=0.48\textwidth]{{"../plots/plot/flows_full_no_ttl_pred_plots_outcomes_0_3.pickle_0_Botnet-ARES"}.pdf}
-%\includegraphics[width=0.48\textwidth]{{"../plots/plot/flows_full_no_ttl_pred_plots_outcomes_0_3.pickle_7_DoS - DDoS-DoS slowloris"}.pdf}
-%\includegraphics[width=0.48\textwidth]{{"../plots/plot/flows_full_no_ttl_pred_plots_outcomes_0_3.pickle_14_Web Attack-XSS"}.pdf}
-%\includegraphics[width=0.48\textwidth]{{"../plots/plot/flows_full_no_ttl_pred_plots_outcomes_0_3.pickle_11_PortScan-PortScan - Firewall off"}.pdf}
-%
-%\caption{Median confidence per time step and first and third quartiles for selected attack types. For the majority of attacks, confidence increases in the first few steps and then stays almost constant at 1.}
-%\label{fig:confidence}
-%\end{figure*}
-%
-%To determine if this hypothesis is correct, we plot the attack confidence of the classifier for each time step for each attack class. At each time step we average over all flows and also show the first and third quartiles. \autoref{fig:confidence} shows that this hypothesis is correct for most attack classes. At the first couple of packets the confidence for maliciousness is not very high yet but towards the end of the flow it reaches values close to 1 and stays there.
-%
-%\begin{figure*}
-%\includegraphics[width=0.48\textwidth]{{"../plots/plot2/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_0_Botnet-ARES"}.pdf}
-%\includegraphics[width=0.48\textwidth]{{"../plots/plot2/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_7_DoS - DDoS-DoS slowloris"}.pdf}
-%\includegraphics[width=0.48\textwidth]{{"../plots/plot2/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_11_PortScan-PortScan - Firewall off"}.pdf}
-%\includegraphics[width=0.48\textwidth]{{"../plots/plot2/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_1_Brute Force-FTP-Patator"}.pdf}
-%
-%\caption{The solid line shows the mean value of the feature for all flows of a specific attack type. The shaded region shows the change in confidence that occurs when the feature is varied.}
-%\label{fig:pred_plots2}
-%\end{figure*}
-%
-%Next, we want to investigate if our classifier just memorized its inputs. The most interesting packet features that can be used to visualize this in our use case are the inter-arrival time (IAT) between packets in a flows and the packet length. To depict how the model comes to a decision, we determined the total minimum and maximum for these features that ever occur for all flows. For a given flow $X$ we then varied feature values at each time step between minimum and maximum and plot how the confidence changes when the feature varies (\autoref{fig:pred_plots2}) depict the averaged predictions for different attack families. It seems clear that the classifier didn't just memorize the inputs but actually learned them since there is always a smooth decrease of confidence if we change the feature values. Instead, when memorizing, we would expect a sharp decline of confidence to occur. Another interesting observation is that after the first couple of packets the classifier is certain about its decision and changing features doesn't change its confidence any longer. This allows the conclusion that if an attacker is able to change the first few packets, she could possibly change the decision of the classifier. We will further investigate this question in section \autoref{sec:adv}.
-%
-%\begin{figure*}
-%\includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_2_Brute Force-SSH-Patator"}.pdf}
-%\includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_6_DoS - DDoS-DoS Slowhttptest"}.pdf}
-%\includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_11_PortScan-PortScan - Firewall off"}.pdf}
-%\includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_7_DoS - DDoS-DoS slowloris"}.pdf}
-%
-%\caption{The solid line shows the median value of the feature for all flows of a specific attack type. The shaded region are the first and third quartile.}
-%\label{fig:plot_features}
-%\end{figure*}
-%
-%Looking at the plots of the features that vary over time (\autoref{fig:plot_features}) we see that certain attack types have a characteristic pattern in which they send packets by which they are easily recognizable. We want to determine how the pattern of packet sizes and interarrival times is significant for the classification. \autoref{fig:plot_features} clearly shows that some attack types have very characteristic patterns of packet sizes and interarrival times.
+\item
+\textbf{Variable sequence lengths.}
+The length of different flows might differ tremendously. Hence, features which are important for the network's outcome for one sequence might not even exist for other flows. Furthermore, the question arises how the distance between flows of different length can be computed.
+
+\item
+\textbf{Lack of a distance measure.}
+However, even if we restricted our analysis to flows of a constant length, a flow is different from the plain concatenation of its packet features.
+If we, for example, consider a classification problem as in this document, we expect that after a certain amount of time steps the classifier is able to perform the classification with a certain confidence. Arguably, features at the beginning of a flow are thus more important for the classifier. Giving differences at the end of a sequence the same weight as differences at its beginning, therefore seems incorrect.
+
+\item
+\textbf{Multiple prediction outputs.}
+Often a recurrent neural network produces an output at each time step. When trying to apply explainability methods, hence, the question arises which prediction to base the methods on.
+
+The natural choice is to base the methods on the prediction output which occurs at the same time step as the feature under investigation. Not only does this approach require a substantially lower amount of computational resources compared to predictions occurring at a later time step, but we also expect the immediately occurring prediction outcome to exhibit a stronger correlation to the feature under investigation than a prediction outcome which occurring many time steps later. However, due to the complex decision processes that can occur for deep neural networks, it is absolutely  uncertain if the network's final prediction is correctly depicted when following this approach.
+\end{itemize}
+
+\subsection{Feature Importance Metrics}
+\begin{table}
+\caption{Accuracy drop when replacing feature values with random data.}
+\label{tab:feat_importance}
+\begin{tabular}{l r}
+\toprule
+Feature & Accuracy drop \\ \midrule
+Protocol	&	0.1323	\\
+Packet Length	&	0.1203	\\
+SYN Flag	&	0.1067	\\
+ACK Flag	&	0.0805	\\
+Destination port	&	0.0796	\\
+PSH Flag	&	0.0767	\\
+Direction	&	0.0732	\\
+Source port	&	0.0254	\\
+Interarrival time	&	0.0200	\\
+RST Flag	&	0.0116	\\
+FIN Flag	&	0.0100	\\
+ECE	Flag &	0.0000	\\
+URG Flag	&	0.0000	\\
+CWR Flag	&	0.0000	\\
+NS Flag	&	0.0000	\\
+\bottomrule
+\end{tabular}
+\end{table}
+As a first step to understanding the neural network's decisions, we tried to estimate how important individual features are for the model's predictions.
+
+To this end, we evaluated by what extent detection accuracy drops when withholding individual features from the classifier. We thus replaced values of individual features by values randomly drawn from the same distribution as the real feature values. We ensured that features which stay constant for a flow, i.e. source port, destination port and protocol, also stay constant for the distorted flows.
+
+\autoref{tab:feat_importance} shows our results. The results match to a large extent with the expectations one has when classifying network flows. In particular,  the most important features turn out to be the used protocol, packet length and the SYN TCP flag. While the first two features are essential for characterizing flows, a high number of packets with set SYN flag is an important characteristic for port scanning or certain DoS attacks.
+
+Also the fact that most of TCP flags do not play an important role in our dataset, was expected.
+It is interesting to note, however, that the interarrival time of packets does not play a crucial role for the detection of attacks.
+
+\subsection{Explainability Plots}
+During flow extraction we used a usual 5-tuple flow key, which distinguishes flows based on the protocol they use and their source and destination port and IP address. Hence, these features are constant for all packets in one flow, which allows us to use explainability methods which have been proposed for non-recurrent classification methods.
+
+In particular,  in literature the use of Partial Dependency Plots (PDP) is proposed. If $\boldsymbol X \in \mathbb R ^n$ denotes a random vector drawn from feature space and $f(X) \in [0,1]$ denotes the neural network's prediction, the PDP for feature $i$ can be defined as
+\begin{equation} \label{eq:pdp}
+\text{PDP}_i(y) = \mathbb E_{\boldsymbol X}\left(f(X_1,\ldots,X_{i-1},y,X_{i+1},\ldots X_n)\right)
+\end{equation}
+
+
+To inspect attack types in detail, in this research we experiment with a modified definition of the PDP  (with C being the attack classes):
+\begin{equation} \label{eq:pdp_conditional}
+\text{PDP}_{c,i}(y) = \mathbb E_{\boldsymbol X | C = c} \left(f \left( X_1,\ldots,X_{i-1},y,X_{i+1},\ldots X_n \right) \right)
+\end{equation}
+
+\begin{figure*}
+\includegraphics[width=0.48\textwidth]{{"../plots/plot_pdp/flows_full_no_ttl_pdp_outcomes_0_3.pickle_8_DoS - DDoS-Heartbleed"}.pdf}
+\includegraphics[width=0.48\textwidth]{{"../plots/plot_pdp/flows_full_no_ttl_pdp_outcomes_0_3.pickle_10_Normal"}.pdf}
+
+\caption{Examples of conditional PD plots for source and destination port. We only analyze these features with the PDP since it is not straightforward to define the PDP for features that can vary for each packet in a flow. The y-axis shows the probability for malicious traffic. }
+\label{fig:pdp}
+\end{figure*}
+
+In this variant of the PDP that we call conditional PDP, we don't take the whole dataset for the computation for the PDP but only a subset that belongs to a certain class. Specifically, we take each attack class and compute the PDP only over samples of this attack class. The results in \autoref{fig:pdp} show that for some attack classes the port numbers play an important role. When looking at the class of normal traffic (non-attack traffic) it becomes apparent that traffic destined to a high source port is generally indicative of an attack. We argue that this is because most services that regular users use have low port numbers. A known issue about PDPs in general is that dependencies of the feature under investigation and the remaining variables are not considered, hence potentially querying the neural network for feature combinations which cannot possibly occur.
+
+As apparent from \autoref{eq:pdp}, for a certain value of the $i$th feature, the whole dataset is used for averaging the neural network's outcome.
+
+For this reason, Accumulated Local Effects (ALE) plots have been proposed in literature. The basic idea for ALE is that instead of using all samples, only the closest samples are used for assessing the effects of one feature. ALE plots therefore inherently require a distance measure for finding the closest samples, which, as revealed in the above discussion, in our case is not possible in a straight-forward manner.
+
+\subsection{Plots for Sequences}
+
+As apparent from the above discussion, trying to explain how packet features influence the model's predictions, poses various difficulties. As a first step to explaining our model's predictions, we investigate how important features at different time steps are for the model's decisions. Intuitively, features at the beginning of a flow should be the most important while the model's predictions should not vary significantly anymore, as soon as the model has come to a decision.
+
+\begin{figure*}
+\includegraphics[width=0.48\textwidth]{{"../plots/plot/flows_full_no_ttl_pred_plots_outcomes_0_3.pickle_0_Botnet-ARES"}.pdf}
+\includegraphics[width=0.48\textwidth]{{"../plots/plot/flows_full_no_ttl_pred_plots_outcomes_0_3.pickle_7_DoS - DDoS-DoS slowloris"}.pdf}
+\includegraphics[width=0.48\textwidth]{{"../plots/plot/flows_full_no_ttl_pred_plots_outcomes_0_3.pickle_14_Web Attack-XSS"}.pdf}
+\includegraphics[width=0.48\textwidth]{{"../plots/plot/flows_full_no_ttl_pred_plots_outcomes_0_3.pickle_11_PortScan-PortScan - Firewall off"}.pdf}
+
+\caption{Median confidence per time step and first and third quartiles for selected attack types. For the majority of attacks, confidence increases in the first few steps and then stays almost constant at 1.}
+\label{fig:confidence}
+\end{figure*}
+
+To determine if this hypothesis is correct, we plot the attack confidence of the classifier for each time step for each attack class. At each time step we average over all flows and also show the first and third quartiles. \autoref{fig:confidence} shows that this hypothesis is correct for most attack classes. At the first couple of packets the confidence for maliciousness is not very high yet but towards the end of the flow it reaches values close to 1 and stays there.
+
+\begin{figure*}
+\includegraphics[width=0.48\textwidth]{{"../plots/plot2/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_0_Botnet-ARES"}.pdf}
+\includegraphics[width=0.48\textwidth]{{"../plots/plot2/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_7_DoS - DDoS-DoS slowloris"}.pdf}
+\includegraphics[width=0.48\textwidth]{{"../plots/plot2/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_11_PortScan-PortScan - Firewall off"}.pdf}
+\includegraphics[width=0.48\textwidth]{{"../plots/plot2/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_1_Brute Force-FTP-Patator"}.pdf}
+
+\caption{The solid line shows the mean value of the feature for all flows of a specific attack type. The shaded region shows the change in confidence that occurs when the feature is varied.}
+\label{fig:pred_plots2}
+\end{figure*}
+
+Next, we want to investigate if our classifier just memorized its inputs. The most interesting packet features that can be used to visualize this in our use case are the inter-arrival time (IAT) between packets in a flows and the packet length. To depict how the model comes to a decision, we determined the total minimum and maximum for these features that ever occur for all flows. For a given flow $X$ we then varied feature values at each time step between minimum and maximum and plot how the confidence changes when the feature varies (\autoref{fig:pred_plots2}) depict the averaged predictions for different attack families. It seems clear that the classifier didn't just memorize the inputs but actually learned them since there is always a smooth decrease of confidence if we change the feature values. Instead, when memorizing, we would expect a sharp decline of confidence to occur. Another interesting observation is that after the first couple of packets the classifier is certain about its decision and changing features doesn't change its confidence any longer. This allows the conclusion that if an attacker is able to change the first few packets, she could possibly change the decision of the classifier. We will further investigate this question in section \autoref{sec:adv}.
+
+\begin{figure*}
+\includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_2_Brute Force-SSH-Patator"}.pdf}
+\includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_6_DoS - DDoS-DoS Slowhttptest"}.pdf}
+\includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_11_PortScan-PortScan - Firewall off"}.pdf}
+\includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_7_DoS - DDoS-DoS slowloris"}.pdf}
+
+\caption{The solid line shows the median value of the feature for all flows of a specific attack type. The shaded region are the first and third quartile.}
+\label{fig:plot_features}
+\end{figure*}
+
+Looking at the plots of the features that vary over time (\autoref{fig:plot_features}) we see that certain attack types have a characteristic pattern in which they send packets by which they are easily recognizable. We want to determine how the pattern of packet sizes and interarrival times is significant for the classification. \autoref{fig:plot_features} clearly shows that some attack types have very characteristic patterns of packet sizes and interarrival times.
 
 \section{Adversarial attacks}
 \label{sec:adv}
