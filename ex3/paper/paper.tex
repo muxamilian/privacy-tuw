@@ -77,6 +77,8 @@ firstname.lastname@tuwien.ac.at}}
 \newacronym{fgsm}{FGSM}{Fast Gradient Sign Method}
 \newacronym{cw}{CW}{Carlini-Wagner method}
 \newacronym{pgd}{PGD}{Projected Gradient Descent}
+\newacronym{pdp}{PDP}{Partial Dependence Plot}
+\newacronym{arm}{ARM}{Adversarial Robustness Metric}
 
 \begin{abstract}
 
@@ -106,17 +108,18 @@ There is a significant body of scientific work focusing on the detection of unwa
 
 More recently, with the rise of omnipresent encryption, available features have changed. Since payload is not available anymore, the focus now lies on features that are always available to observers such as port numbers, flags of packets etc. Network communication is usually grouped into \textit{flows}, which is commonly defined as a sequence of packets between two applications that may be located at different physical locations.
 
-When analyzing flows, not only the aforementioned features are available but also features related to the timing of the individual packets as well as their size. For example, a specific attack might require the attacker to send three small packets and the victim to reply with two large packets followed by a small one the attacker. Various approaches have been proposed to extract features from flows and then perform anomaly detection with the results \cite{meghdouri_analysis_2018}. While this approach works well, it is problematic that first the whole flow has to be received and only afterwards it can be determined if there was an anomaly.
+When analyzing flows, not only the aforementioned features are available but also features related to the timing of the individual packets as well as their size. For example, a specific attack might require the attacker to send three small packets and the victim to reply with two large packets followed by a small one the attacker. Various approaches have been proposed to extract features from flows and then perform anomaly detection with the results \cite{meghdouri_analysis_2018}. While these approaches works well, it is problematic that first the whole flow has to be received and only afterwards it can be determined if there was an anomaly. Thus, we design a network anomaly detection system that operates on a per-packet basis and decides if a packet is anomalous based on features that are available for traffic that is encrypted above the transport layer, like for example TLS or QUIC.
+We show that our system has similar performance to other flow-based anomaly detection systems but can commonly detect anomalies \textit{before} the flow is over. 
 
-Thus, we design a network anomaly detection system that operates on a per-packet basis and decides if a packet is anomalous based on features that are available for traffic that is encrypted above the transport layer, like for example TLS or QUIC.
-We show that our system has similar performance to other flow-based anomaly detection systems but can commonly detect anomalies before the flow is over.
+Since common explainability methods are designed to work with images or tabular data but not sequences, we extend existing explainability methods such as \glspl{pdp} \cite{friedman_greedy_2001} for sequential data. These show the varying characteristics of different attacks and how many packets it takes on average to detect them. Furthermore they aid with visualizing potentially vulnerable features for adversaries. 
 
-Then we investigate the question whether adversarial samples can be found for this type of data. This is not a trivially answerable question since adversarial samples have mostly been analyzed in the context of computer vision. Our scenario significantly deviates from this in several ways because \begin{enumerate*}
+This leads us to investigate the question whether adversarial samples can be found for this type of data. This is not a trivially answerable question since adversarial samples have mostly been analyzed in the context of computer vision. Our scenario significantly deviates from this in several ways because \begin{enumerate*}
 \item the number of features is significantly smaller and
 \item only certain features can be manipulated (for example the destination port cannot be manipulated)
 \end{enumerate*}.
 
-We can confirm that adversarial samples can be found even when considering the tight constraints mentioned before. Especially the first packets of a flow are critical for determining the decision of a recurrent \gls{ids}. We develop a simple methods for defending against adversaries who can manipulate arbitrary packets by simply leaving out potentially manipulable information from the classification process. The resulting classifier is slightly less accurate but is still useful to be deployed in a real scenario. Finally we develop a custom adversarial training procedure which especially focuses on easy of use and low resource consumption and aims to keep the number of additionally introduced training hyperparameters low. With this novel strategy we can reduce attack surface and harden the resulting \gls{ids} while keeping similar classification performance like for the original \gls{ml} model.
+Surprisingly, we can confirm that adversarial samples can be found even when considering the tight constraints mentioned before. Also astonishingly, feature importance method reveal that the manipulable features, that are left for adversaries to modify are not even particularly significant for the classification outcome. %Especially the first packets of a flow are critical for determining the decision of a recurrent \gls{ids}. 
+We develop a simple methods for defending against adversaries who can manipulate arbitrary packets by simply leaving out potentially manipulable information from the classification process. The resulting classifier is slightly less accurate but is still useful to be deployed in a real scenario. Finally we develop a custom adversarial training procedure which especially focuses on easy of use and low resource consumption and aims to keep the number of additionally introduced training hyperparameters low. With this novel strategy we can reduce attack surface and harden the resulting \gls{ids} while keeping similar classification performance like for the original \gls{ml} model.
 
 \section{Related work}
 
@@ -240,26 +243,26 @@ It is interesting to note, however, that the interarrival time of packets does n
 \subsection{Explainability Plots}
 During flow extraction we used a usual 5-tuple flow key, which distinguishes flows based on the protocol they use and their source and destination port and IP address. Hence, these features are constant for all packets in one flow, which allows us to use explainability methods which have been proposed for non-recurrent classification methods.
 
-In particular,  in literature the use of Partial Dependency Plots (PDP) is proposed. If $\boldsymbol X \in \mathbb R ^n$ denotes a random vector drawn from feature space and $f(X) \in [0,1]$ denotes the neural network's prediction, the PDP for feature $i$ can be defined as
+In particular,  in literature the use of Partial Dependency Plots (\gls{pdp}) is proposed. If $\boldsymbol X \in \mathbb R ^n$ denotes a random vector drawn from feature space and $f(X) \in [0,1]$ denotes the neural network's prediction, the \gls{pdp} for feature $i$ can be defined as
 \begin{equation} \label{eq:pdp}
-\text{PDP}_i(y) = \mathbb E_{\boldsymbol X}\left(f(X_1,\ldots,X_{i-1},y,X_{i+1},\ldots X_n)\right)
+\text{\gls{pdp}}_i(y) = \mathbb E_{\boldsymbol X}\left(f(X_1,\ldots,X_{i-1},y,X_{i+1},\ldots X_n)\right)
 \end{equation}
 
 
-To inspect attack types in detail, in this research we experiment with a modified definition of the PDP  (with C being the attack classes):
+To inspect attack types in detail, in this research we experiment with a modified definition of the \gls{pdp}  (with C being the attack classes):
 \begin{equation} \label{eq:pdp_conditional}
-\text{PDP}_{c,i}(y) = \mathbb E_{\boldsymbol X | C = c} \left(f \left( X_1,\ldots,X_{i-1},y,X_{i+1},\ldots X_n \right) \right)
+\text{\gls{pdp}}_{c,i}(y) = \mathbb E_{\boldsymbol X | C = c} \left(f \left( X_1,\ldots,X_{i-1},y,X_{i+1},\ldots X_n \right) \right)
 \end{equation}
 
 \begin{figure*}
 \includegraphics[width=0.48\textwidth]{{"../plots/plot_pdp/flows_full_no_ttl_pdp_outcomes_0_3.pickle_8_DoS - DDoS-Heartbleed"}.pdf}
 \includegraphics[width=0.48\textwidth]{{"../plots/plot_pdp/flows_full_no_ttl_pdp_outcomes_0_3.pickle_10_Normal"}.pdf}
 
-\caption{Examples of conditional PD plots for source and destination port. We only analyze these features with the PDP since it is not straightforward to define the PDP for features that can vary for each packet in a flow. The y-axis shows the probability for malicious traffic. }
+\caption{Examples of conditional PD plots for source and destination port. We only analyze these features with the \gls{pdp} since it is not straightforward to define the \gls{pdp} for features that can vary for each packet in a flow. The y-axis shows the probability for malicious traffic. }
 \label{fig:pdp}
 \end{figure*}
 
-In this variant of the PDP that we call conditional PDP, we don't take the whole dataset for the computation for the PDP but only a subset that belongs to a certain class. Specifically, we take each attack class and compute the PDP only over samples of this attack class. The results in \autoref{fig:pdp} show that for some attack classes the port numbers play an important role. When looking at the class of normal traffic (non-attack traffic) it becomes apparent that traffic destined to a high source port is generally indicative of an attack. We argue that this is because most services that regular users use have low port numbers. A known issue about PDPs in general is that dependencies of the feature under investigation and the remaining variables are not considered, hence potentially querying the neural network for feature combinations which cannot possibly occur.
+In this variant of the \gls{pdp} that we call conditional \gls{pdp}, we don't take the whole dataset for the computation for the \gls{pdp} but only a subset that belongs to a certain class. Specifically, we take each attack class and compute the \gls{pdp} only over samples of this attack class. The results in \autoref{fig:pdp} show that for some attack classes the port numbers play an important role. When looking at the class of normal traffic (non-attack traffic) it becomes apparent that traffic destined to a high source port is generally indicative of an attack. We argue that this is because most services that regular users use have low port numbers. A known issue about \glspl{pdp} in general is that dependencies of the feature under investigation and the remaining variables are not considered, hence potentially querying the neural network for feature combinations which cannot possibly occur.
 
 As apparent from \autoref{eq:pdp}, for a certain value of the $i$th feature, the whole dataset is used for averaging the neural network's outcome.
 
@@ -383,6 +386,10 @@ Web Attack:XSS	&	0.6700 / 0.9500	&	0.7200 / 0.9500	&	0.6200 / 0.9500	&	0.6700 / 
 \bottomrule
 
 \end{tabular}
+
+\todo{In the adv table, round the numbers!!! \\
+For Max: Introduce two-level table\\
+What's the tradeoff for CW?}
 \end{table*}
 
 It is interesting to note that for very large values of $\epsilon$ the success ratio starts to decrease again.This phenomenon might be due to numerical effects and might be preventable by a smaller learning rate.
@@ -418,6 +425,17 @@ The plots show that primarily features at the beginning of flows are modified. I
 \label{adv_plots}
 \end{figure*}
 
+\section{Adversarial Robustness Metric}
+
+As \autoref{tab:adv_per_family} shows, for most attack types, most samples can be modified to look benign by an adversary by using \gls{cw}. High accuracy for a particular attack category does not imply that adversarial attacks are more likely to fail for these attacks. Thus we argue that beside the classical metrics such as accuracy, false positives etc., a new metric is needed, which quantifies how easily an adversary can fool the classifier. 
+
+Such a method should be easy to compute and easy to interpret. We thus propose the \gls{arm}, which roughly works as follows: Use \gls{cw} with a small tradeoff to try to generate adversarial samples for an attack type. If more than half of the samples are now wrongly classified, stop. Otherwise increase the tradeoff of \gls{cw} and repeat. If after a predefined number of iterations -- e.g. 100 -- still not more than half of the samples are adversarial, also break. 
+
+The result is a number of adversarial samples (more than half in the ideal case) and some that could not be made adversarial. For example, if in total, there are 100 samples, there might be 54 which could be made adversarial. Out of these 54, the 50 with the smallest distance to the original samples are taken. Of these samples, the distance of each adversarial sample to the original sample is taken and averaged over all 50 samples. The resulting average distance is the \gls{arm}. The larger it is the better since then an adversary needs to modify the samples more to make them adversarial. If not more then half of the samples could be made adversarial, our metric is undefined since then apparently it is not possible for an adversary conduct adversarial attacks on the majority of samples.
+
+Setting the threshold for our metric to 50\% is arbitrary but we think that it is reasonable since if an attacker can make the majority of samples adversarial, we think that its attack is ``successful''.
+
+\todo{Insert results}
 
 \section{Defences}
 

@@ -564,7 +564,7 @@ def get_feature_importance_distribution(test_data):
 				unique = np.unique(distribution[feature,:])
 				distribution[feature,:] = np.random.choice(unique, size=distribution.shape[1])
 	return distribution
-	
+
 # Right now this function replaces all values of one feature by random values sampled from the distribution of all features and looks how the accuracy changes.
 def feature_importance():
 
@@ -705,7 +705,7 @@ def mutinfo_feat_imp():
 	SAMPLE_COUNT = 100
 	PDF_FEATURE_BINS = 50
 	PDF_CONFIDENCE_BINS = 2
-	
+
 	n_fold = opt.nFold
 	fold = opt.fold
 	lstm_module.eval()
@@ -721,27 +721,27 @@ def mutinfo_feat_imp():
 	flow_lengths = np.zeros(opt.maxLength, dtype=int)
 
 	start_iterating = time.time()
-	
+
 	for real_ind, sample_ind in zip(test_indices, range(len(test_data))):
 		print (sample_ind)
 		flow, _, flow_categories = test_data[sample_ind]
 		cat = int(flow_categories[0,0])
 		flow_lengths[:flow.shape[0]] += 1
-		
+
 		# process constant features
 		lstm_module.init_hidden(len(constant_features)*SAMPLE_COUNT)
 		input_data = torch.FloatTensor(flow[:,None,:]).repeat(1,len(constant_features)*SAMPLE_COUNT,1)
-		
+
 		for k, feat_ind in enumerate(constant_features):
 			input_data[:,k*SAMPLE_COUNT:(k+1)*SAMPLE_COUNT,feat_ind] = torch.FloatTensor(np.random.choice(distribution[feat_ind,:], size=(input_data.shape[0],SAMPLE_COUNT)))
 
 		packed_input = torch.nn.utils.rnn.pack_padded_sequence(input_data, [input_data.shape[0]] *input_data.shape[1]).to(device)
-		
+
 		for i in range(flow.shape[0]):
 
 			output, _ = lstm_module(packed_input)
 			sigmoided = torch.sigmoid(output[0,:,0]).detach().cpu()
-			
+
 			for k,feat_ind in enumerate(features):
 				bin1 = (torch.round((PDF_FEATURE_BINS-1) * (input_data[i,:,feat_ind] - minmax[feat_ind][0]) / (minmax[feat_ind][1]-minmax[feat_ind][0]))).cpu().numpy().astype(int)
 				bin2 = (torch.round((PDF_CONFIDENCE_BINS-1) * sigmoided)).cpu().numpy().astype(int)
@@ -769,7 +769,7 @@ def mutinfo_feat_imp():
 			# print("hidden before", lstm_module.hidden)
 			output, _ = lstm_module(packed_input)
 			sigmoided = torch.sigmoid(output[0,:,0]).detach().cpu()
-			
+
 			for k,feat_ind in enumerate(features):
 				bin1 = (torch.round((PDF_FEATURE_BINS-1) * (input_data[0,:,feat_ind] - minmax[feat_ind][0]) / (minmax[feat_ind][1]-minmax[feat_ind][0]))).cpu().numpy().astype(int)
 				bin2 = (torch.round((PDF_CONFIDENCE_BINS-1) * sigmoided)).cpu().numpy().astype(int)
@@ -784,7 +784,7 @@ def mutinfo_feat_imp():
 			# print("hidden before", lstm_module.hidden)
 			lstm_module.forgetting = False
 			packed_input = torch.nn.utils.rnn.pack_padded_sequence(torch.FloatTensor(flow[i,:][None,None,:]), [1]).to(device)
-			
+
 			output, _ = lstm_module(packed_input)
 
 	#  mutinfos = [[ compute_mutinfo(joint_pdf[i,j,:,:]) for i in range(opt.maxLength) ] for j,_ in enumerate(features) ]
@@ -1110,7 +1110,7 @@ def adv_until_less_than_half():
 
 				successfully_changed_flows_mask = (np.round(numpy_sigmoid(np.array([item[-1] for item in prev_results[i][attack_index]]))) == 0).flatten()
 				# TODO: l1 or l2 norm?
-				distances = np.array([np.linalg.norm((orig_flows[attack_index][flow_index]-flow).flatten(), ord=1) for flow_index, flow in enumerate(prev_flows[i][attack_index])])
+				distances = np.array([np.linalg.norm((orig_flows[attack_index][flow_index]-flow).flatten(), ord=2) for flow_index, flow in enumerate(prev_flows[i][attack_index])])
 				argsorted_distances = np.argsort(distances)
 				correct_indices = argsorted_distances[successfully_changed_flows_mask[argsorted_distances]]
 				lower_part = correct_indices[:int(math.ceil(len(distances)*min(ratio, THRESHOLD)))]
