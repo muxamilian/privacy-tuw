@@ -550,6 +550,21 @@ def dropout_feature_importance():
 		print("accuracy_for_feature", feature_index, feature_array[feature_index], accuracy-accuracy_for_feature)
 	return (accuracy, accuracy_for_features)
 
+def get_feature_importance_distribution(test_data):
+	distribution = np.concatenate([item[0][:,:] for item in test_data], axis=0).transpose(1,0)
+	if opt.adjustFeatImpDistribution:
+		numerical_features = [0,1,3]
+		# retain original distribution of iat, as iat varies over many magnitudes and we're mainly
+		# interested in feature importance of practical (=low) iats
+		retain_features = [2]
+		for feature in distribution.shape[0]:
+			if feature in numerical_features:
+				distribution[feature,:] = np.linspace(np.min(distribution[feature,:]), np.max(distribution[feature,:]), distribution.shape[1])
+			elif feature not in retain_features:
+				unique = np.unique(distribution[feature,:])
+				distribution[feature,:] = np.random.choice(unique, size=distribution.shape[1])
+	return distribution
+	
 # Right now this function replaces all values of one feature by random values sampled from the distribution of all features and looks how the accuracy changes.
 def feature_importance():
 
@@ -565,19 +580,19 @@ def feature_importance():
 
 	_, test_indices = get_nth_split(dataset, n_fold, fold)
 	test_data = torch.utils.data.Subset(dataset, test_indices)
-	test_x = np.concatenate([item[0][:,:] for item in test_data], axis=0).transpose(1,0)
+	distribution = get_feature_importance_distribution(test_data)
 	test_loader = torch.utils.data.DataLoader(test_data, batch_size=opt.batchSize, shuffle=False, collate_fn=custom_collate)
 
 	attack_numbers = mapping.values()
 
 	results_by_attack_number = [list() for _ in range(min(attack_numbers), max(attack_numbers)+1)]
-	randomized_results_by_attack_number = [[list() for _ in range(test_x.shape[0])] for _ in range(min(attack_numbers), max(attack_numbers)+1)]
+	randomized_results_by_attack_number = [[list() for _ in range(distribution.shape[0])] for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 
 	if opt.mutinfo:
-		minmax = {feat_ind: (min(min(sample[i,feat_ind] for i in range(sample.shape[0])) for sample in x), max(max(sample[i,feat_ind] for i in range(sample.shape[0])) for sample in x)) for feat_ind in range(test_x.shape[0]) }
+		minmax = list(zip(np.min(distribution, axis=1), np.max(distribution, axis=1)))
 
 		# Joint pdf for feature values in individual time steps and confidence in the same time step
-		per_packet_pdf = np.zeros([opt.maxLength,test_x.shape[0],PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
+		per_packet_pdf = np.zeros([opt.maxLength,distribution.shape[0],PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
 		# Joint pdf for constant feature values and end confidence
 		per_flow_pdf = np.zeros([max(constant_features)+1,PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
 
@@ -612,17 +627,17 @@ def feature_importance():
 
 			results_by_attack_number[flow_category].append(flow_output)
 
-		for feature_index in range(test_x.shape[0]):
+		for feature_index in range(distribution.shape[0]):
 			# Now draw individual feature values at random and query the nn for modified flows
 			lstm_module.init_hidden(batch_size)
 
 			input_data_cloned = torch.nn.utils.rnn.PackedSequence(input_data.data.detach().clone(), input_data.batch_sizes, input_data.sorted_indices, input_data.unsorted_indices)
 			if feature_index in constant_features:
 				input_data_padded, input_data_lens = torch.nn.utils.rnn.pad_packed_sequence(input_data_cloned)
-				input_data_padded[:,:,feature_index] = torch.FloatTensor(np.random.choice(test_x[feature_index], size=(1,input_data_padded.shape[1]))).to(device)
+				input_data_padded[:,:,feature_index] = torch.FloatTensor(np.random.choice(distribution[feature_index], size=(1,input_data_padded.shape[1]))).to(device)
 				input_data_cloned = torch.nn.utils.rnn.pack_padded_sequence(input_data_padded, input_data_lens, enforce_sorted=False)
 			else:
-				input_data_cloned.data.data[:,feature_index] = torch.FloatTensor(np.random.choice(test_x[feature_index], size=(input_data_cloned.data.data.shape[0]))).to(device)
+				input_data_cloned.data.data[:,feature_index] = torch.FloatTensor(np.random.choice(distribution[feature_index], size=(input_data_cloned.data.data.shape[0]))).to(device)
 			output, seq_lens = lstm_module(input_data_cloned)
 
 			sigmoided_output = torch.sigmoid(output.detach())
@@ -652,7 +667,7 @@ def feature_importance():
 		feature_array = json.load(f)
 	print("accuracy", accuracy)
 	mutinfos = []
-	for feature_index in range(test_x.shape[0]):
+	for feature_index in range(distribution.shape[0]):
 		accuracy_for_feature = np.mean(np.concatenate([feature for attack_type in randomized_results_by_attack_number for feature in attack_type[feature_index]]))
 		print("accuracy_for_feature", feature_index, feature_array[feature_index], accuracy-accuracy_for_feature)
 		if opt.mutinfo:
@@ -684,6 +699,99 @@ def compute_mutinfo(joint_pdf):
 	nonzero_joint_pdf[joint_pdf==0] = 1
 
 	return np.sum(joint_pdf * np.log2( nonzero_joint_pdf / (marg_1[:,None] * marg_2[None,:])))
+
+def mutinfo_feat_imp():
+	constant_features = [0,1,2]
+	SAMPLE_COUNT = 100
+	PDF_FEATURE_BINS = 50
+	PDF_CONFIDENCE_BINS = 2
+	
+	n_fold = opt.nFold
+	fold = opt.fold
+	lstm_module.eval()
+
+	_, test_indices = get_nth_split(dataset, n_fold, fold)
+	test_data = torch.utils.data.Subset(dataset, test_indices)
+	distribution = get_feature_importance_distribution(test_data)
+
+	minmax = list(zip(np.min(distribution, axis=1), np.max(distribution, axis=1)))
+	features = [ feat_ind for feat_ind in range(distribution.shape[0]) if feat_ind not in constant_features and minmax[feat_ind][0] != minmax[feat_ind][1] ]
+
+	mutinfos = np.zeros([opt.maxLength, distribution.shape[0]])
+	flow_lengths = np.zeros(opt.maxLength, dtype=int)
+
+	start_iterating = time.time()
+	
+	for real_ind, sample_ind in zip(test_indices, range(len(test_data))):
+		print (sample_ind)
+		flow, _, flow_categories = test_data[sample_ind]
+		cat = int(flow_categories[0,0])
+		flow_lengths[:flow.shape[0]] += 1
+		
+		# process constant features
+		lstm_module.init_hidden(len(constant_features)*SAMPLE_COUNT)
+		input_data = torch.FloatTensor(flow[:,None,:]).repeat(1,len(constant_features)*SAMPLE_COUNT,1)
+		
+		for k, feat_ind in enumerate(constant_features):
+			input_data[:,k*SAMPLE_COUNT:(k+1)*SAMPLE_COUNT,feat_ind] = torch.FloatTensor(np.random.choice(distribution[feat_ind,:], size=(input_data.shape[0],SAMPLE_COUNT)))
+
+		packed_input = torch.nn.utils.rnn.pack_padded_sequence(input_data, [input_data.shape[0]] *input_data.shape[1]).to(device)
+		
+		for i in range(flow.shape[0]):
+
+			output, _ = lstm_module(packed_input)
+			sigmoided = torch.sigmoid(output[0,:,0]).detach().cpu()
+			
+			for k,feat_ind in enumerate(features):
+				bin1 = (torch.round((PDF_FEATURE_BINS-1) * (input_data[i,:,feat_ind] - minmax[feat_ind][0]) / (minmax[feat_ind][1]-minmax[feat_ind][0]))).cpu().numpy().astype(int)
+				bin2 = (torch.round((PDF_CONFIDENCE_BINS-1) * sigmoided)).cpu().numpy().astype(int)
+				c = Counter(zip(bin1,bin2))
+				bin1, bin2 = zip(*c.keys())
+				joint_pdf = np.zeros([PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
+				joint_pdf[bin1,bin2] = list(c.values())
+				mutinfos[i,feat_ind] += compute_mutinfo(joint_pdf)
+
+
+		# process variables features
+		lstm_module.init_hidden(1)
+
+		for i in range(flow.shape[0]):
+			lstm_module.forgetting = True
+
+			input_data = torch.FloatTensor(flow[i,None,None,:]).repeat(1,len(features)*SAMPLE_COUNT,1)
+			for k, feat_ind in enumerate(features):
+				input_data[0,k*SAMPLE_COUNT:(k+1)*SAMPLE_COUNT,feat_ind] = torch.FloatTensor(np.random.choice(distribution[feat_ind,:], size=SAMPLE_COUNT))
+
+			packed_input = torch.nn.utils.rnn.pack_padded_sequence(input_data, [1] *input_data.shape[1]).to(device)
+
+			# Convert hidden state to larger batch size
+			lstm_module.hidden = (lstm_module.hidden[0].repeat(1,input_data.shape[1],1), lstm_module.hidden[1].repeat(1,input_data.shape[1],1))
+			# print("hidden before", lstm_module.hidden)
+			output, _ = lstm_module(packed_input)
+			sigmoided = torch.sigmoid(output[0,:,0]).detach().cpu()
+			
+			for k,feat_ind in enumerate(features):
+				bin1 = (torch.round((PDF_FEATURE_BINS-1) * (input_data[0,:,feat_ind] - minmax[feat_ind][0]) / (minmax[feat_ind][1]-minmax[feat_ind][0]))).cpu().numpy().astype(int)
+				bin2 = (torch.round((PDF_CONFIDENCE_BINS-1) * sigmoided)).cpu().numpy().astype(int)
+				c = Counter(zip(bin1,bin2))
+				bin1, bin2 = zip(*c.keys())
+				joint_pdf = np.zeros([PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
+				joint_pdf[bin1,bin2] = list(c.values())
+				mutinfos[i,feat_ind] += compute_mutinfo(joint_pdf)
+
+			# Convert hidden state to batch size 1
+			lstm_module.hidden = (lstm_module.hidden[0][:,0:1,:].contiguous(), lstm_module.hidden[1][:,0:1,:].contiguous())
+			# print("hidden before", lstm_module.hidden)
+			lstm_module.forgetting = False
+			packed_input = torch.nn.utils.rnn.pack_padded_sequence(torch.FloatTensor(flow[i,:][None,None,:]), [1]).to(device)
+			
+			output, _ = lstm_module(packed_input)
+
+	#  mutinfos = [[ compute_mutinfo(joint_pdf[i,j,:,:]) for i in range(opt.maxLength) ] for j,_ in enumerate(features) ]
+	with open(opt.dataroot[:-7] + '_individual_mutinfos.pickle', 'wb') as f:
+		pickle.dump((features, mutinfos/flow_lengths[:,None]), f)
+	print("It took {} seconds per sample".format((time.time()-start_iterating)/len(test_data)))
+
 
 def adv_internal(in_training = False, attack_types_which_are_not_investigated_anymore=[]):
 	# FIXME: They suggest at least 10000 iterations with some specialized optimizer (Adam)
@@ -1356,6 +1464,7 @@ if __name__=="__main__":
 	parser.add_argument('--mutinfo', action='store_true', help='also compute mutinfo during the feature_importance function')
 	parser.add_argument('--hidden_size', type=int, default=512, help='number of neurons per layer')
 	parser.add_argument('--n_layers', type=int, default=3, help='number of LSTM layers')
+	parser.add_argument('--adjustFeatImpDistribution', action='store_true', help='adjust randomization feature importance distributions to a practically relevant shape')
 
 	# parser.add_argument('--nSamples', type=int, default=1, help='number of items to sample for the feature importance metric')
 
