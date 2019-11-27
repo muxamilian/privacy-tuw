@@ -282,6 +282,7 @@ def train():
 				with open(adv_filename(), 'wb') as f:
 					pickle.dump(train_data.adv_flows, f)
 
+@torch.no_grad()
 def test():
 
 	n_fold = opt.nFold
@@ -551,21 +552,47 @@ def dropout_feature_importance():
 	return (accuracy, accuracy_for_features)
 
 def get_feature_importance_distribution(test_data):
-	distribution = np.concatenate([item[0][:,:] for item in test_data], axis=0).transpose(1,0)
+	distribution = np.concatenate([item[0] for item in test_data], axis=0).transpose(1,0)
+	minmax = list(zip(np.min(distribution, axis=1), np.max(distribution, axis=1)))
 	if opt.adjustFeatImpDistribution:
 		numerical_features = [0,1,3]
 		# retain original distribution of iat, as iat varies over many magnitudes and we're mainly
 		# interested in feature importance of practical (=low) iats
 		retain_features = [2]
-		for feature in distribution.shape[0]:
+		for feature in range(distribution.shape[0]):
 			if feature in numerical_features:
 				distribution[feature,:] = np.linspace(np.min(distribution[feature,:]), np.max(distribution[feature,:]), distribution.shape[1])
 			elif feature not in retain_features:
 				unique = np.unique(distribution[feature,:])
 				distribution[feature,:] = np.random.choice(unique, size=distribution.shape[1])
-	return distribution
+	return distribution, minmax
+	
+def get_bin_boundaries(distribution, n_bins):
+	# For ideal resolution, choose bin boundaries so that each bin would
+	# get the equal number of hits for given distribution
+	spacing = np.linspace(0, distribution.shape[1]-1, n_bins+1, dtype=int)[1:]
+	boundaries = np.stack([ np.sort(distribution[feat_ind,:])[spacing] for feat_ind in range(distribution.shape[0]) ])
+	boundaries[:,-1] = np.inf
+	return boundaries
+	
+def compute_mutinfo(joint_pdf):
+	joint_pdf = joint_pdf / np.sum(joint_pdf)
+	marg_1 = np.sum(joint_pdf, axis=1)
+	marg_1 /= np.sum(marg_1)
+	marg_2 = np.sum(joint_pdf, axis=0)
+	marg_2 /= np.sum(marg_2)
+
+	# For 0 values, joint_pdf is 0 as well. Prevent NaNs in this case
+	marg_1[marg_1==0] = 1
+	marg_2[marg_2==0] = 1
+	nonzero_joint_pdf = joint_pdf.copy()
+	nonzero_joint_pdf[joint_pdf==0] = 1
+
+	return np.sum(joint_pdf * np.log2( nonzero_joint_pdf / (marg_1[:,None] * marg_2[None,:])))
+		
 
 # Right now this function replaces all values of one feature by random values sampled from the distribution of all features and looks how the accuracy changes.
+@torch.no_grad()
 def feature_importance():
 
 	# Number of bins for probability density functions
@@ -580,7 +607,7 @@ def feature_importance():
 
 	_, test_indices = get_nth_split(dataset, n_fold, fold)
 	test_data = torch.utils.data.Subset(dataset, test_indices)
-	distribution = get_feature_importance_distribution(test_data)
+	distribution, minmax = get_feature_importance_distribution(test_data)
 	test_loader = torch.utils.data.DataLoader(test_data, batch_size=opt.batchSize, shuffle=False, collate_fn=custom_collate)
 
 	attack_numbers = mapping.values()
@@ -589,8 +616,7 @@ def feature_importance():
 	randomized_results_by_attack_number = [[list() for _ in range(distribution.shape[0])] for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 
 	if opt.mutinfo:
-		minmax = list(zip(np.min(distribution, axis=1), np.max(distribution, axis=1)))
-
+		bin_boundaries = get_bin_boundaries(distribution, PDF_FEATURE_BINS)
 		# Joint pdf for feature values in individual time steps and confidence in the same time step
 		per_packet_pdf = np.zeros([opt.maxLength,distribution.shape[0],PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
 		# Joint pdf for constant feature values and end confidence
@@ -648,11 +674,13 @@ def feature_importance():
 
 				if opt.mutinfo:
 					if feature_index in constant_features:
-						bin1 = int(torch.round((PDF_FEATURE_BINS-1) * (input_data_padded[0,batch_index,feature_index] - minmax[feature_index][0]) / (minmax[feature_index][1]-minmax[feature_index][0])))
+						bin1 = np.argmax(input_data_padded[0,batch_index,feature_index] <= bin_boundaries[feat_ind,:], axis=1)
+						#  bin1 = int(torch.round((PDF_FEATURE_BINS-1) * (input_data_padded[0,batch_index,feature_index] - minmax[feature_index][0]) / (minmax[feature_index][1]-minmax[feature_index][0])))
 						bin2 = int(torch.round((PDF_CONFIDENCE_BINS-1) * sigmoided_output[flow_length-1,batch_index,0]))
 						per_flow_pdf[feature_index,bin1,bin2] += 1
 
-					bin1 = (torch.round((PDF_FEATURE_BINS-1) * (input_data_padded[:flow_length,batch_index,feature_index] - minmax[feature_index][0]) / (minmax[feature_index][1]-minmax[feature_index][0]))).cpu().numpy().astype(int)
+					bin1 = np.argmax(input_data_padded[:flow_length,batch_index,feature_index,None] <= bin_boundaries[None,feat_ind,:], axis=1)
+					#  bin1 = (torch.round((PDF_FEATURE_BINS-1) * (input_data_padded[:flow_length,batch_index,feature_index] - minmax[feature_index][0]) / (minmax[feature_index][1]-minmax[feature_index][0]))).cpu().numpy().astype(int)
 					bin2 = (torch.round((PDF_CONFIDENCE_BINS-1) * sigmoided_output[:flow_length,batch_index,0])).cpu().numpy().astype(int)
 					per_packet_pdf[np.arange(bin1.size),feature_index,bin1,bin2] += 1
 
@@ -685,21 +713,7 @@ def feature_importance():
 		with open(opt.dataroot[:-7] + '_mutinfos.pickle', 'wb') as f:
 			pickle.dump(mutinfos, f)
 
-def compute_mutinfo(joint_pdf):
-	joint_pdf = joint_pdf / np.sum(joint_pdf)
-	marg_1 = np.sum(joint_pdf, axis=1)
-	marg_1 /= np.sum(marg_1)
-	marg_2 = np.sum(joint_pdf, axis=0)
-	marg_2 /= np.sum(marg_2)
-
-	# For 0 values, joint_pdf is 0 as well. Prevent NaNs in this case
-	marg_1[marg_1==0] = 1
-	marg_2[marg_2==0] = 1
-	nonzero_joint_pdf = joint_pdf.copy()
-	nonzero_joint_pdf[joint_pdf==0] = 1
-
-	return np.sum(joint_pdf * np.log2( nonzero_joint_pdf / (marg_1[:,None] * marg_2[None,:])))
-
+@torch.no_grad()
 def mutinfo_feat_imp():
 	constant_features = [0,1,2]
 	SAMPLE_COUNT = 100
@@ -712,20 +726,18 @@ def mutinfo_feat_imp():
 
 	_, test_indices = get_nth_split(dataset, n_fold, fold)
 	test_data = torch.utils.data.Subset(dataset, test_indices)
-	distribution = get_feature_importance_distribution(test_data)
+	distribution, minmax = get_feature_importance_distribution(test_data)
+	bin_boundaries = get_bin_boundaries(distribution, PDF_FEATURE_BINS)
 
-	minmax = list(zip(np.min(distribution, axis=1), np.max(distribution, axis=1)))
-	features = [ feat_ind for feat_ind in range(distribution.shape[0]) if feat_ind not in constant_features and minmax[feat_ind][0] != minmax[feat_ind][1] ]
+	var_features = [ feat_ind for feat_ind in range(distribution.shape[0]) if feat_ind not in constant_features and minmax[feat_ind][0] != minmax[feat_ind][1] ]
 
 	mutinfos = np.zeros([opt.maxLength, distribution.shape[0]])
 	flow_lengths = np.zeros(opt.maxLength, dtype=int)
 
 	start_iterating = time.time()
 
-	for real_ind, sample_ind in zip(test_indices, range(len(test_data))):
-		print (sample_ind)
-		flow, _, flow_categories = test_data[sample_ind]
-		cat = int(flow_categories[0,0])
+	for real_ind, sample_ind in zip(test_indices, tqdm(range(len(test_data)))):
+		flow, _, _ = test_data[sample_ind]
 		flow_lengths[:flow.shape[0]] += 1
 
 		# process constant features
@@ -742,10 +754,11 @@ def mutinfo_feat_imp():
 			output, _ = lstm_module(packed_input)
 			sigmoided = torch.sigmoid(output[0,:,0]).detach().cpu()
 
-			for k,feat_ind in enumerate(features):
-				bin1 = (torch.round((PDF_FEATURE_BINS-1) * (input_data[i,:,feat_ind] - minmax[feat_ind][0]) / (minmax[feat_ind][1]-minmax[feat_ind][0]))).cpu().numpy().astype(int)
+			for k,feat_ind in enumerate(constant_features):
+				#  normalized_inputs = ((input_data[i,:,feat_ind] - minmax[feat_ind][0]) / (minmax[feat_ind][1]-minmax[feat_ind][0])).cpu().numpy()
+				bin1 = np.argmax(input_data[i,:,feat_ind,None].cpu().numpy() <= bin_boundaries[None,feat_ind,:], axis=1)
 				bin2 = (torch.round((PDF_CONFIDENCE_BINS-1) * sigmoided)).cpu().numpy().astype(int)
-				c = Counter(zip(bin1,bin2))
+				c = collections.Counter(zip(bin1,bin2))
 				bin1, bin2 = zip(*c.keys())
 				joint_pdf = np.zeros([PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
 				joint_pdf[bin1,bin2] = list(c.values())
@@ -758,22 +771,23 @@ def mutinfo_feat_imp():
 		for i in range(flow.shape[0]):
 			lstm_module.forgetting = True
 
-			input_data = torch.FloatTensor(flow[i,None,None,:]).repeat(1,len(features)*SAMPLE_COUNT,1)
-			for k, feat_ind in enumerate(features):
+			input_data = torch.FloatTensor(flow[i,None,None,:]).repeat(1,len(var_features)*SAMPLE_COUNT,1)
+			for k, feat_ind in enumerate(var_features):
 				input_data[0,k*SAMPLE_COUNT:(k+1)*SAMPLE_COUNT,feat_ind] = torch.FloatTensor(np.random.choice(distribution[feat_ind,:], size=SAMPLE_COUNT))
 
 			packed_input = torch.nn.utils.rnn.pack_padded_sequence(input_data, [1] *input_data.shape[1]).to(device)
 
 			# Convert hidden state to larger batch size
 			lstm_module.hidden = (lstm_module.hidden[0].repeat(1,input_data.shape[1],1), lstm_module.hidden[1].repeat(1,input_data.shape[1],1))
-			# print("hidden before", lstm_module.hidden)
 			output, _ = lstm_module(packed_input)
 			sigmoided = torch.sigmoid(output[0,:,0]).detach().cpu()
 
-			for k,feat_ind in enumerate(features):
-				bin1 = (torch.round((PDF_FEATURE_BINS-1) * (input_data[0,:,feat_ind] - minmax[feat_ind][0]) / (minmax[feat_ind][1]-minmax[feat_ind][0]))).cpu().numpy().astype(int)
+			for k,feat_ind in enumerate(var_features):
+				#  normalized_inputs = ((input_data[0,:,feat_ind] - minmax[feat_ind][0]) / (minmax[feat_ind][1]-minmax[feat_ind][0])).cpu().numpy()
+				#  bin1 = np.argmax(normalized_inputs[:,None] < bin_boundaries[feat_ind,None,:], axis=1)
+				bin1 = np.argmax(input_data[0,:,feat_ind,None].cpu().numpy() <= bin_boundaries[None,feat_ind,:], axis=1)
 				bin2 = (torch.round((PDF_CONFIDENCE_BINS-1) * sigmoided)).cpu().numpy().astype(int)
-				c = Counter(zip(bin1,bin2))
+				c = collections.Counter(zip(bin1,bin2))
 				bin1, bin2 = zip(*c.keys())
 				joint_pdf = np.zeros([PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
 				joint_pdf[bin1,bin2] = list(c.values())
@@ -781,15 +795,13 @@ def mutinfo_feat_imp():
 
 			# Convert hidden state to batch size 1
 			lstm_module.hidden = (lstm_module.hidden[0][:,0:1,:].contiguous(), lstm_module.hidden[1][:,0:1,:].contiguous())
-			# print("hidden before", lstm_module.hidden)
 			lstm_module.forgetting = False
 			packed_input = torch.nn.utils.rnn.pack_padded_sequence(torch.FloatTensor(flow[i,:][None,None,:]), [1]).to(device)
 
 			output, _ = lstm_module(packed_input)
 
-	#  mutinfos = [[ compute_mutinfo(joint_pdf[i,j,:,:]) for i in range(opt.maxLength) ] for j,_ in enumerate(features) ]
-	with open(opt.dataroot[:-7] + '_individual_mutinfos.pickle', 'wb') as f:
-		pickle.dump((features, mutinfos/flow_lengths[:,None]), f)
+	with open(opt.dataroot[:-7] + '_mutinfos2.pickle', 'wb') as f:
+		pickle.dump(mutinfos/flow_lengths[:,None], f)
 	print("It took {} seconds per sample".format((time.time()-start_iterating)/len(test_data)))
 
 
@@ -1200,6 +1212,7 @@ def get_feature_ranges_from_adv(sampling_density=100):
 		# print("feature", feat_name, "min", feat_min, "max", feat_max, "min_rescaled", feat_min*stds[feat_ind] + means[feat_ind], "max_rescaled", feat_max*stds[feat_ind] + means[feat_ind])
 	return features
 
+@torch.no_grad()
 def pred_plots():
 	OUT_DIR='pred_plots'
 	os.makedirs(OUT_DIR, exist_ok=True)
@@ -1272,6 +1285,7 @@ def pred_plots():
 	with open(file_name, "wb") as f:
 		pickle.dump({"results_by_attack_number": results_by_attack_number, "sample_indices_by_attack_number": sample_indices_by_attack_number}, f)
 
+@torch.no_grad()
 def pred_plots2():
 	OUT_DIR='pred_plots2'
 	os.makedirs(OUT_DIR, exist_ok=True)
@@ -1356,6 +1370,7 @@ def pred_plots2():
 	with open(file_name, "wb") as f:
 		pickle.dump({"results_by_attack_number": results_by_attack_number, "flows_by_attack_number": flows_by_attack_number, "result_ranges_by_attack_number": result_ranges_by_attack_number, "sample_indices_by_attack_number": sample_indices_by_attack_number, "features": features}, f)
 
+@torch.no_grad()
 def pdp():
 
 	feature_names = ["srcPort", "dstPort"]
