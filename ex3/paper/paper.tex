@@ -210,9 +210,10 @@ The natural choice is to base the methods on the prediction output which occurs 
 \begin{table}
 \caption{Accuracy drop when replacing feature values with random data.}
 \label{tab:feat_importance}
+\centering
 \begin{tabular}{l r}
 \toprule
-Feature & Accuracy drop \\ \midrule
+Feature & Acc.~drop \\ \midrule
 Protocol	&	0.1323	\\
 Packet Length	&	0.1203	\\
 SYN Flag	&	0.1067	\\
@@ -231,14 +232,18 @@ NS Flag	&	0.0000	\\
 \bottomrule
 \end{tabular}
 \end{table}
-As a first step to understanding the neural network's decisions, we tried to estimate how important individual features are for the model's predictions.
+As a first step to understanding the neural network's decisions, we tried to estimate how important individual features are for the model's predictions. The most commonly used techniques for this which are used by practitioners for \glspl{rnn} \cite{stackexchange_cross_validated_neural_2019} and \gls{dl} \cite{stackexchange_cross_validated_feature_2016} in general are based on adding noise to a particular feature and then evaluating the drop in accuracy that occurs. As we find it hard to find out the ``correct'' intensity of noise to add, we slightly vary the proposed approach: We do not add noise drawn from a probability distribution but instead sample the value for a feature from the distribution of all values of this feature. This makes the method non-parametric since the standard deviation of the noise does not need to be chosen. We ensured that features which stay constant for a flow, i.e. source port, destination port and protocol, also stay constant for the distorted flows.
 
-To this end, we evaluated by what extent detection accuracy drops when withholding individual features from the classifier. We thus replaced values of individual features by values randomly drawn from the same distribution as the real feature values. We ensured that features which stay constant for a flow, i.e. source port, destination port and protocol, also stay constant for the distorted flows.
+\autoref{tab:feat_importance} shows our results. The results match to a large extent with the expectations one has when classifying network flows. In particular, the most important features turn out to be the used protocol, packet length and the SYN TCP flag. While the first two features are essential for characterizing flows, a high number of packets with set SYN flag is an important characteristic for port scanning or certain DoS attacks. Also the fact that most of TCP flags do not play an important role in our dataset was expected. It is interesting to note, however, that the interarrival time of packets does not play a crucial role for the detection of attacks. 
 
-\autoref{tab:feat_importance} shows our results. The results match to a large extent with the expectations one has when classifying network flows. In particular,  the most important features turn out to be the used protocol, packet length and the SYN TCP flag. While the first two features are essential for characterizing flows, a high number of packets with set SYN flag is an important characteristic for port scanning or certain DoS attacks.
+While the method of adding noise to features/randomizing them is convenient since it is easy to implement and understand, we argue that it has some shortcomings: 
+The \gls{rnn} was never trained for dealing with ``garbage'' values that the noise/randomization methods create. For example, completely unrealistic feature combinations could occur that were never observed during training. Furthermore, sequences of features could occur that cannot occur in reality. 
+ 
+We think that the ``ideal'' feature importance method for our scenario are Shapley values \cite{shapley_value_1953}: To analyze feature importance with them, the feature under investigation in completely omitted from the dataset and a model is trained without it. The resulting accuracy is then compared to the baseline accuracy with all features. The effort required to do this is high both in terms of storage space as well as training time since for $n$ features $n$ models need to be separately trained and stored. While this seems tractable, when also analyzing the feature importance of combinations of features, the number of models required becomes even larger: Out of $n$ features, $2^n$ unique subsets can be chosen, meaning that the computational demand rises exponentially. 
 
-Also the fact that most of TCP flags do not play an important role in our dataset, was expected.
-It is interesting to note, however, that the interarrival time of packets does not play a crucial role for the detection of attacks.
+Considering the difficulties that arise from computing Shapley values, we propose a light-weight version of them: When training a model, for each sample, we leave out each feature with a certain probability by setting it to zero. On average, one feature gets zeroed out but it is also possible that none or more than one are left out. This procedure is equivalent to using dropout \cite{srivastava_dropout:_2014} with probability $\frac{1}{n}$ before the first layer. The result is the classifier learning to deal with missing features. As it can also happen that several features are left out for a sample, our method can also be used to analyze the effect of multiple features missing and can thus show possibly correlated features. 
+
+\todo{Add refs to Stackoverflow posts and add our custom feature importance methods.}
 
 \subsection{Explainability Plots}
 During flow extraction we used a usual 5-tuple flow key, which distinguishes flows based on the protocol they use and their source and destination port and IP address. Hence, these features are constant for all packets in one flow, which allows us to use explainability methods which have been proposed for non-recurrent classification methods.

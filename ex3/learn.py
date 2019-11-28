@@ -481,7 +481,9 @@ def dropout_feature_importance():
 	attack_numbers = mapping.values()
 
 	results_by_attack_number = [list() for _ in range(min(attack_numbers), max(attack_numbers)+1)]
+	results_flow_by_attack_number = [list() for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 	dropout_results_by_attack_number = [[list() for _ in range(test_x.shape[0])] for _ in range(min(attack_numbers), max(attack_numbers)+1)]
+	dropout_results_flow_by_attack_number = [[list() for _ in range(test_x.shape[0])] for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 
 	for input_data, labels, categories in test_loader:
 
@@ -513,6 +515,7 @@ def dropout_feature_importance():
 			flow_category = int(categories_padded[0, batch_index,:].squeeze().item())
 
 			results_by_attack_number[flow_category].append(flow_output)
+			results_flow_by_attack_number[flow_category].append(flow_output[-1])
 
 		for feature_index in range(test_x.shape[0]):
 			# Now draw individual feature values at random and query the nn for modified flows
@@ -531,24 +534,31 @@ def dropout_feature_importance():
 			# Data is (Sequence Index, Batch Index, Feature Index)
 			for batch_index in range(output.shape[1]):
 				flow_length = seq_lens[batch_index]
-
 				flow_output = (torch.round(sigmoided_output[:flow_length,batch_index,:]) == labels_padded[:flow_length,batch_index,:]).detach().cpu().numpy()
-
 				assert (categories_padded[0, batch_index,:] == categories_padded[:flow_length, batch_index,:]).all()
-
 				flow_category = int(categories_padded[0, batch_index,:].squeeze().item())
-
 				dropout_results_by_attack_number[flow_category][feature_index].append(flow_output)
+				dropout_results_flow_by_attack_number[flow_category][feature_index].append(flow_output[-1])
 
 	accuracy = np.mean(np.concatenate([subitem for item in results_by_attack_number for subitem in item], axis=0))
+	flow_accuracy = np.mean(np.concatenate([subitem for item in results_flow_by_attack_number for subitem in item], axis=0))
 	accuracy_for_features = []
-	with open("features.json", "r") as f:
+	accuracy_flow_for_features = []
+	with open("features_meaningful_names.json", "r") as f:
 		feature_array = json.load(f)
 	print("accuracy", accuracy)
+	print("flow_accuracy", flow_accuracy)
+	print("accuracy drops for each feature:")
 	for feature_index in range(test_x.shape[0]):
 		accuracy_for_feature = np.mean(np.concatenate([feature for attack_type in dropout_results_by_attack_number for feature in attack_type[feature_index]]))
 		accuracy_for_features.append(accuracy_for_feature)
-		print("accuracy_for_feature", feature_index, feature_array[feature_index], accuracy-accuracy_for_feature)
+		accuracy_flow_for_feature = np.mean(np.concatenate([feature for attack_type in dropout_results_flow_by_attack_number for feature in attack_type[feature_index]]))
+		accuracy_flow_for_features.append(accuracy_flow_for_feature)
+		print("accuracy_for_feature", feature_index, feature_array[feature_index], accuracy-accuracy_for_feature, flow_accuracy-accuracy_flow_for_feature)
+	print("accuracy drops for each feature sorted:")
+	for feature_index, _ in sorted(enumerate(accuracy_flow_for_features), key=lambda x: accuracy-x[1], reverse=True):
+		print("accuracy_for_feature", feature_index, feature_array[feature_index], max(accuracy-accuracy_for_features[feature_index], 0), max(flow_accuracy-accuracy_flow_for_features[feature_index], 0))
+
 	return (accuracy, accuracy_for_features)
 
 def get_feature_importance_distribution(test_data):
@@ -566,7 +576,7 @@ def get_feature_importance_distribution(test_data):
 				unique = np.unique(distribution[feature,:])
 				distribution[feature,:] = np.random.choice(unique, size=distribution.shape[1])
 	return distribution, minmax
-	
+
 def get_bin_boundaries(distribution, n_bins):
 	# For ideal resolution, choose bin boundaries so that each bin would
 	# get the equal number of hits for given distribution
@@ -574,7 +584,7 @@ def get_bin_boundaries(distribution, n_bins):
 	boundaries = np.stack([ np.sort(distribution[feat_ind,:])[spacing] for feat_ind in range(distribution.shape[0]) ])
 	boundaries[:,-1] = np.inf
 	return boundaries
-	
+
 def compute_mutinfo(joint_pdf):
 	joint_pdf = joint_pdf / np.sum(joint_pdf)
 	marg_1 = np.sum(joint_pdf, axis=1)
@@ -589,7 +599,7 @@ def compute_mutinfo(joint_pdf):
 	nonzero_joint_pdf[joint_pdf==0] = 1
 
 	return np.sum(joint_pdf * np.log2( nonzero_joint_pdf / (marg_1[:,None] * marg_2[None,:])))
-		
+
 
 # Right now this function replaces all values of one feature by random values sampled from the distribution of all features and looks how the accuracy changes.
 @torch.no_grad()
@@ -613,7 +623,9 @@ def feature_importance():
 	attack_numbers = mapping.values()
 
 	results_by_attack_number = [list() for _ in range(min(attack_numbers), max(attack_numbers)+1)]
+	results_flow_by_attack_number = [list() for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 	randomized_results_by_attack_number = [[list() for _ in range(distribution.shape[0])] for _ in range(min(attack_numbers), max(attack_numbers)+1)]
+	randomized_flow_results_by_attack_number = [[list() for _ in range(distribution.shape[0])] for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 
 	if opt.mutinfo:
 		bin_boundaries = get_bin_boundaries(distribution, PDF_FEATURE_BINS)
@@ -652,6 +664,7 @@ def feature_importance():
 			flow_category = int(categories_padded[0, batch_index,:].squeeze().item())
 
 			results_by_attack_number[flow_category].append(flow_output)
+			results_flow_by_attack_number[flow_category].append(flow_output[-1])
 
 		for feature_index in range(distribution.shape[0]):
 			# Now draw individual feature values at random and query the nn for modified flows
@@ -689,15 +702,23 @@ def feature_importance():
 				flow_category = int(categories_padded[0, batch_index,:].squeeze().item())
 
 				randomized_results_by_attack_number[flow_category][feature_index].append(flow_output)
+				randomized_flow_results_by_attack_number[flow_category][feature_index].append(flow_output[-1])
 
 	accuracy = np.mean(np.concatenate([subitem for item in results_by_attack_number for subitem in item], axis=0))
-	with open("features.json", "r") as f:
+	flow_accuracy = np.mean(np.concatenate([subitem for item in results_flow_by_attack_number for subitem in item], axis=0))
+	accuracy_for_features = []
+	accuracy_flow_for_features = []
+	with open("features_meaningful_names.json", "r") as f:
 		feature_array = json.load(f)
 	print("accuracy", accuracy)
+	print("flow_accuracy", flow_accuracy)
 	mutinfos = []
 	for feature_index in range(distribution.shape[0]):
 		accuracy_for_feature = np.mean(np.concatenate([feature for attack_type in randomized_results_by_attack_number for feature in attack_type[feature_index]]))
-		print("accuracy_for_feature", feature_index, feature_array[feature_index], accuracy-accuracy_for_feature)
+		accuracy_for_features.append(accuracy_for_feature)
+		accuracy_flow_for_feature = np.mean(np.concatenate([feature for attack_type in randomized_flow_results_by_attack_number for feature in attack_type[feature_index]]))
+		accuracy_flow_for_features.append(accuracy_flow_for_feature)
+		print("accuracy_for_feature", feature_index, feature_array[feature_index], accuracy-accuracy_for_feature, flow_accuracy-accuracy_flow_for_feature)
 		if opt.mutinfo:
 			if feature_index in constant_features:
 				print("mutual information for pf feature", feature_index, feature_array[feature_index], compute_mutinfo(per_flow_pdf[feature_index,:,:]))
@@ -708,6 +729,9 @@ def feature_importance():
 			])
 			if feature_index in constant_features:
 				mutinfos[-1].append(compute_mutinfo(per_flow_pdf[feature_index,:,:]))
+	print("accuracy drops for each feature sorted:")
+	for feature_index, _ in sorted(enumerate(accuracy_flow_for_features), key=lambda x: accuracy-x[1], reverse=True):
+		print("accuracy_for_feature", feature_index, feature_array[feature_index], max(accuracy-accuracy_for_features[feature_index], 0), max(flow_accuracy-accuracy_flow_for_features[feature_index], 0))
 
 	if opt.mutinfo:
 		with open(opt.dataroot[:-7] + '_mutinfos.pickle', 'wb') as f:
@@ -1099,7 +1123,7 @@ def adv_until_less_than_half():
 		results_dict = list(adv_internal(False, next_filter))[0]
 		modified_flows_by_attack, modified_results_by_attack, original_flows_by_attack, original_results_by_attack = results_dict["modified_flows_by_attack_number"], results_dict["results_by_attack_number"], results_dict["orig_flows_by_attack_number"], results_dict["orig_results_by_attack_number"]
 		ratio_modified_by_attack_number = np.array([np.mean(numpy_sigmoid(np.array([item[-1] for item in modified_results]))) if len(modified_results)>0 else -float("inf") for modified_results in modified_results_by_attack])
-		next_filter = [index for index, item in enumerate(ratio_modified_by_attack_number) if item <= THRESHOLD]
+		next_filter = [index for index, item in enumerate(ratio_modified_by_attack_number) if item <= THRESHOLD or prev_ratios[-1][item] <= THRESHOLD]
 		if i==0:
 			orig_results = original_results_by_attack
 			orig_flows = original_flows_by_attack
@@ -1128,8 +1152,8 @@ def adv_until_less_than_half():
 				lower_part = correct_indices[:int(math.ceil(len(distances)*min(ratio, THRESHOLD)))]
 
 				distances_per_packet = [dist/len(flow) for dist, flow in zip(distances[lower_part], prev_flows[i][attack_index])]
-				distances_flows[attack_index] = np.mean(distances[lower_part])
-				distances_packets[attack_index] = np.mean(distances_per_packet)
+				distances_flows[attack_index] = float(np.mean(distances[lower_part]))
+				distances_packets[attack_index] = float(np.mean(distances_per_packet))
 
 	for attack_index in range(len(distances_packets)):
 		if len(orig_results[attack_index]) <= 0:
