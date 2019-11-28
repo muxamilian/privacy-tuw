@@ -243,7 +243,7 @@ We think that the ``ideal'' feature importance method for our scenario are Shapl
 
 Considering the difficulties that arise from computing Shapley values, we propose a light-weight version of them: When training a model, for each sample, we leave out each feature with a certain probability by setting it to zero. On average, one feature gets zeroed out but it is also possible that none or more than one are left out. This procedure is equivalent to using dropout \cite{srivastava_dropout:_2014} with probability $\frac{1}{n}$ before the first layer. The result is the classifier learning to deal with missing features. As it can also happen that several features are left out for a sample, our method can also be used to analyze the effect of multiple features missing and can thus show possibly correlated features. 
 
-\todo{Add refs to Stackoverflow posts and add our custom feature importance methods.}
+\todo{Change table with recent values and include table for dropout\_feature\_importance.}
 
 \subsection{Explainability Plots}
 During flow extraction we used a usual 5-tuple flow key, which distinguishes flows based on the protocol they use and their source and destination port and IP address. Hence, these features are constant for all packets in one flow, which allows us to use explainability methods which have been proposed for non-recurrent classification methods.
