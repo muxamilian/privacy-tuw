@@ -208,27 +208,47 @@ The natural choice is to base the methods on the prediction output which occurs 
 
 \subsection{Feature Importance Metrics}
 \begin{table}
-\caption{Accuracy drop when replacing feature values with random data.}
+\caption{Accuracy drop when \textbf{Left:} when replacing feature values with random data \textbf{Right:} Feature dropout}
 \label{tab:feat_importance}
 \centering
 \begin{tabular}{l r}
 \toprule
 Feature & Acc.~drop \\ \midrule
-Protocol	&	0.1323	\\
-Packet Length	&	0.1203	\\
-SYN Flag	&	0.1067	\\
-ACK Flag	&	0.0805	\\
-Destination port	&	0.0796	\\
-PSH Flag	&	0.0767	\\
-Direction	&	0.0732	\\
-Source port	&	0.0254	\\
-Interarrival time	&	0.0200	\\
-RST Flag	&	0.0116	\\
-FIN Flag	&	0.0100	\\
-ECE	Flag &	0.0000	\\
-URG Flag	&	0.0000	\\
-CWR Flag	&	0.0000	\\
-NS Flag	&	0.0000	\\
+Protocol & 0.207 \\
+Packet Length & 0.165 \\
+SYN Flag & 0.099 \\
+ACK Flag & 0.084 \\
+Direction & 0.073 \\
+Destination port & 0.071 \\
+Source port & 0.06 \\
+RST Flag & 0.057 \\
+PSH Flag & 0.056 \\
+Interarrival time & 0.024 \\
+FIN Flag & 0.012 \\
+URG Flag & 0 \\
+ECE Flag & 0 \\
+CWR Flag & 0 \\
+NS Flag & 0 \\
+\bottomrule
+\end{tabular}
+\begin{tabular}{l r}
+\toprule
+Feature & Acc.~drop \\ \midrule
+Destination port & 0.025 \\
+Source port & 0.003 \\
+RST Flag & 0.001 \\
+ACK Flag & 0.001 \\
+Protocol & 0.001 \\
+Packet Length & 0.001 \\
+Direction & 0.001 \\
+SYN Flag & 0 \\
+Interarrival time & 0 \\
+FIN Flag & 0 \\
+ECE Flag & 0 \\
+URG Flag & 0 \\
+CWR Flag & 0 \\
+NS Flag & 0 \\
+PSH Flag & 0 \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -241,9 +261,10 @@ The \gls{rnn} was never trained for dealing with ``garbage'' values that the noi
  
 We think that the ``ideal'' feature importance method for our scenario are Shapley values \cite{shapley_value_1953}: To analyze feature importance with them, the feature under investigation in completely omitted from the dataset and a model is trained without it. The resulting accuracy is then compared to the baseline accuracy with all features. The effort required to do this is high both in terms of storage space as well as training time since for $n$ features $n$ models need to be separately trained and stored. While this seems tractable, when also analyzing the feature importance of combinations of features, the number of models required becomes even larger: Out of $n$ features, $2^n$ unique subsets can be chosen, meaning that the computational demand rises exponentially. 
 
-Considering the difficulties that arise from computing Shapley values, we propose a light-weight version of them: When training a model, for each sample, we leave out each feature with a certain probability by setting it to zero. On average, one feature gets zeroed out but it is also possible that none or more than one are left out. This procedure is equivalent to using dropout \cite{srivastava_dropout:_2014} with probability $\frac{1}{n}$ before the first layer. The result is the classifier learning to deal with missing features. As it can also happen that several features are left out for a sample, our method can also be used to analyze the effect of multiple features missing and can thus show possibly correlated features. 
+Considering the difficulties that arise from computing Shapley values, we propose a light-weight version of them, called \textit{feature dropout}: When training a model, for each sample, we leave out each feature with a certain probability by setting it to zero. On average, one feature gets zeroed out but it is also possible that none or more than one are left out. This procedure is equivalent to using dropout \cite{srivastava_dropout:_2014} with probability $\frac{1}{n}$ before the first layer. The result is the classifier learning to deal with missing features. As it can also happen that several features are left out for a sample, our method can also be used to analyze the effect of multiple features missing and can thus show possibly correlated features. The results in \autoref{tab:feat_importance} show that the randomization feature importance method vastly overestimates features' importance. With feature dropout, it becomes apparent that there are very few features that actually contain unique information and that affect accuracy when left out: the destination port and the source port. 
+\todo{Add correlation and explain why most features have no importance}
 
-\todo{Change table with recent values and include table for dropout\_feature\_importance.}
+A model trained with feature dropout typically yields slightly lower accuracy than a regularly trained model, even if no features are left out (flow accuracy of 0.9943 vs.~0.9965 \todo{Update results in the first table at the very top since our results now are better than they used to be originally.}). We thus recommend training two models: One regular one and one with feature dropout to use for the feature importance. 
 
 \subsection{Explainability Plots}
 During flow extraction we used a usual 5-tuple flow key, which distinguishes flows based on the protocol they use and their source and destination port and IP address. Hence, these features are constant for all packets in one flow, which allows us to use explainability methods which have been proposed for non-recurrent classification methods.
