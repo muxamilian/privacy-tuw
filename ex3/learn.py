@@ -37,6 +37,16 @@ def output_scores(y_true, y_pred):
 def numpy_sigmoid(x):
 	return 1/(1+np.exp(-x))
 
+def pretty_print(*args, **kwargs):
+	# Print tables in a format which can be parsed easily
+	outputs = []
+	for arg in args:
+		try:
+			outputs.append('%.6f' % arg)
+		except:
+			outputs.append(arg)
+	print('\t'.join(outputs), **kwargs)
+
 class OurDataset(Dataset):
 	def __init__(self, data, labels, categories):
 		self.data = data
@@ -192,7 +202,7 @@ def train():
 	train_data = torch.utils.data.Subset(dataset, train_indices)
 	if opt.advTraining:
 		train_data = AdvDataset(train_data)
-		adv_generator = adv_internal(in_training=True)
+		adv_generator = adv_internal(in_training=True, iterations=10)
 	train_loader = torch.utils.data.DataLoader(train_data, batch_size=opt.batchSize, shuffle=True, collate_fn=custom_collate)
 
 	optimizer = optim.SGD(lstm_module.parameters(), lr=opt.lr)
@@ -201,6 +211,8 @@ def train():
 	writer = SummaryWriter()
 
 	samples = 0
+	save_period = int(round(len(train_indices) * opt.modelSavePeriod))
+	
 	for i in range(1, sys.maxsize):
 		if opt.advTraining:
 			train_data.adv_flows, train_data.categories, av_distance = next(adv_generator)
@@ -274,13 +286,15 @@ def train():
 				writer.add_scalar("adv_confidence", torch.mean(confidences[mask]), samples)
 				writer.add_scalar("adv_end_confidence", torch.mean(confidences[mask_exact]), samples)
 
-
-		# Save after every epoch
-		if i % 1 == 0:
-			torch.save(lstm_module.state_dict(), '%s/lstm_module_%d.pth' % (writer.log_dir, i))
-			if opt.advTraining:
-				with open(adv_filename(), 'wb') as f:
-					pickle.dump(train_data.adv_flows, f)
+			if samples % save_period < output.shape[1]:
+				if len(train_indices) % save_period == 0:
+					filename = 'lstm_module_%d.pth' % i
+				else:
+					filename = 'lstm_module_%.3f.pth' % (samples / len(train_indices))
+				torch.save(lstm_module.state_dict(), '%s/%s' % (writer.log_dir, filename))
+				if opt.advTraining:
+					with open(adv_filename(), 'wb') as f:
+						pickle.dump(train_data.adv_flows, f)
 
 @torch.no_grad()
 def test():
@@ -455,14 +469,14 @@ def dropout_feature_correlation():
 				else:
 					overall_score = float("nan")
 			correlations[(feat1, feat2)] = overall_score
-			print("feat1", feat1, feature_array[feat1], feat2, "feat2", feature_array[feat2], "acc_feat1", baseline_accuracy-accuracy_by_feature[feat1], "acc_feat2", baseline_accuracy-accuracy_by_feature[feat2], "joint_acc", joint_accuracy[(feat1, feat2)], "score", overall_score)
+			pretty_print("feat1", feat1, feature_array[feat1], feat2, "feat2", feature_array[feat2], "acc_feat1", baseline_accuracy-accuracy_by_feature[feat1], "acc_feat2", baseline_accuracy-accuracy_by_feature[feat2], "joint_acc", joint_accuracy[(feat1, feat2)], "score", overall_score)
 
 	N_MOST_CORRELATED_TO_SHOW = len(list(correlations.items()))
 	sorted_correlations = list(sorted([item for item in list(correlations.items()) if not math.isnan(item[1])], key=lambda item: item[1], reverse=True))[:N_MOST_CORRELATED_TO_SHOW]
 	print("highest", N_MOST_CORRELATED_TO_SHOW, "scores:")
 	for (feat1, feat2), score in sorted_correlations:
-		print("feat1", feat1, feature_array[feat1], feat2, "feat2", feature_array[feat2], "acc_feat1", baseline_accuracy-accuracy_by_feature[feat1], "acc_feat2", baseline_accuracy-accuracy_by_feature[feat2], "joint_acc", joint_accuracy[(feat1, feat2)], "score", score)
-
+		pretty_print("feat1", feat1, feature_array[feat1], feat2, "feat2", feature_array[feat2], "acc_feat1", baseline_accuracy-accuracy_by_feature[feat1], "acc_feat2", baseline_accuracy-accuracy_by_feature[feat2], "joint_acc", joint_accuracy[(feat1, feat2)], "score", score)
+	
 # This function takes a model that was trained with feature dropout and can compute feature importance using that model.
 def dropout_feature_importance():
 
@@ -554,13 +568,13 @@ def dropout_feature_importance():
 		accuracy_for_features.append(accuracy_for_feature)
 		accuracy_flow_for_feature = np.mean(np.concatenate([feature for attack_type in dropout_results_flow_by_attack_number for feature in attack_type[feature_index]]))
 		accuracy_flow_for_features.append(accuracy_flow_for_feature)
-		print("accuracy_for_feature", feature_index, feature_array[feature_index], accuracy-accuracy_for_feature, flow_accuracy-accuracy_flow_for_feature)
+		pretty_print("accuracy_for_feature", feature_index, feature_array[feature_index], accuracy-accuracy_for_feature, flow_accuracy-accuracy_flow_for_feature)
 	print("accuracy drops for each feature sorted:")
 	for feature_index, _ in sorted(enumerate(accuracy_flow_for_features), key=lambda x: accuracy-x[1], reverse=True):
-		print("accuracy_for_feature", feature_index, feature_array[feature_index], max(accuracy-accuracy_for_features[feature_index], 0), max(flow_accuracy-accuracy_flow_for_features[feature_index], 0))
+		pretty_print("accuracy_for_feature", feature_index, feature_array[feature_index], max(accuracy-accuracy_for_features[feature_index], 0), max(flow_accuracy-accuracy_flow_for_features[feature_index], 0))
 
 	return (accuracy, accuracy_for_features)
-
+	
 def get_feature_importance_distribution(test_data):
 	distribution = np.concatenate([item[0] for item in test_data], axis=0).transpose(1,0)
 	minmax = list(zip(np.min(distribution, axis=1), np.max(distribution, axis=1)))
@@ -718,11 +732,11 @@ def feature_importance():
 		accuracy_for_features.append(accuracy_for_feature)
 		accuracy_flow_for_feature = np.mean(np.concatenate([feature for attack_type in randomized_flow_results_by_attack_number for feature in attack_type[feature_index]]))
 		accuracy_flow_for_features.append(accuracy_flow_for_feature)
-		print("accuracy_for_feature", feature_index, feature_array[feature_index], accuracy-accuracy_for_feature, flow_accuracy-accuracy_flow_for_feature)
+		pretty_print("accuracy_for_feature", feature_index, feature_array[feature_index], accuracy-accuracy_for_feature, flow_accuracy-accuracy_flow_for_feature)
 		if opt.mutinfo:
 			if feature_index in constant_features:
-				print("mutual information for pf feature", feature_index, feature_array[feature_index], compute_mutinfo(per_flow_pdf[feature_index,:,:]))
-			print("mutual information for pp feature", feature_index, feature_array[feature_index], compute_mutinfo(np.sum(per_packet_pdf[:,feature_index,:,:],axis=0)))
+				pretty_print("mutual information for pf feature", feature_index, feature_array[feature_index], compute_mutinfo(per_flow_pdf[feature_index,:,:]))
+			pretty_print("mutual information for pp feature", feature_index, feature_array[feature_index], compute_mutinfo(np.sum(per_packet_pdf[:,feature_index,:,:],axis=0)))
 			mutinfos.append([
 				compute_mutinfo(np.sum(per_packet_pdf[:,feature_index,:,:], axis=0)),
 				[ compute_mutinfo(per_packet_pdf[timestep,feature_index,:,:]) for timestep in range(opt.maxLength) ]
@@ -731,7 +745,7 @@ def feature_importance():
 				mutinfos[-1].append(compute_mutinfo(per_flow_pdf[feature_index,:,:]))
 	print("accuracy drops for each feature sorted:")
 	for feature_index, _ in sorted(enumerate(accuracy_flow_for_features), key=lambda x: accuracy-x[1], reverse=True):
-		print("accuracy_for_feature", feature_index, feature_array[feature_index], max(accuracy-accuracy_for_features[feature_index], 0), max(flow_accuracy-accuracy_flow_for_features[feature_index], 0))
+		pretty_print("accuracy_for_feature", feature_index, feature_array[feature_index], max(accuracy-accuracy_for_features[feature_index], 0), max(flow_accuracy-accuracy_flow_for_features[feature_index], 0))
 
 	if opt.mutinfo:
 		with open(opt.dataroot[:-7] + '_mutinfos.pickle', 'wb') as f:
@@ -747,6 +761,9 @@ def mutinfo_feat_imp():
 	n_fold = opt.nFold
 	fold = opt.fold
 	lstm_module.eval()
+	
+	with open("features.json", "r") as f:
+		feature_array = json.load(f)
 
 	_, test_indices = get_nth_split(dataset, n_fold, fold)
 	test_data = torch.utils.data.Subset(dataset, test_indices)
@@ -824,18 +841,26 @@ def mutinfo_feat_imp():
 
 			output, _ = lstm_module(packed_input)
 
+	mutinfos /= flow_lengths[:,None]
+	for feature_index, feature_mutinfo in enumerate(np.mean(mutinfos, axis=0)):
+		pretty_print("mutinfo for feature", feature_index, feature_array[feature_index], feature_mutinfo)
 	with open(opt.dataroot[:-7] + '_mutinfos2.pickle', 'wb') as f:
-		pickle.dump(mutinfos/flow_lengths[:,None], f)
+		pickle.dump(mutinfos, f)
+
 	print("It took {} seconds per sample".format((time.time()-start_iterating)/len(test_data)))
 
 
-def adv_internal(in_training = False, attack_types_which_are_not_investigated_anymore=[]):
+def adv_internal(in_training = False, tradeoff=None, lr=None, iterations=None, attack_types_which_are_not_investigated_anymore=[]):
 	# FIXME: They suggest at least 10000 iterations with some specialized optimizer (Adam)
 	# with SGD we probably need even more.
 	if opt.advMethod == 'fgsm':
 		ITERATION_COUNT = 1
 	else:
-		ITERATION_COUNT = 10 if in_training else opt.iterationCount
+		ITERATION_COUNT = opt.iterationCount if iterations is None else iterations
+	if tradeoff is None:
+		tradeoff = opt.tradeoff
+	if lr is None:
+		lr = opt.lr
 
 	lstm_module.train()
 
@@ -871,7 +896,7 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 	finished_adv_samples = [None] * len(subset)
 	finished_categories = [ item[2][0,0] for item in subset ]
 
-	zero_tensor = torch.FloatTensor([0]).to(device)
+	zero_tensor = torch.FloatTensor([-0.2]).to(device)
 
 	samples = 0
 	distances = []
@@ -893,9 +918,9 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 		samples += input_data.sorted_indices.shape[0]
 
 		if opt.advMethod == "cw":
-			optimizer = optim.SGD([input_data.data], lr=opt.lr)
+			optimizer = optim.SGD([input_data.data], lr=lr)
 		else:
-			optimizer = optim.SGD(lstm_module.parameters(), lr=opt.lr)
+			optimizer = optim.SGD(lstm_module.parameters(), lr=lr)
 			criterion = nn.BCEWithLogitsLoss(reduction="mean")
 
 		orig_batch = input_data.data.clone()
@@ -953,6 +978,9 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 		mask_pgd = (index_tensor <= selection_tensor).byte().to(device)
 		labels, _ = torch.nn.utils.rnn.pad_packed_sequence(labels)
 
+		#  best_seen_adv_flows = [None] * seqs.shape[1]
+		#  best_seen_adv_distances = torch.FloatTensor([np.inf] * seqs.shape[1]).to(device)
+		
 		for i in range(ITERATION_COUNT):
 
 			# print("iterating", i)
@@ -972,10 +1000,15 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 				if opt.order != 1:
 					seqs, lengths = torch.nn.utils.rnn.pad_packed_sequence(input_data)
 					unpadded_seqs = unpad_padded_sequences(seqs, lengths)
-					distance = torch.stack([torch.dist(orig_batch_unpadded_item, unpadded_seqs_item, p=opt.order) for orig_batch_unpadded_item, unpadded_seqs_item in zip(orig_batch_unpadded, unpadded_seqs)]).sum()
+					distances = torch.stack([torch.dist(orig_batch_unpadded_item, unpadded_seqs_item, p=opt.order) for orig_batch_unpadded_item, unpadded_seqs_item in zip(orig_batch_unpadded, unpadded_seqs)])
+					#  success_mask = (output.data[:,:,0] < -0.2).all(dim=0) & (distances.data < best_seen_adv_distances)
+					#  for ind in success_mask.cpu().nonzero()[:,0]:
+						#  best_seen_adv_flows[ind] = seqs.data[:,ind,:].cpu()
+					#  best_seen_adv_distances[success_mask] = distances.data[success_mask]
+					distance = distances.sum()
 				else:
 					distance = torch.dist(orig_batch, input_data.data, p=opt.order)
-				regularizer = opt.tradeoff*torch.max(output, zero_tensor).sum()
+				regularizer = tradeoff*torch.max(output, zero_tensor).sum()
 				criterion = distance + regularizer
 				if opt.penaltyTradeoff > 0:
 					seqs, lengths = torch.nn.utils.rnn.pad_packed_sequence(input_data)
@@ -996,12 +1029,12 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 				gradient[:,:3] = 0
 				gradient[:,5:] = 0
 				if opt.advMethod == 'fgsm':
-					input_data.data.data = input_data.data.data + opt.tradeoff*gradient.sign()
+					input_data.data.data = input_data.data.data + tradeoff*gradient.sign()
 				else:
-					input_data.data.data += opt.lr * gradient
+					input_data.data.data += lr * gradient
 					delta = input_data.data.data - orig_batch.data
-					proj_mask = delta.abs() > opt.tradeoff
-					input_data.data.data[proj_mask] = orig_batch.data[proj_mask] + opt.tradeoff * delta[proj_mask].sign()
+					proj_mask = delta.abs() > tradeoff
+					input_data.data.data[proj_mask] = orig_batch.data[proj_mask] + tradeoff * delta[proj_mask].sign()
 
 			# Packet lengths cannot become smaller than original
 			packet_mask = input_data.data[:,3] < orig_batch[:,3]
@@ -1033,6 +1066,11 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 			input_data.data.data = torch.nn.utils.rnn.pack_padded_sequence(seqs, lengths, enforce_sorted=False).data.data
 
 		seqs, lengths = torch.nn.utils.rnn.pad_packed_sequence(input_data)
+		
+		#  if opt.advMethod == 'cw':
+			#  for ind in range(seqs.shape[1]):
+				#  if best_seen_adv_flows[ind] is not None:
+					#  seqs[:,ind,:] = best_seen_adv_flows[ind]
 
 		adv_samples = [ seqs[:lengths[batch_index],batch_index,:].detach().cpu().numpy() for batch_index in range(seqs.shape[1]) ]
 
@@ -1055,7 +1093,7 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 
 	assert len(results) == len(subset)
 
-	print("Tradeoff: {}".format(opt.tradeoff))
+	print("Tradeoff: {}".format(tradeoff))
 	print("Number of attack samples: {}".format(len(subset)))
 	print("Average confidence on original packets: {}".format(np.mean(numpy_sigmoid(np.concatenate([np.array(item) for item in original_results], axis=0)))))
 	print("Average confidence on packets: {}".format(np.mean(numpy_sigmoid(np.concatenate([np.array(item) for item in results], axis=0)))))
@@ -1094,7 +1132,7 @@ def adv_internal(in_training = False, attack_types_which_are_not_investigated_an
 
 		print("Attack type: {}; number of samples: {}, average dist: {}, packet confidence: {}/{}, flow confidence: {}/{}".format(reverse_mapping[attack_number], len(per_attack_results), dist, per_packet_accuracy, per_packet_orig_accuracy, per_flow_accuracy, per_flow_orig_accuracy))
 
-	file_name = opt.dataroot[:-7]+"_adv_{}{}_outcomes_{}_{}.pickle".format(opt.tradeoff, "_notBidirectional" if not opt.canManipulateBothDirections else "", opt.fold, opt.nFold)
+	file_name = opt.dataroot[:-7]+"_adv_{}{}_outcomes_{}_{}.pickle".format(tradeoff, "_notBidirectional" if not opt.canManipulateBothDirections else "", opt.fold, opt.nFold)
 	results_dict = {"results_by_attack_number": results_by_attack_number, "orig_results_by_attack_number": orig_results_by_attack_number, "modified_flows_by_attack_number": modified_flows_by_attack_number, "orig_flows_by_attack_number": orig_flows_by_attack_number}
 	with open(file_name, "wb") as f:
 		pickle.dump(results_dict, f)
@@ -1117,13 +1155,14 @@ def adv_until_less_than_half():
 	orig_flows = None
 	prev_ratios = []
 	next_filter = []
+	tradeoff = 0
+	lr = opt.lr
+	iterations = 1
 	while True:
-		# FIXME: Hack: Shouldn't assign input parameter I guess
-		opt.tradeoff = i*SCALING
-		results_dict = list(adv_internal(False, next_filter))[0]
+		results_dict = list(adv_internal(False, tradeoff, lr, iterations, next_filter))[0]
 		modified_flows_by_attack, modified_results_by_attack, original_flows_by_attack, original_results_by_attack = results_dict["modified_flows_by_attack_number"], results_dict["results_by_attack_number"], results_dict["orig_flows_by_attack_number"], results_dict["orig_results_by_attack_number"]
-		ratio_modified_by_attack_number = np.array([np.mean(numpy_sigmoid(np.array([item[-1] for item in modified_results]))) if len(modified_results)>0 else -float("inf") for modified_results in modified_results_by_attack])
-		next_filter = [index for index, item in enumerate(ratio_modified_by_attack_number) if item <= THRESHOLD or prev_ratios[-1][item] <= THRESHOLD]
+		ratio_modified_by_attack_number = np.array([np.mean(np.round(numpy_sigmoid(np.array([item[-1] for item in modified_results])))) if len(modified_results)>0 else -float("inf") for modified_results in modified_results_by_attack])
+		next_filter = [index for index, item in enumerate(ratio_modified_by_attack_number) if item <= THRESHOLD ]#or prev_ratios[-1][item] <= THRESHOLD]
 		if i==0:
 			orig_results = original_results_by_attack
 			orig_flows = original_flows_by_attack
@@ -1134,6 +1173,19 @@ def adv_until_less_than_half():
 		if i+1==MAX or (ratio_modified_by_attack_number <= THRESHOLD).all() or (len(prev_ratios) > 1 and (prev_ratios[-2] <= prev_ratios[-1]).all()):
 			break
 		i += 1
+		# linear steps
+		tradeoff += SCALING
+		# # exponential steps
+		#  if i == 1:
+			#  tradeoff = 0.5
+		#  else:
+			#  tradeoff *= 2
+		# Since the regularizer is multplied by the tradeoff, we have to scale
+		# the learning rate inversely with the tradeoff to avoid numerical
+		# issues. However, since the distance is not affected by the tradeoff,
+		# the iteration count has to be increased with a higher tradeoff.
+		lr = opt.lr/tradeoff
+		iterations = int(opt.iterationCount * tradeoff) # TODO: change default iterationCount
 
 	reverse_mapping = {v: k for k, v in mapping.items()}
 	distances_packets = [None]*len(orig_results)
@@ -1158,11 +1210,11 @@ def adv_until_less_than_half():
 	for attack_index in range(len(distances_packets)):
 		if len(orig_results[attack_index]) <= 0:
 			continue
-		print(
+		pretty_print(
 			"attack_type", reverse_mapping[attack_index],
 			"ratio", final_ratios[attack_index],
-			"flow_accuracy", np.mean(numpy_sigmoid(np.array([item[-1] for item in orig_results[attack_index]]))),
-			"packet_accuracy", np.mean(numpy_sigmoid(np.array([sublist for l in orig_results[attack_index] for sublist in l]))),
+			"flow_accuracy", np.mean(np.round(numpy_sigmoid(np.array([item[-1] for item in orig_results[attack_index]])))),
+			"packet_accuracy", np.mean(np.round(numpy_sigmoid(np.array([sublist for l in orig_results[attack_index] for sublist in l])))),
 			"flow_distance", distances_flows[attack_index],
 			"packet_distance", distances_packets[attack_index]
 		)
@@ -1500,6 +1552,7 @@ if __name__=="__main__":
 	parser.add_argument('--iterationCount', type=int, default=100, help='number of iterations for creating adversarial samples')
 	parser.add_argument('--pathToAdvOutput', type=str, default="", help='path to adv output to be used in pred_plots2')
 	parser.add_argument('--averageFeaturesToPruneDuringTraining', type=int, default=-1, help='average number of features that should be "dropped out"; -1 to disable (default)')
+	parser.add_argument('--modelSavePeriod', type=float, default=1, help='number of epochs, after which to save the model, can be decimal')
 	parser.add_argument('--mutinfo', action='store_true', help='also compute mutinfo during the feature_importance function')
 	parser.add_argument('--hidden_size', type=int, default=512, help='number of neurons per layer')
 	parser.add_argument('--n_layers', type=int, default=3, help='number of LSTM layers')
