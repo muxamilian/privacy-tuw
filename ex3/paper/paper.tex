@@ -311,56 +311,6 @@ Setting the threshold for our metric to 50\% is arbitrary but we think that it i
 
 \todo{Insert results}
 
-\section{Defences}
-
-\subsection{Reducing features}
-The most obvious defence, which is only possible because of the nature of the dataset, is to simply leave out features which the attacker can manipulate. For this, we try two different approaches:
-\begin{itemize}
-\item Leaving out all features that are manipulable: packet size and interarrival time
-\item Leaving out manipulable features when the attacker can manipulate them: only in the direction from the attacker to the victim (This, however does not prevent adversarial samples for botnets, for which both sides are malicious)
-\end{itemize}
-
-Both approaches lead to complete resistance to adversarial samples (as we left out all manipulable features), except for botnets, which can still operate when only leaving out manipulable features in one direction. The results in \autoref{tab:performance_results_no_manipulable} show that -- surprisingly -- there is only a small difference in classification performance when only computing the accuracy for the last packet of each flow (flow accuracy). However, when looking at the packet accuracy, which considers all packets of all flows, there is a significant difference. Thus, apparently the interarrival time and packet size are especially important for determining whether a flow is malicious in the first packets of a flow.
-
-\subsection{Adversarial training}
-In addition to omitting manipulable features we tried to make our network more robust against adversarial samples by augmenting the training set by adversarial flows generated using the Carlini-Wagner method, labeled as additional attacks.
-
-For this purpose, we added one adversarial sample per attack sample to the training set. Note that, since our used method for obtaining adversarial samples is deterministic, this is the maximum number of adversarial samples possible. With this training set we then alternated retraining of the neural network and optimization of the adversarial samples using gradient descent.
-
-One question which occurs in this process, is how many CPU cycles to spend on network training and adversarial sample optimization. As a natural approach, we decided to use as many backpropagation steps for neural network training as we use for adversarial sample optimization.  For each adversarial sample optimization step, we performed 10 iterations of gradient descent. Hence, all adversarial samples were optimized each 10 epochs of neural network training.
-
-\autoref{fig:avdistance} shows the average distance of a block of adversarial samples from to original, unmodified attack samples throughout the adversarial training procedure. The figure clearly indicates that adversarial training is effective, as the distance gradually increases. Hence, an attacker would have to modify attack samples more and more, eventually rendering the attack unpractical.
-
-However, the figure also shows that an increase of distance can only be achieved after a considerable amount of training. It is, hence, questionable if the gained increase in robustness is enough for reliable attack detection.
-
-\begin{figure}
-\includegraphics[width=\columnwidth]{../plots/adv_training/avdistance.pdf}
-\caption{Distance of adversarial samples from original attack samples throughout adversarial training.}
-\label{fig:avdistance}
-\end{figure}
-
-%However, against our expectations, this approach did not lead to satisfactory results in the sense that the network would learn to classify adversarial samples as attacks. In fact, classification accuracy stayed about constant during the training of the network.
-
-A possible explanation for this observation might be that the adversarial samples assumed too much the shape of normal flows, so that the network could not reliable tell them apart.
-
-\begin{table*}
-\caption{Comparing performance with all features, only safe features (interarrival time and packet size removed) and safe features in one direction (interarrival time and packet size removed for packets coming from source). \textit{packets} means that we consider the neural network output of all packets of the flow while \textit{flows} means that we only consider the last packet. At the last packet the classifier is usually already a lot more confident than at the first packets of a flow and thus metrics are always better in this case.}  \label{tab:performance_results_no_manipulable}
-\newcommand{\cmidrulespace}{6pt}
-\centering
-\begin{tabular}{l l l l l l l} \toprule
-& \multicolumn{2}{l}{all} & \multicolumn{2}{l}{safe features} & \multicolumn{2}{l}{safe features one direction} \\
-\cmidrule(r){2-3} \cmidrule(lr){4-5} \cmidrule(l){6-7}
-& packets & flows & packets & flows & packets & flows \\
-\midrule
-Accuracy & 0.9857054 & 0.99472587 & 0.96678023 & 0.99337596 & 0.98056073 & 0.99353386 \\
-Precision & 0.94963342 & 0.9894422 & 0.87175275 & 0.98798596 & 0.91359787 & 0.98994595 \\
-Recall & 0.96735895 & 0.98972051 & 0.94374958 & 0.98581328 & 0.97836672 & 0.9844478 \\
-F1 & 0.95841423 & 0.98958134 & 0.90632359 & 0.98689842 & 0.94487366 & 0.98718922 \\
-Youden & 0.95682951 & 0.98614231 & 0.91525628 & 0.98175163 & 0.95937772 & 0.9810602 \\
-\bottomrule
-\end{tabular}
-\end{table*}
-
 \section{Explaining Recurrent Neural Networks}
 From a naive perspective, one might be tempted to reuse explainability methods for recurrent neural networks by considering a flow the sum of its packet features.
 We identify several problems which occur when trying to explain decisions made by recurrent neural networks. 
@@ -448,10 +398,15 @@ A large amount of research has been spent on finding \emph{feature importance} m
 
 Both adversarial machine learning and explainable machine learning bring up the question to what extent individual features are able to change the prediction outcome. While being seemingly similar at first sight, traditional feature importance can yield markedly wrong results for this case.  To distinguish, we propose the term \emph{feature sensitivity} for such metrics.
 
+\subsubsection{Neural Network Weights}
+In previous works, a simple method for determining feature importance in neural networks, has been summing up neural network weights leading from an input to the prediction outcome. The weights method can be considered for both feature importance and feature sensitivity, however, clearly, especially in the case of complex network architectures, this method is likely to provide wrong results. Hence, we provide results for the weights method mainly for comparison. Note that an LSTM cell alone has four weights leading from one input to an output. 
+
+\subsubsection{Input Perturbation}
+
 As a first step to understanding the neural network's decisions, we tried to estimate how important individual features are for the model's predictions. The most commonly used techniques for this which are used by practitioners for \glspl{rnn} \cite{stackexchange_cross_validated_neural_2019} and \gls{dl} \cite{stackexchange_cross_validated_feature_2016} in general are based on adding noise to a particular feature and then evaluating the drop in accuracy that occurs. We argue that it is hard to find out the ``correct'' intensity of noise to add, we slightly vary the proposed approach: We do not add noise drawn from a probability distribution but instead sample the value for a feature from the distribution of all values of this feature. This makes the method non-parametric since the standard deviation of the noise does not need to be chosen. We ensured that features which stay constant for a flow, i.e. source port, destination port and protocol, also stay constant throughout the whole flow when randomizing the feature.
 
-Table~\ref{fig:featRandom} shows our results. The results match to a large extent with the expectations one has when classifying network flows. In particular, the most important features turn out to be the used protocol, packet length and the SYN TCP flag. While the first two features are essential for characterizing flows, a high number of packets with set SYN flag is an important characteristic for port scanning or certain DoS attacks. Also the fact that most of TCP flags do not play an important role in our dataset was expected. It is interesting to note, however, that the interarrival time of packets does not play a crucial role for the detection of attacks. 
 
+\subsubsection{Feature Dropout}
 While the method of adding noise to features/randomizing them is convenient since it is easy to implement and understand, we argue that it has some shortcomings: 
 The \gls{rnn} was never trained for dealing with ``garbage'' values that the noise/randomization methods create. For example, completely unrealistic feature combinations could occur that were never observed during training. Furthermore, sequences of features could occur that cannot occur in reality. 
  
@@ -461,6 +416,23 @@ Considering the difficulties that arise from computing Shapley values, we propos
 \todo{Add correlation and explain why most features have no importance}
 
 A model trained with feature dropout typically yields slightly lower accuracy than a regularly trained model, even if no features are left out (flow accuracy of 0.9943 vs.~0.9965. We thus recommend training two models: One regular one and one with feature dropout to use for the feature importance. 
+
+
+\subsubsection{Mutual Information}
+Input Perturbation has some shortcomings when considering feature sensitivity. Assuming that the test dataset is representative for production use, for feature importance it is reasonable to equate the distribution of the perturbed feature with the feature distribution. On the other hand, when evaluating feature sensitivity, e.g. for analyzing potential for adversarial samples, the attacker is not limited by this distribution and frequently is able to choose arbitrary values in the feature space.
+
+Furthermore, let $f_A(x)$  denote the joint probability for classification as attack with a feature value $x$. Accuracy then is $\int f_A(x) dx$ for attacks and $1-\int f_A(x) dx$ for benign traffic. Consider \autoref{fig:mutinfo}. Evidently, both distributions
+yield the same accuracy, but clearly the lower distribution has a larger influence on the prediction. 
+To capture such dependencies, we propose to use mutual information to determine feature sensitivity.
+Mutual Information between two random variables $X,Y$ is defined as 
+\begin{equation}
+I_{X,Y} = \mathbb E \left\{ \log\left(\frac{f_{X,Y}(x,y)}{f_X(x)f_Y(y)}\right) \right\},
+\end{equation}
+with $f_X(x), f_Y(y)$ and $f_{X,Y}(x,y)$ denoting the distribution of $X,Y$ and their joint distribution, respectively. To obtain feature sensitivity, we compute mutual information between an input variable and the prediction output for one flow at one particular time step, and average over the result for the test dataset.
+
+\subsubsection{Results}
+Table~\ref{fig:featRandom} shows our results. The results match to a large extent with the expectations one has when classifying network flows. In particular, the most important features turn out to be the used protocol, packet length and the SYN TCP flag. While the first two features are essential for characterizing flows, a high number of packets with set SYN flag is an important characteristic for port scanning or certain DoS attacks. Also the fact that most of TCP flags do not play an important role in our dataset was expected. It is interesting to note, however, that the interarrival time of packets does not play a crucial role for the detection of attacks. 
+
 
 \subsection{Explainability Plots}
 During flow extraction we used a usual 5-tuple flow key, which distinguishes flows based on the protocol they use and their source and destination port and IP address. Hence, these features are constant for all packets in one flow, which allows us to use explainability methods which have been proposed for non-recurrent classification methods.
@@ -529,6 +501,57 @@ Next, we want to investigate if our classifier just memorized its inputs. The mo
 \end{figure*}
 
 Looking at the plots of the features that vary over time (\autoref{fig:plot_features}) we see that certain attack types have a characteristic pattern in which they send packets by which they are easily recognizable. We want to determine how the pattern of packet sizes and interarrival times is significant for the classification. \autoref{fig:plot_features} clearly shows that some attack types have very characteristic patterns of packet sizes and interarrival times.
+
+\section{Defences}
+
+\subsection{Reducing features}
+The most obvious defence, which is only possible because of the nature of the dataset, is to simply leave out features which the attacker can manipulate. For this, we try two different approaches:
+\begin{itemize}
+\item Leaving out all features that are manipulable: packet size and interarrival time
+\item Leaving out manipulable features when the attacker can manipulate them: only in the direction from the attacker to the victim (This, however does not prevent adversarial samples for botnets, for which both sides are malicious)
+\end{itemize}
+
+Both approaches lead to complete resistance to adversarial samples (as we left out all manipulable features), except for botnets, which can still operate when only leaving out manipulable features in one direction. The results in \autoref{tab:performance_results_no_manipulable} show that -- surprisingly -- there is only a small difference in classification performance when only computing the accuracy for the last packet of each flow (flow accuracy). However, when looking at the packet accuracy, which considers all packets of all flows, there is a significant difference. Thus, apparently the interarrival time and packet size are especially important for determining whether a flow is malicious in the first packets of a flow.
+
+\subsection{Adversarial training}
+In addition to omitting manipulable features we tried to make our network more robust against adversarial samples by augmenting the training set by adversarial flows generated using the Carlini-Wagner method, labeled as additional attacks.
+
+For this purpose, we added one adversarial sample per attack sample to the training set. Note that, since our used method for obtaining adversarial samples is deterministic, this is the maximum number of adversarial samples possible. With this training set we then alternated retraining of the neural network and optimization of the adversarial samples using gradient descent.
+
+One question which occurs in this process, is how many CPU cycles to spend on network training and adversarial sample optimization. As a natural approach, we decided to use as many backpropagation steps for neural network training as we use for adversarial sample optimization.  For each adversarial sample optimization step, we performed 10 iterations of gradient descent. Hence, all adversarial samples were optimized each 10 epochs of neural network training.
+
+\autoref{fig:avdistance} shows the average distance of a block of adversarial samples from to original, unmodified attack samples throughout the adversarial training procedure. The figure clearly indicates that adversarial training is effective, as the distance gradually increases. Hence, an attacker would have to modify attack samples more and more, eventually rendering the attack unpractical.
+
+However, the figure also shows that an increase of distance can only be achieved after a considerable amount of training. It is, hence, questionable if the gained increase in robustness is enough for reliable attack detection.
+
+\begin{figure}
+\includegraphics[width=\columnwidth]{../plots/adv_training/avdistance.pdf}
+\caption{Distance of adversarial samples from original attack samples throughout adversarial training.}
+\label{fig:avdistance}
+\end{figure}
+
+%However, against our expectations, this approach did not lead to satisfactory results in the sense that the network would learn to classify adversarial samples as attacks. In fact, classification accuracy stayed about constant during the training of the network.
+
+A possible explanation for this observation might be that the adversarial samples assumed too much the shape of normal flows, so that the network could not reliable tell them apart.
+
+\begin{table*}
+\caption{Comparing performance with all features, only safe features (interarrival time and packet size removed) and safe features in one direction (interarrival time and packet size removed for packets coming from source). \textit{packets} means that we consider the neural network output of all packets of the flow while \textit{flows} means that we only consider the last packet. At the last packet the classifier is usually already a lot more confident than at the first packets of a flow and thus metrics are always better in this case.}  \label{tab:performance_results_no_manipulable}
+\newcommand{\cmidrulespace}{6pt}
+\centering
+\begin{tabular}{l l l l l l l} \toprule
+& \multicolumn{2}{l}{all} & \multicolumn{2}{l}{safe features} & \multicolumn{2}{l}{safe features one direction} \\
+\cmidrule(r){2-3} \cmidrule(lr){4-5} \cmidrule(l){6-7}
+& packets & flows & packets & flows & packets & flows \\
+\midrule
+Accuracy & 0.9857054 & 0.99472587 & 0.96678023 & 0.99337596 & 0.98056073 & 0.99353386 \\
+Precision & 0.94963342 & 0.9894422 & 0.87175275 & 0.98798596 & 0.91359787 & 0.98994595 \\
+Recall & 0.96735895 & 0.98972051 & 0.94374958 & 0.98581328 & 0.97836672 & 0.9844478 \\
+F1 & 0.95841423 & 0.98958134 & 0.90632359 & 0.98689842 & 0.94487366 & 0.98718922 \\
+Youden & 0.95682951 & 0.98614231 & 0.91525628 & 0.98175163 & 0.95937772 & 0.9810602 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
 
 \section{Conclusions}
 
