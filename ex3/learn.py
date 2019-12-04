@@ -1162,7 +1162,7 @@ def adv_until_less_than_half():
 		results_dict = list(adv_internal(False, tradeoff, lr, iterations, next_filter))[0]
 		modified_flows_by_attack, modified_results_by_attack, original_flows_by_attack, original_results_by_attack = results_dict["modified_flows_by_attack_number"], results_dict["results_by_attack_number"], results_dict["orig_flows_by_attack_number"], results_dict["orig_results_by_attack_number"]
 		ratio_modified_by_attack_number = np.array([np.mean(np.round(numpy_sigmoid(np.array([item[-1] for item in modified_results])))) if len(modified_results)>0 else -float("inf") for modified_results in modified_results_by_attack])
-		next_filter = [index for index, item in enumerate(ratio_modified_by_attack_number) if item <= THRESHOLD ]#or prev_ratios[-1][item] <= THRESHOLD]
+		next_filter = [index for index, item in enumerate(ratio_modified_by_attack_number) if item <= THRESHOLD or prev_ratios[-1][item] <= THRESHOLD]
 		if i==0:
 			orig_results = original_results_by_attack
 			orig_flows = original_flows_by_attack
