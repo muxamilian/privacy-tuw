@@ -154,7 +154,9 @@ DoS / DDoS:Heartbleed                                          & $0.000001$ \\
 \label{tab:occurence}
 \end{table}
 
-The dataset we use is the \textit{CIC-IDS 2017} dataset \cite{sharafaldin_toward_2018}, which includes the attacks listed in \autoref{tab:occurence} and contains over two million flows in total. We implement an LSTM-based classifier with three layers of 512 neurons each. As the input features we use \begin{itemize*}
+In this research, we use the \textit{CIC-IDS-2017} \cite{sharafaldin_toward_2018} and \textit{UNSW-NB15} \cite{moustafa_unsw-nb15:_2015} datasets which each include more than 2 million flows of network data, containing both benign traffic and a large number of different attacks. Attacks contained in CIC-IDS-2017 are shown in \autoref{tab:occurence}.
+
+We implement a three-layer LSTM-based classifier of 512 neurons each. As the input features we use \begin{itemize*}
 \item source port
 \item destination port
 \item protocol identifier
@@ -166,18 +168,24 @@ The dataset we use is the \textit{CIC-IDS 2017} dataset \cite{sharafaldin_toward
 
 We use Z-score normalization and a train/test split of 2:1.
 
-\autoref{tab:performance_results} shows that our classifier achieves an accuracy that is similar to the one of the random forest and the multilayer perceptron that we developed in the previous exercise. However unlike these classifiers, our recurrent classifier has the advantage that it can detect attacks already before they are over.
+\autoref{tab:performance_results} shows that our classifier achieves an accuracy that is similar previous work based on these datasets~\cite{meghdouri_analysis_2018}. However unlike these classifiers, our recurrent classifier has the advantage that it can detect attacks already before they are over.
 
 \begin{table}
-\caption{Detection performance results. Random forest and Multilayer Perceptron are from the previous exercise, LSTM is this implementation.} \label{tab:performance_results}
+% Evaluated using
+% ./python learn.py --dataroot flows.pickle --net runs/Oct26_00-03-50_gpu/lstm_module_1284.pth --function test --batchSize 512
+% ./python learn.py --dataroot flows15.pickle --net runs/Oct28_15-41-46_gpu/lstm_module_997.pth --function test --batchSize 512
+% on Dec. 4th
+\caption{Detection performance on a packet and flow level.} \label{tab:performance_results}
 \centering
-\begin{tabular}{l r r r} \toprule
-& RF & MLP & LSTM \\ \midrule
-Accuracy	&	0.9974 & 0.9970	& 0.9965 \\
-Precision	&	0.9965 & 0.9979 & 0.9956	\\
-Recall	&	0.9931 & 0.9903	& 0.9905 \\
-F1	&	0.9948 & 0.9941	& 0.9930 \\
-Youden	&	0.9920 & 0.9896 & 0.9890 \\
+\begin{tabular}{l r r r r} \toprule
+& \multicolumn{2}{c}{CIC-IDS-17} & \multicolumn{2}{c}{UNSW-NB-15} \\
+	&	Packet	&	Flow	&	Packet	&	Flow	\\ \midrule
+Accuracy	&	0.991	&	0.997	&		&		\\
+Precision	&	0.970	&	0.997	&		&		\\
+Recall	&	0.978	&	0.991	&		&		\\
+F1	&	0.974	&	0.994	&		&		\\
+Youden	&	0.972	&	0.990	&		&		\\
+
 \bottomrule
 \end{tabular}
 \end{table}
@@ -419,11 +427,16 @@ A model trained with feature dropout typically yields slightly lower accuracy th
 
 
 \subsubsection{Mutual Information}
+\begin{figure}
+\includegraphics[width=\columnwidth]{../plots/mutinfo_example.pdf}
+\caption{Distributions $f_A(x)$ yielding an identical accuracy drop.}
+\label{fig:mutinfo_example}
+\end{figure}
 Input Perturbation has some shortcomings when considering feature sensitivity. Assuming that the test dataset is representative for production use, for feature importance it is reasonable to equate the distribution of the perturbed feature with the feature distribution. On the other hand, when evaluating feature sensitivity, e.g. for analyzing potential for adversarial samples, the attacker is not limited by this distribution and frequently is able to choose arbitrary values in the feature space.
 
-Furthermore, let $f_A(x)$  denote the joint probability for classification as attack with a feature value $x$. Accuracy then is $\int f_A(x) dx$ for attacks and $1-\int f_A(x) dx$ for benign traffic. Consider \autoref{fig:mutinfo}. Evidently, both distributions
-yield the same accuracy, but clearly the lower distribution has a larger influence on the prediction. 
-To capture such dependencies, we propose to use mutual information to determine feature sensitivity.
+Furthermore, let $f_A(x)$  denote the joint probability for classification as attack with a feature value $x$. Accuracy then is $\int f_A(x) dx$ for attacks and $1-\int f_A(x) dx$ for benign traffic. Consider \autoref{fig:mutinfo_example}. Evidently, both distributions
+yield the same accuracy, but clearly the right-side distribution has a larger influence on the prediction, as in the right-side case the prediction deterministically depends on the feature value.
+To capture such dependencies, we propose to use mutual information instead of accuracy drop to determine feature sensitivity.
 Mutual Information between two random variables $X,Y$ is defined as 
 \begin{equation}
 I_{X,Y} = \mathbb E \left\{ \log\left(\frac{f_{X,Y}(x,y)}{f_X(x)f_Y(y)}\right) \right\},
