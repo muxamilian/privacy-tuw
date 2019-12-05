@@ -105,19 +105,19 @@ With the rise of ubiquitous \gls{ml} systems, malicious actors have been catchin
 
 \section{Introduction}
 
-There is a significant body of scientific work focusing on the detection of unwanted behavior in networks. In the past, a viable way of performing intrusion detection was to inspect the content of packets themselves and detect if a packet delivers potentially harmful content. More recently, with the rise of omnipresent encryption, available features have changed. Since payload is not available anymore, the focus now lies on features that are always available to observers such as port numbers, flags of packets etc. Network communication is usually grouped into \textit{flows}, which is commonly defined as a sequence of packets between two applications that may be located at different physical locations.
+There is a significant body of scientific work focusing on the detection of unwanted behavior in networks. In the past, a viable way of performing intrusion detection was to inspect the content of packets themselves and detect if a packet delivers potentially harmful content. More recently, with the rise of omnipresent encryption, available features have changed. Since payload is not available anymore, the focus now lies on features that are always available to observers such as port numbers, protocol flags etc. Network communication is usually grouped into \textit{flows}, which are commonly defined as a sequence of packets sharing certain properties, between two applications that may be located at different physical locations.
 
-When analyzing flows, not only the aforementioned features are available but also features related to the timing of the individual packets as well as their size. For example, a specific attack might require the attacker to send three small packets and the victim to reply with two large packets followed by a small one the attacker. Various approaches have been proposed to extract features from flows and then perform anomaly detection with the results \cite{meghdouri_analysis_2018}. While these approaches works well, it is problematic that first the whole flow has to be received and only afterwards it can be determined if there was an anomaly. Thus, we design a network anomaly detection system that operates on a per-packet basis and decides if a packet is anomalous based on features that are available for traffic that is encrypted above the transport layer, like for example TLS or QUIC.
+When analyzing flows, not only the aforementioned features are available but also features related to the timing of the individual packets as well as their size. For example, a specific attack might require the attacker to send three small packets and the victim to reply with two large packets followed by a small one the attacker. Various approaches have been proposed to extract features from flows and then perform anomaly detection with the results \cite{meghdouri_analysis_2018}. While these approaches work well, it is problematic that first the whole flow has to be received and only afterwards it can be determined if there was an anomaly. Thus, we design a network anomaly detection system that operates on a per-packet basis and decides if a packet is anomalous based on features that are available even for traffic that is encrypted above the transport layer, like for example TLS or QUIC.
 We show that our system has similar performance to other flow-based anomaly detection systems but can commonly detect anomalies \textit{before} the flow is over. 
 
 
-With the recent rise of interest in \gls{aml} techniques, also \gls{aml} for \glspl{ids} have been investigated. E.g. \cite{Bachl2019} investigates remedies for poisoning attacks on \glspl{ids}.
+With the recent rise of interest in \gls{aml} techniques, also \gls{aml} for \glspl{ids} has been investigated. For example, \cite{Bachl2019} investigates remedies for poisoning attacks on \glspl{ids}.
 In this research, we investigate whether adversarial samples can be found for \gls{ml} based on \glspl{rnn}. This is not a trivially answerable question since adversarial samples have mostly been analyzed in the context of computer vision. Our scenario significantly deviates from this in several ways because \begin{enumerate*}
 \item the number of features is significantly smaller and
 \item only certain features can be manipulated by an adversary (for example the destination port cannot be manipulated)
 \end{enumerate*}.
 
-Surprisingly, we can confirm that adversarial samples can be found even when considering thse tight constraints. % mentioned before.
+Surprisingly, we can confirm that adversarial samples can be found even when considering these tight constraints. % mentioned before.
 Thus, we argue that traditional methods like accuracy are not sufficient for evaluating security-sensitive \gls{ml} systems.
 We propose the \acrfull{ars} as a new performance score, which precisely captures the notion of how easily an adversary can generate adversarial samples. 
 
@@ -125,7 +125,7 @@ Astonishingly, feature importance methods reveal that the manipulable features, 
 
 Since common explainability methods are designed to work with images or tabular data but not sequences, we extend existing explainability methods such as \glspl{pdp} \cite{friedman_greedy_2001} for sequential data. These show the varying characteristics of different attacks and they aid with visualizing potentially vulnerable features for adversaries.
 
-Based on the insight gained by the feature importance and explainability methods, we develop a simple methods for defending against adversaries who can manipulate arbitrary packets by simply leaving out potentially manipulable information from the classification process. The resulting classifier is slightly less accurate but is still useful to be deployed in a real scenario. We develop a custom adversarial training procedure which especially focuses on easy of use and low resource consumption and aims to keep the number of additionally introduced training hyperparameters low. With this novel strategy we can reduce attack surface and harden the resulting \gls{ids} while keeping similar classification performance like for the original \gls{ml} model. 
+Based on the insights gained by the feature importance and explainability methods, we develop a simple method for defending against adversaries who can manipulate arbitrary packets by simply leaving out potentially manipulable information from the classification process. The resulting classifier is slightly less accurate but is still useful to be deployed in a real scenario. Furthermore, we develop a custom adversarial training procedure which especially focuses on ease of use and low resource consumption and aims to keep the number of additionally introduced training hyperparameters low. With this novel strategy we can reduce attack surface and harden the resulting \gls{ids} while retaining similar classification performance like for the original \gls{ml} model. 
 
 \section{RNN-based classifier}
 
@@ -157,7 +157,7 @@ DoS / DDoS:Heartbleed                                          & $0.000001$ \\
 
 In this research, we use the \textit{CIC-IDS-2017} \cite{sharafaldin_toward_2018} and \textit{UNSW-NB15} \cite{moustafa_unsw-nb15:_2015} datasets which each include more than 2 million flows of network data, containing both benign traffic and a large number of different attacks. Attacks contained in CIC-IDS-2017 are shown in \autoref{tab:occurence}.
 
-We implement a three-layer LSTM-based classifier of 512 neurons each. As the input features we use \begin{itemize*}
+We implement a three-layer LSTM-based classifier with 512 neurons at each layer. As the input features we use \begin{itemize*}
 \item source port
 \item destination port
 \item protocol identifier
@@ -166,10 +166,9 @@ We implement a three-layer LSTM-based classifier of 512 neurons each. As the inp
 \item packet directions (if packet goes there or back)
 \item all TCP flags (0 if flow is not TCP)
 \end{itemize*}. Of these features, source port, destination port and protocol identifier are constant over the whole flow while the others vary.
-
 We use Z-score normalization and a train/test split of 2:1.
 
-\autoref{tab:performance_results} shows that our classifier achieves an accuracy that is similar previous work based on these datasets~\cite{meghdouri_analysis_2018,Bachl2019}. However unlike these classifiers, our recurrent classifier has the advantage that it can detect attacks already before they are over.
+\autoref{tab:performance_results} shows that our classifier achieves an accuracy that is similar to previous work based on these datasets~\cite{meghdouri_analysis_2018,Bachl2019}. However, unlike these classifiers, our recurrent classifier has the advantage that it can detect attacks already before they are over.
 
 \begin{table}
 % Evaluated using
@@ -195,7 +194,7 @@ Youden	&	0.972	&	0.990	&	0.873	&	0.719	\\
 \section{Adversarial attacks}
 \label{sec:adv}
 
-Since most features such as the TCP flags cannot be easily be manipulated because it might violate the TCP and thus cause communication to fails, we experiment whether by manipulating the interarrival times and packet lengths of the first packets, the classifier might be fooled. However, our scenario is quite different from how generating adversarial samples usually works: We have significantly less features than in, for example, an image. Furthermore, only two out of those few features can be manipulated. And even these features cannot manipulated freely: Besides the constraints that packet size and interarrival time cannot become negative there are also more problem-specific constraints:
+Most features such as, e.g., TCP flags cannot be easily manipulated because it might violate the TCP and thus cause communication to fail. Hence, we experiment whether by manipulating the interarrival times and packet lengths of the first packets, the classifier might be fooled. Our scenario is quite different from how generating adversarial samples usually works: We have significantly less features than in, for example, an image. Furthermore, only two out of those few features can be manipulated. And even these features cannot be manipulated freely: Besides the constraints that packet size and interarrival time cannot become negative there are also more problem-specific constraints:
 \begin{itemize}
 \item Only packets can be manipulated which are transmitted by the attacker. This means the attacker can only control one direction (except for botnets where both sides are attackers).
 \item Packets must not be smaller than initially, as otherwise less information could be transmitted or packets might be rendered syntactically invalid.
@@ -208,11 +207,11 @@ Several methods for generating adversarial samples have been proposed in the rec
 As finding adversarial flows is particularly difficult in our case for the reasons we discussed above, for the present research we preferred methods which produces high-quality adversarial samples while not being as fast as other methods. We implemented the several methods for generating adversarial flows.
 
 \subsection{Carlini-Wagner}
-In particular, we implemented \gls{cw} \cite{carlini_towards_2017}, which performs gradient descent on the optimization objective
+We implemented the \gls{cw} \cite{carlini_towards_2017}, which performs gradient descent on the optimization objective
 \begin{equation} \label{eq:carliniWagner}
 d(X,\tilde X) + \epsilon  \max(Z(\tilde X), 0).
 \end{equation}
-Here, $d(\cdot)$ is a distance metric, $\epsilon \in \mathbb R^+$ is a parameter governing the tradeoff achieved between attack success and distance from the original flow. Furthermore, $Z(\cdot)$ denotes the neural network's logit output, $X$ denotes the original flow and $\tilde X$ the adversarial flow under optimization.
+Here, $d(\cdot)$ is a distance metric and $\epsilon \in \mathbb R^+$ is a parameter governing the tradeoff achieved between attack success and distance from the original flow. Furthermore, $Z(\cdot)$ denotes the neural network's logit output, $X$ denotes the original flow and $\tilde X$ the adversarial flow under optimization.
 
 We used $\ell_1$ norm as distance metric and \gls{pgd} for meeting the real-world constraints discussed above.
 
@@ -220,13 +219,13 @@ The method minimizes the adversarial sample's distance so that the network's dec
 \begin{equation}
 d(X,\tilde X) + \epsilon  \max(Z(\tilde X), -0.2),
 \end{equation}
-i.e. we require a slight level of confidence that our adversarial samples are not classified as attack traffic. A logit value of $-0.2$ corresponds to a confidence of 45\% for the sample to be an attack.
+i.e. we require a slight level of confidence that our adversarial samples are not classified as attack traffic. A logit value of $-0.2$ corresponds to a confidence of 55\% for the sample to be benign.
 
 \subsection{$\ell_\infty$-bounded Projected Gradient Descent}
-\cite{madry_towards_2018} use a method for generating adversarial samples which uses \gls{pgd}  to minimize the network's negative loss function while constraining the achieved $\ell_\infty$ distance from the original samples.
+\cite{madry_towards_2018} uses a method for generating adversarial samples which deploys \gls{pgd}  to minimize the network's negative loss function while constraining the achieved $\ell_\infty$ distance from the original samples.
 
 \subsection{Fast Gradient Sign Method}
-Finally, we also tested the Fast Gradient Sign Method (FGSM), which was initially proposed in \cite{goodfellow_explaining_2015} and perhaps is the most frequently used method for generating adversarial sampling. FGSM can be considered a single pass of \gls{pgd} on the loss function with an equality constraint on the $\ell_\infty$ distance, i.e. the adversarial sample is found as
+Finally, we also tested the Fast Gradient Sign Method (FGSM), which was initially proposed in \cite{goodfellow_explaining_2015} and perhaps is the most frequently used method for generating adversarial samples. FGSM can be considered a single pass of \gls{pgd} on the loss function with an equality constraint on the $\ell_\infty$ distance, i.e. the adversarial sample is found as
 \begin{equation}
 \tilde X = X + \epsilon \text{sgn}( \nabla_X L(X)),
 \end{equation}
@@ -239,7 +238,7 @@ where $L(X)$ denotes the network's loss function and $\epsilon$ denotes the achi
 \caption{Performance of the \gls{cw} with different $\epsilon$ values for $\ell_1$ and $\ell_2$ distances.}
 \label{fig:adv_cw}
 \end{figure*}
-\autoref{fig:adv_cw} depicts the ratio of attack flows which were successfully misclassified as normal traffic with respect to the final packet along with the resulting distance from the original sample. Evidently, the larger the $\epsilon$ parameter, the better the attack works, but also the distances become larger.
+\autoref{fig:adv_cw} depicts the ratio of attack flows which were successfully misclassified as benign with respect to the final packet along with the resulting distance from the original sample. Evidently, the larger the $\epsilon$ parameter, the better the attack works, but also the distances become larger.
 
 Hence, with acceptable distance values we were able to generate adversarial samples for about 80\% of attack samples.
 
@@ -284,7 +283,7 @@ It is interesting to note that for very large values of $\epsilon$ the success r
 
 Of the investigated algorithms, thus the \gls{cw} with $\ell_2$ distance delivered the best performance.
 
-\autoref{tab:adv_per_family} depicts how successful the attack is for individual attack families. For this table we used a $\ell_\infty$ bound of 0.3 for FGSM and $\ell_\infty$-bounded \gls{pgd} and a tradeoff of 0.5 for Carlini-Wagner. The table shows significant for detecting different attack families in the first place. However, also for generating adversarial flows some attack families are more susceptible than others.
+\autoref{tab:adv_per_family} depicts how successful the attack is for individual attack families. For this table we used a $\ell_\infty$ bound of 0.3 for FGSM and $\ell_\infty$-bounded \gls{pgd} and a tradeoff of 0.5 for Carlini-Wagner. The table shows significant differences for detecting different attack families in the first place. However, also for generating adversarial flows some attack families are more susceptible than others.
 
 \begin{figure*}
 \includegraphics[width=0.45\textwidth]{adv_plots/fgsm.pdf}
@@ -323,30 +322,32 @@ Setting the threshold for our metric to 50\% is arbitrary but we think that it i
 \todo{Insert results}
 
 \section{Explaining Recurrent Neural Networks}
-From a naive perspective, one might be tempted to reuse explainability methods for recurrent neural networks by considering a flow the sum of its packet features.
-We identify several problems which occur when trying to explain decisions made by recurrent neural networks. 
+From a naive perspective, one might be tempted to reuse explainability methods for \glspl{rnn} by considering a flow the sum of its packet features.
+We identify several difficulties which occur when trying to explain decisions made by \glspl{rnn}. 
 
 \begin{itemize}
 \item
 \textbf{Feature quantity.}
-The number of features that is fed into a recurrent neural network is found as the product of packet features with the total length of the flow. For long flows, the total number of inputs can therefore grow to a substantial size.
+The number of features that is fed into an \gls{rnn} is found as the product of packet features with the total length of the flow. For long flows, the total number of inputs can therefore grow to a substantial size.
 
 \item
 \textbf{Variable sequence lengths.}
-The length of different flows might differ tremendously. Hence, features which are important for the network's outcome for one sequence might not even exist for other flows. Furthermore, the question arises how the distance between flows of different length can be computed.
+The length of different flows might differ tremendously. Hence, features which are important for the network's outcome for one flow might not even exist for other flows. Furthermore, the question arises how the distance between flows of different length can be computed.
 
 \item
 \textbf{Lack of a distance measure.}
-However, even if we restricted our analysis to flows of a constant length, a flow is different from the plain concatenation of its packet features.
-If we, for example, consider a classification problem as in this document, we expect that after a certain amount of time steps the classifier is able to perform the classification with a certain confidence. Arguably, features at the beginning of a flow are thus more important for the classifier. Giving differences at the end of a sequence the same weight as differences at its beginning, therefore seems incorrect.
+However, even if we restricted the analysis to flows of a constant length, a flow is different from the plain concatenation of its packet features.
+If we, for example, consider a classification problem as in this document, we expect that after a certain amount of time steps the classifier is able to perform the classification with a certain confidence. Arguably, features at the beginning of a flow are thus more important for the classifier. Giving feature differences at the end of a flow the same weight as differences at its beginning, therefore seems incorrect.
 
 \item
 \textbf{Multiple prediction outputs.}
-Often a recurrent neural network produces an output at each time step. When trying to apply explainability methods, hence, the question arises which prediction to base the methods on.
+Often an \gls{rnn} produces an output at each time step. When trying to apply explainability methods, hence, the question arises which output to base the methods on.
 
-The natural choice is to base the methods on the prediction output which occurs at the same time step as the feature under investigation. Not only does this approach require a substantially lower amount of computational resources compared to predictions occurring at a later time step, but we also expect the immediately occurring prediction outcome to exhibit a stronger correlation to the feature under investigation than a prediction outcome which occurring many time steps later. However, due to the complex decision processes that can occur for deep neural networks, it is absolutely  uncertain if the network's final prediction is correctly depicted when following this approach.
+The natural choice is to base the methods on the prediction output which occurs at the same time step as the feature under investigation. Not only does this approach require a substantially lower amount of computational resources compared to predictions occurring at a later time step, but we also expect the immediately occurring prediction outcome to exhibit a stronger correlation to the feature under investigation, compared to a prediction outcome occurring many time steps later.
+However, due to the complex decision processes that can occur for deep neural networks, it is absolutely  uncertain if the network's final prediction is correctly depicted when following this approach.
 \end{itemize}
 
+% where does this come from :)
 %\subfloat[Throughput of the fq \gls{qdisc}\label{fig:fqThroughput}
 %]{
 %\includegraphics[width=\columnwidth]{{{plots/throughput_1_fq_cubic_10_20_60_0.5_bw_1571240937211.pcap}}}
@@ -403,27 +404,30 @@ PSH Flag & 0 \\
 \end{tabular}
 }{}
 \end{table}
+As a first step to understanding the neural network's decisions, we tried to estimate how important individual features are for the model's predictions.
 When investigating an \gls{ml} classifier, it is natural to ask which inputs have a large influence on the classifier's prediction. We feel the need to distinguish metrics for this purpose based on their main aim:
 
 A large amount of research has been spent on finding \emph{feature importance} metrics, which allow the selection  of high-importance features, providing a reasonably good classification performance while resulting in a more light-weight classifier.
 
-Both adversarial machine learning and explainable machine learning bring up the question to what extent individual features are able to change the prediction outcome. While being seemingly similar at first sight, traditional feature importance can yield markedly wrong results for this case.  To distinguish, we propose the term \emph{feature sensitivity} for such metrics.
+On the other hand, both adversarial machine learning and explainable machine learning bring up the question to what extent individual features are able to change the prediction outcome. While being seemingly similar at first sight, traditional feature importance can yield markedly wrong results for this case.  To distinguish, we propose the term \emph{feature sensitivity} for such metrics.
+
+To analyze features for our network, we use the following approaches.
 
 \subsubsection{Neural Network Weights}
-In previous works, a simple method for determining feature importance in neural networks, has been summing up neural network weights leading from an input to the prediction outcome. The weights method can be considered for both feature importance and feature sensitivity, however, clearly, especially in the case of complex network architectures, this method is likely to provide wrong results. Hence, we provide results for the weights method mainly for comparison. Note that an LSTM cell alone has four weights leading from one input to an output. 
+In previous works, a simple method for determining feature importance in neural networks, has been summing up neural network weights leading from a dertain input to the prediction outcome. The weights method can be considered for both feature importance and feature sensitivity, however, clearly, especially in the case of complex network architectures, this method is likely to provide wrong results. Hence, we provide results for the weights method mainly for comparison. Note that an LSTM cell alone has four weights leading from one input to an output. 
 
 \subsubsection{Input Perturbation}
 
-As a first step to understanding the neural network's decisions, we tried to estimate how important individual features are for the model's predictions. The most commonly used techniques for this which are used by practitioners for \glspl{rnn} \cite{stackexchange_cross_validated_neural_2019} and \gls{dl} \cite{stackexchange_cross_validated_feature_2016} in general are based on adding noise to a particular feature and then evaluating the drop in accuracy that occurs. We argue that it is hard to find out the ``correct'' intensity of noise to add, we slightly vary the proposed approach: We do not add noise drawn from a probability distribution but instead sample the value for a feature from the distribution of all values of this feature. This makes the method non-parametric since the standard deviation of the noise does not need to be chosen. We ensured that features which stay constant for a flow, i.e. source port, destination port and protocol, also stay constant throughout the whole flow when randomizing the feature.
+ The most commonly used techniques for feature importance which are used by practitioners for \glspl{rnn} \cite{stackexchange_cross_validated_neural_2019} and \gls{dl} \cite{stackexchange_cross_validated_feature_2016} in general are based on adding noise to a particular feature and then evaluating the drop in accuracy that occurs. We argue that it is hard to find out the ``correct'' intensity of noise to add, we slightly vary the proposed approach: We do not add noise drawn from a probability distribution but instead sample the value for a feature from the distribution of all values of this feature. This makes the method non-parametric since the distribution of the noise does not need to be chosen. We ensured that features which stay constant for a flow, i.e. source port, destination port and protocol, also stay constant throughout the whole flow when randomizing the feature.
 
 
 \subsubsection{Feature Dropout}
 While the method of adding noise to features/randomizing them is convenient since it is easy to implement and understand, we argue that it has some shortcomings: 
 The \gls{rnn} was never trained for dealing with ``garbage'' values that the noise/randomization methods create. For example, completely unrealistic feature combinations could occur that were never observed during training. Furthermore, sequences of features could occur that cannot occur in reality. 
  
-We think that the ``ideal'' feature importance method for our scenario are Shapley values \cite{shapley_value_1953}: To analyze feature importance with them, the feature under investigation in completely omitted from the dataset and a model is trained without it. The resulting accuracy is then compared to the baseline accuracy with all features. The effort required to do this is high both in terms of storage space as well as training time since for $n$ features $n$ models need to be separately trained and stored. While this seems tractable, when also analyzing the feature importance of combinations of features, the number of models required becomes even larger: Out of $n$ features, $2^n$ unique subsets can be chosen, meaning that the computational demand rises exponentially. 
+We think that the ``ideal'' feature importance method for our scenario are Shapley values \cite{shapley_value_1953}: To analyze feature importance with them, the feature under investigation is completely omitted from the dataset and a model is trained without it. The resulting accuracy is then compared to the baseline accuracy with all features. The effort required to do this is high both in terms of storage space as well as training time since for $n$ features $n$ models need to be separately trained and stored. While this seems tractable, when also analyzing the feature importance of combinations of features, the number of models required becomes even larger: Out of $n$ features, $2^n$ unique subsets can be chosen, meaning that the computational demand rises exponentially. 
 
-Considering the difficulties that arise from computing Shapley values, we propose a light-weight version of them, called \textit{feature dropout}: When training a model, for each sample, we leave out each feature with a certain probability by setting it to zero. On average, one feature gets zeroed out but it is also possible that none or more than one are left out. This procedure is equivalent to using dropout \cite{srivastava_dropout:_2014} with probability $\frac{1}{n}$ before the first layer. The result is the classifier learning to deal with missing features. As it can also happen that several features are left out for a sample, our method can also be used to analyze the effect of multiple features missing and can thus show possibly correlated features. The results in Table~\ref{fig:featDropout} show unlike the randomization feature importance method, the feature dropout method does not vastly overestimate features' importance. With feature dropout, it becomes apparent that there are very few features that actually contain unique information and that affect accuracy when left out: the destination port and the source port. A model trained with feature dropout typically yields slightly lower accuracy than a regularly trained model, even if no features are left out (flow accuracy of 0.9943 vs.~0.9965. We thus recommend training two models: One regular one and one with feature dropout to use for the feature importance. 
+Considering the difficulties that arise from computing Shapley values, we propose a light-weight version of them, called \textit{feature dropout}: When training a model, for each sample, we leave out each feature with a certain probability by setting it to zero. On average, one feature gets zeroed out but it is also possible that none or more than one are left out. This procedure is equivalent to using dropout \cite{srivastava_dropout:_2014} with probability $\frac{1}{n}$ before the first layer. The result is the classifier learning to deal with missing features. As it can also happen that several features are left out for a sample, our method can also be used to analyze the effect of multiple features missing and can thus show possibly correlated features. The results in Table~\ref{fig:featDropout} show that, unlike the randomization feature importance method, the feature dropout method does not vastly overestimate features' importance. With feature dropout, it becomes apparent that there are very few features that actually contain unique information and that affect accuracy when left out: the destination port and the source port. A model trained with feature dropout typically yields slightly lower accuracy than a regularly trained model, even if no features are left out (flow accuracy of 0.9943 vs.~0.9965. We thus recommend training two models: One regular one and one with feature dropout to use for the feature importance. 
 
 Feature dropout also allows us to find correlated features or -- more general -- features that contain common information: 
 
