@@ -110,14 +110,18 @@ There is a significant body of scientific work focusing on the detection of unwa
 When analyzing flows, not only the aforementioned features are available but also features related to the timing of the individual packets as well as their size. For example, a specific attack might require the attacker to send three small packets and the victim to reply with two large packets followed by a small one the attacker. Various approaches have been proposed to extract features from flows and then perform anomaly detection with the results \cite{meghdouri_analysis_2018}. While these approaches works well, it is problematic that first the whole flow has to be received and only afterwards it can be determined if there was an anomaly. Thus, we design a network anomaly detection system that operates on a per-packet basis and decides if a packet is anomalous based on features that are available for traffic that is encrypted above the transport layer, like for example TLS or QUIC.
 We show that our system has similar performance to other flow-based anomaly detection systems but can commonly detect anomalies \textit{before} the flow is over. 
 
-Then we investigate the question whether adversarial samples can be found for this type of data. This is not a trivially answerable question since adversarial samples have mostly been analyzed in the context of computer vision. Our scenario significantly deviates from this in several ways because \begin{enumerate*}
+
+With the recent rise of interest in \gls{aml} techniques, also \gls{aml} for \glspl{ids} have been investigated. E.g. \cite{Bachl2019} investigates remedies for poisoning attacks on \glspl{ids}.
+In this research, we investigate whether adversarial samples can be found for \gls{ml} based on \glspl{rnn}. This is not a trivially answerable question since adversarial samples have mostly been analyzed in the context of computer vision. Our scenario significantly deviates from this in several ways because \begin{enumerate*}
 \item the number of features is significantly smaller and
-\item only certain features can be manipulated (for example the destination port cannot be manipulated)
+\item only certain features can be manipulated by an adversary (for example the destination port cannot be manipulated)
 \end{enumerate*}.
 
-Surprisingly, we can confirm that adversarial samples can be found even when considering the tight constraints mentioned before. Thus we argue that traditional methods like accuracy are not sufficient for evaluating security-sensitive \gls{ml} systems. The new performance score \gls{ars} precisely captures the notion of how easily an adversary can generate adversarial samples. 
+Surprisingly, we can confirm that adversarial samples can be found even when considering thse tight constraints. % mentioned before.
+Thus, we argue that traditional methods like accuracy are not sufficient for evaluating security-sensitive \gls{ml} systems.
+We propose the \acrfull{ars} as a new performance score, which precisely captures the notion of how easily an adversary can generate adversarial samples. 
 
-Astonishingly, feature importance method reveal that the manipulable features, that are left for adversaries to modify are not even particularly significant for the classification outcome. %Especially the first packets of a flow are critical for determining the decision of a recurrent \gls{ids}. 
+Astonishingly, feature importance methods reveal that the manipulable features, that are left for adversaries to modify are not even particularly significant for the classification outcome. %Especially the first packets of a flow are critical for determining the decision of a recurrent \gls{ids}. 
 
 Since common explainability methods are designed to work with images or tabular data but not sequences, we extend existing explainability methods such as \glspl{pdp} \cite{friedman_greedy_2001} for sequential data. These show the varying characteristics of different attacks and they aid with visualizing potentially vulnerable features for adversaries.
 
@@ -165,7 +169,7 @@ We implement a three-layer LSTM-based classifier of 512 neurons each. As the inp
 
 We use Z-score normalization and a train/test split of 2:1.
 
-\autoref{tab:performance_results} shows that our classifier achieves an accuracy that is similar previous work based on these datasets~\cite{meghdouri_analysis_2018}. However unlike these classifiers, our recurrent classifier has the advantage that it can detect attacks already before they are over.
+\autoref{tab:performance_results} shows that our classifier achieves an accuracy that is similar previous work based on these datasets~\cite{meghdouri_analysis_2018,Bachl2019}. However unlike these classifiers, our recurrent classifier has the advantage that it can detect attacks already before they are over.
 
 \begin{table}
 % Evaluated using
