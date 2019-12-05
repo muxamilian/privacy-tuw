@@ -115,16 +115,13 @@ Then we investigate the question whether adversarial samples can be found for th
 \item only certain features can be manipulated (for example the destination port cannot be manipulated)
 \end{enumerate*}.
 
-Surprisingly, we can confirm that adversarial samples can be found even when considering the tight constraints mentioned before. Thus we argue that traditional methods like accuracy are not sufficient for evaluating security-sensitive \gls{ml} systems. The new performance score \gls{ars} precisely captures the notion of how easily an adversary can generate adversarial samples. We develop a simple methods for defending against adversaries who can manipulate arbitrary packets by simply leaving out potentially manipulable information from the classification process. The resulting classifier is slightly less accurate but is still useful to be deployed in a real scenario. We develop a custom adversarial training procedure which especially focuses on easy of use and low resource consumption and aims to keep the number of additionally introduced training hyperparameters low. With this novel strategy we can reduce attack surface and harden the resulting \gls{ids} while keeping similar classification performance like for the original \gls{ml} model.
+Surprisingly, we can confirm that adversarial samples can be found even when considering the tight constraints mentioned before. Thus we argue that traditional methods like accuracy are not sufficient for evaluating security-sensitive \gls{ml} systems. The new performance score \gls{ars} precisely captures the notion of how easily an adversary can generate adversarial samples. 
 
 Astonishingly, feature importance method reveal that the manipulable features, that are left for adversaries to modify are not even particularly significant for the classification outcome. %Especially the first packets of a flow are critical for determining the decision of a recurrent \gls{ids}. 
 
 Since common explainability methods are designed to work with images or tabular data but not sequences, we extend existing explainability methods such as \glspl{pdp} \cite{friedman_greedy_2001} for sequential data. These show the varying characteristics of different attacks and they aid with visualizing potentially vulnerable features for adversaries.
 
-\section{Related work}
-
-\cite{szegedy_intriguing_2014} show that it is possible to create adversarial samples for an image, which look similar to the original image but are classified wrongly. \cite{goodfellow_explaining_2015} develop the \gls{fgsm}, which makes easy generation of adversarial samples possible.
-\cite{papernot_crafting_2016} explore the use of \gls{aml} for \glspl{rnn}
+Based on the insight gained by the feature importance and explainability methods, we develop a simple methods for defending against adversaries who can manipulate arbitrary packets by simply leaving out potentially manipulable information from the classification process. The resulting classifier is slightly less accurate but is still useful to be deployed in a real scenario. We develop a custom adversarial training procedure which especially focuses on easy of use and low resource consumption and aims to keep the number of additionally introduced training hyperparameters low. With this novel strategy we can reduce attack surface and harden the resulting \gls{ids} while keeping similar classification performance like for the original \gls{ml} model. 
 
 \section{RNN-based classifier}
 
@@ -201,9 +198,10 @@ Since most features such as the TCP flags cannot be easily be manipulated becaus
 \item Interarrival times must not decrease, as otherwise the physical speed of data transmission can be violated in some cases. Since an in-depth analysis of when the reduction of interarrival times is possible, would come with substantial effort, we generally disallowed a reduction of this feature.
 \end{itemize}
 
-Several methods for generating adversarial samples have been proposed in the recent literature, achieving different speed-quality tradeoffs. Since the reasons discussed above suggest that finding adversarial flows is particularly difficult in our case, for the present research we preferred methods which produces high-quality adversarial samples while not being as fast as other methods.
+Several methods for generating adversarial samples have been proposed in the recent literature, achieving different speed-quality tradeoffs: 
+\cite{szegedy_intriguing_2014} show that it is possible to create adversarial samples for an image, which look similar to the original image but are classified wrongly. \cite{goodfellow_explaining_2015} develop the \gls{fgsm}, which makes easy generation of adversarial samples possible. \cite{papernot_crafting_2016} explore the use of \gls{aml} for \glspl{rnn}
 
-We implemented the following methods for generating adversarial flows.
+As finding adversarial flows is particularly difficult in our case for the reasons we discussed above, for the present research we preferred methods which produces high-quality adversarial samples while not being as fast as other methods. We implemented the several methods for generating adversarial flows.
 
 \subsection{Carlini-Wagner}
 In particular, we implemented \gls{cw} \cite{carlini_towards_2017}, which performs gradient descent on the optimization objective
@@ -421,11 +419,16 @@ The \gls{rnn} was never trained for dealing with ``garbage'' values that the noi
  
 We think that the ``ideal'' feature importance method for our scenario are Shapley values \cite{shapley_value_1953}: To analyze feature importance with them, the feature under investigation in completely omitted from the dataset and a model is trained without it. The resulting accuracy is then compared to the baseline accuracy with all features. The effort required to do this is high both in terms of storage space as well as training time since for $n$ features $n$ models need to be separately trained and stored. While this seems tractable, when also analyzing the feature importance of combinations of features, the number of models required becomes even larger: Out of $n$ features, $2^n$ unique subsets can be chosen, meaning that the computational demand rises exponentially. 
 
-Considering the difficulties that arise from computing Shapley values, we propose a light-weight version of them, called \textit{feature dropout}: When training a model, for each sample, we leave out each feature with a certain probability by setting it to zero. On average, one feature gets zeroed out but it is also possible that none or more than one are left out. This procedure is equivalent to using dropout \cite{srivastava_dropout:_2014} with probability $\frac{1}{n}$ before the first layer. The result is the classifier learning to deal with missing features. As it can also happen that several features are left out for a sample, our method can also be used to analyze the effect of multiple features missing and can thus show possibly correlated features. The results in Table~\ref{fig:featDropout} show unlike the randomization feature importance method, the feature dropout method does not vastly overestimate features' importance. With feature dropout, it becomes apparent that there are very few features that actually contain unique information and that affect accuracy when left out: the destination port and the source port. 
-\todo{Add correlation and explain why most features have no importance}
+Considering the difficulties that arise from computing Shapley values, we propose a light-weight version of them, called \textit{feature dropout}: When training a model, for each sample, we leave out each feature with a certain probability by setting it to zero. On average, one feature gets zeroed out but it is also possible that none or more than one are left out. This procedure is equivalent to using dropout \cite{srivastava_dropout:_2014} with probability $\frac{1}{n}$ before the first layer. The result is the classifier learning to deal with missing features. As it can also happen that several features are left out for a sample, our method can also be used to analyze the effect of multiple features missing and can thus show possibly correlated features. The results in Table~\ref{fig:featDropout} show unlike the randomization feature importance method, the feature dropout method does not vastly overestimate features' importance. With feature dropout, it becomes apparent that there are very few features that actually contain unique information and that affect accuracy when left out: the destination port and the source port. A model trained with feature dropout typically yields slightly lower accuracy than a regularly trained model, even if no features are left out (flow accuracy of 0.9943 vs.~0.9965. We thus recommend training two models: One regular one and one with feature dropout to use for the feature importance. 
 
-A model trained with feature dropout typically yields slightly lower accuracy than a regularly trained model, even if no features are left out (flow accuracy of 0.9943 vs.~0.9965. We thus recommend training two models: One regular one and one with feature dropout to use for the feature importance. 
+Feature dropout also allows us to find correlated features or -- more general -- features that contain common information: 
 
+% numerator = max(float(baseline_accuracy-accuracy_for_feature_combination), 0)
+% 			denominator = max(float(baseline_accuracy-accuracy_for_feature_1), 0) + max(float(baseline_accuracy-accuracy_for_feature_2), 0)
+\begin{equation}
+\text{score} = \frac{\text{acc}_\text{base}-\text{acc}_\text{-both\_features}}{\left(\text{acc}_\text{base}-\text{acc}_\text{-feature\_1}\right) + \left(\text{acc}_\text{base}-\text{acc}_\text{-feature\_2}\right)}
+\end{equation}
+With $\text{acc}_\text{base}$ we denote the average accuracy of the classifier with all features included, with $\text{acc}_\text{-feature\_i}$ the average accuracy if feature $i$ is omitted and with $\text{acc}_\text{-both\_features}$ the average accuracy if both features are omitted. The higher the resulting number, the larger the information that both features share. 
 
 \subsubsection{Mutual Information}
 \begin{figure}

@@ -212,7 +212,7 @@ def train():
 
 	samples = 0
 	save_period = int(round(len(train_indices) * opt.modelSavePeriod))
-	
+
 	for i in range(1, sys.maxsize):
 		if opt.advTraining:
 			train_data.adv_flows, train_data.categories, av_distance = next(adv_generator)
@@ -469,14 +469,14 @@ def dropout_feature_correlation():
 				else:
 					overall_score = float("nan")
 			correlations[(feat1, feat2)] = overall_score
-			pretty_print("feat1", feat1, feature_array[feat1], feat2, "feat2", feature_array[feat2], "acc_feat1", baseline_accuracy-accuracy_by_feature[feat1], "acc_feat2", baseline_accuracy-accuracy_by_feature[feat2], "joint_acc", joint_accuracy[(feat1, feat2)], "score", overall_score)
+			pretty_print("feat1", feat1, feature_array[feat1], feat2, "feat2", feature_array[feat2], "acc_feat1", baseline_accuracy-accuracy_by_feature[feat1], "acc_feat2", baseline_accuracy-accuracy_by_feature[feat2], "joint_acc", baseline_accuracy-joint_accuracy[(feat1, feat2)], "score", overall_score)
 
 	N_MOST_CORRELATED_TO_SHOW = len(list(correlations.items()))
 	sorted_correlations = list(sorted([item for item in list(correlations.items()) if not math.isnan(item[1])], key=lambda item: item[1], reverse=True))[:N_MOST_CORRELATED_TO_SHOW]
 	print("highest", N_MOST_CORRELATED_TO_SHOW, "scores:")
 	for (feat1, feat2), score in sorted_correlations:
-		pretty_print("feat1", feat1, feature_array[feat1], feat2, "feat2", feature_array[feat2], "acc_feat1", baseline_accuracy-accuracy_by_feature[feat1], "acc_feat2", baseline_accuracy-accuracy_by_feature[feat2], "joint_acc", joint_accuracy[(feat1, feat2)], "score", score)
-	
+		pretty_print("feat1", feat1, feature_array[feat1], feat2, "feat2", feature_array[feat2], "acc_feat1", baseline_accuracy-accuracy_by_feature[feat1], "acc_feat2", baseline_accuracy-accuracy_by_feature[feat2], "joint_acc", baseline_accuracy-joint_accuracy[(feat1, feat2)], "score", score)
+
 # This function takes a model that was trained with feature dropout and can compute feature importance using that model.
 def dropout_feature_importance():
 
@@ -574,7 +574,7 @@ def dropout_feature_importance():
 		pretty_print("accuracy_for_feature", feature_index, feature_array[feature_index], max(accuracy-accuracy_for_features[feature_index], 0), max(flow_accuracy-accuracy_flow_for_features[feature_index], 0))
 
 	return (accuracy, accuracy_for_features)
-	
+
 def get_feature_importance_distribution(test_data):
 	distribution = np.concatenate([item[0] for item in test_data], axis=0).transpose(1,0)
 	minmax = list(zip(np.min(distribution, axis=1), np.max(distribution, axis=1)))
@@ -761,7 +761,7 @@ def mutinfo_feat_imp():
 	n_fold = opt.nFold
 	fold = opt.fold
 	lstm_module.eval()
-	
+
 	with open("features.json", "r") as f:
 		feature_array = json.load(f)
 
@@ -980,7 +980,7 @@ def adv_internal(in_training = False, tradeoff=None, lr=None, iterations=None, a
 
 		#  best_seen_adv_flows = [None] * seqs.shape[1]
 		#  best_seen_adv_distances = torch.FloatTensor([np.inf] * seqs.shape[1]).to(device)
-		
+
 		for i in range(ITERATION_COUNT):
 
 			# print("iterating", i)
@@ -1066,7 +1066,7 @@ def adv_internal(in_training = False, tradeoff=None, lr=None, iterations=None, a
 			input_data.data.data = torch.nn.utils.rnn.pack_padded_sequence(seqs, lengths, enforce_sorted=False).data.data
 
 		seqs, lengths = torch.nn.utils.rnn.pad_packed_sequence(input_data)
-		
+
 		#  if opt.advMethod == 'cw':
 			#  for ind in range(seqs.shape[1]):
 				#  if best_seen_adv_flows[ind] is not None:
