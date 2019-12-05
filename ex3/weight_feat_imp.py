@@ -5,6 +5,7 @@ import torch
 import numpy as np
 import sys
 import json
+from learn import pretty_print
 
 hidden_size = 512
 n_layers = 3
@@ -14,8 +15,8 @@ assert len(sys.argv) > 1, 'No model specified'
 
 parameters = torch.load(sys.argv[1])
 
-with open('features.json', 'r') as f:
-	features = json.load(f)
+with open('features_meaningful_names.json', 'r') as f:
+	feature_array = json.load(f)
 
 #	parameters = lstm_module.state_dict()
 weights_hh = [ parameters['lstm.weight_hh_l%d' % layer].cpu().numpy().reshape(4,hidden_size,hidden_size).sum(axis=0) for layer in range(n_layers) ]
@@ -45,8 +46,11 @@ for _ in range(10):
 	hh_prod = [ np.matmul(hh_prod[i], weights_hh[i]) for i in range(n_layers) ]
 	fi_over_time.append(np.abs(np.sum([ np.matmul(output_featimp[i+1], np.matmul(hh_prod[i], input_featimp[i])) for i in range(n_layers)], axis=0)[0,:]))
 
-print ('Packet feature importance:', sorted(zip(features, fi_over_time[0]/np.sum(fi_over_time[0])), key=lambda item: item[1]))
+print ('Packet feature importance:')
 
+for feature_index, feature_importance in sorted(enumerate(fi_over_time[0]/np.sum(fi_over_time[0])), key=lambda item: item[1]):
+	pretty_print("weight feat. imp. for", feature_index, feature_array[feature_index], feature_importance)
+	
 # Highly experimental stuff
 decomposition = [ np.linalg.eig(weights_hh[i]) for i in range(n_layers) ]
 valid_eigenvalues = [ [ j for j in range(hidden_size) if np.imag(decomposition[i][0][j]) == 0 ] for i in range(n_layers) ]
@@ -57,13 +61,12 @@ layer_with_max_eigenvalue = max(range(n_layers), key=lambda i: decomposition[i][
 eigenvector = np.real(decomposition[layer_with_max_eigenvalue][1][max_eigenvalues[layer_with_max_eigenvalue]])
 flow_feat_imp = np.abs(np.matmul(output_featimp[layer_with_max_eigenvalue+1], np.matmul(np.matmul(eigenvector[:,None], eigenvector[None,:]), input_featimp[layer_with_max_eigenvalue]))).flatten()
 flow_feat_imp /= np.sum(flow_feat_imp)
-print('Flow feature importance:', sorted(zip(features,flow_feat_imp.tolist()), key=lambda item: item[1]))
+print('Flow feature importance:')
+for feature_index, feature_importance in sorted(enumerate(flow_feat_imp.tolist()), key=lambda item: item[1]):
+	pretty_print("weight feat. imp. for", feature_index, feature_array[feature_index], feature_importance)
 
 to_plot = np.stack(fi_over_time)
 plt.semilogy(to_plot[:,:to_plot.shape[1]//2])
 plt.semilogy(to_plot[:,(to_plot.shape[1]//2):], linestyle='--')
-plt.legend(features)
+plt.legend(feature_array)
 plt.show()
-	
-
-
