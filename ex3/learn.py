@@ -762,7 +762,7 @@ def mutinfo_feat_imp():
 	fold = opt.fold
 	lstm_module.eval()
 
-	with open("features.json", "r") as f:
+	with open("features_meaningful_names.json", "r") as f:
 		feature_array = json.load(f)
 
 	_, test_indices = get_nth_split(dataset, n_fold, fold)
