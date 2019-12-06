@@ -646,7 +646,7 @@ def feature_importance():
 		# Joint pdf for feature values in individual time steps and confidence in the same time step
 		per_packet_pdf = np.zeros([opt.maxLength,distribution.shape[0],PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
 		# Joint pdf for constant feature values and end confidence
-		per_flow_pdf = np.zeros([max(constant_features)+1,PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
+		per_flow_pdf = np.zeros([distribution.shape[0],PDF_FEATURE_BINS,PDF_CONFIDENCE_BINS])
 
 	for input_data, labels, categories in test_loader:
 
@@ -691,6 +691,7 @@ def feature_importance():
 				input_data_cloned = torch.nn.utils.rnn.pack_padded_sequence(input_data_padded, input_data_lens, enforce_sorted=False)
 			else:
 				input_data_cloned.data.data[:,feature_index] = torch.FloatTensor(np.random.choice(distribution[feature_index], size=(input_data_cloned.data.data.shape[0]))).to(device)
+			input_data_padded_np = input_data_padded.cpu().numpy()
 			output, seq_lens = lstm_module(input_data_cloned)
 
 			sigmoided_output = torch.sigmoid(output.detach())
@@ -701,12 +702,13 @@ def feature_importance():
 
 				if opt.mutinfo:
 					if feature_index in constant_features:
-						bin1 = np.argmax(input_data_padded[0,batch_index,feature_index] <= bin_boundaries[feat_ind,:], axis=1)
-						#  bin1 = int(torch.round((PDF_FEATURE_BINS-1) * (input_data_padded[0,batch_index,feature_index] - minmax[feature_index][0]) / (minmax[feature_index][1]-minmax[feature_index][0])))
-						bin2 = int(torch.round((PDF_CONFIDENCE_BINS-1) * sigmoided_output[flow_length-1,batch_index,0]))
-						per_flow_pdf[feature_index,bin1,bin2] += 1
+						bin1 = np.argmax(input_data_padded_np[0,batch_index,feature_index] <= bin_boundaries[feature_index,:], axis=0)
+					else:
+						bin1 = np.argmax(input_data_padded_np[:flow_length,batch_index,feature_index,None] <= bin_boundaries[None,feature_index,:], axis=1)
+					bin2 = int(torch.round((PDF_CONFIDENCE_BINS-1) * sigmoided_output[flow_length-1,batch_index,0]))
+					per_flow_pdf[feature_index,bin1,bin2] += 1
 
-					bin1 = np.argmax(input_data_padded[:flow_length,batch_index,feature_index,None] <= bin_boundaries[None,feat_ind,:], axis=1)
+					bin1 = np.argmax(input_data_padded_np[:flow_length,batch_index,feature_index,None] <= bin_boundaries[None,feature_index,:], axis=1)
 					#  bin1 = (torch.round((PDF_FEATURE_BINS-1) * (input_data_padded[:flow_length,batch_index,feature_index] - minmax[feature_index][0]) / (minmax[feature_index][1]-minmax[feature_index][0]))).cpu().numpy().astype(int)
 					bin2 = (torch.round((PDF_CONFIDENCE_BINS-1) * sigmoided_output[:flow_length,batch_index,0])).cpu().numpy().astype(int)
 					per_packet_pdf[np.arange(bin1.size),feature_index,bin1,bin2] += 1
@@ -734,8 +736,7 @@ def feature_importance():
 		accuracy_flow_for_features.append(accuracy_flow_for_feature)
 		pretty_print("accuracy_for_feature", feature_index, feature_array[feature_index], accuracy-accuracy_for_feature, flow_accuracy-accuracy_flow_for_feature)
 		if opt.mutinfo:
-			if feature_index in constant_features:
-				pretty_print("mutual information for pf feature", feature_index, feature_array[feature_index], compute_mutinfo(per_flow_pdf[feature_index,:,:]))
+			pretty_print("mutual information for pf feature", feature_index, feature_array[feature_index], compute_mutinfo(per_flow_pdf[feature_index,:,:]))
 			pretty_print("mutual information for pp feature", feature_index, feature_array[feature_index], compute_mutinfo(np.sum(per_packet_pdf[:,feature_index,:,:],axis=0)))
 			mutinfos.append([
 				compute_mutinfo(np.sum(per_packet_pdf[:,feature_index,:,:], axis=0)),
