@@ -232,12 +232,12 @@ Finally, we also tested the Fast Gradient Sign Method (FGSM), which was initiall
 where $L(X)$ denotes the network's loss function and $\epsilon$ denotes the achieved $\ell_\infty$ distance.
 
 \subsection{Evaluation}
-\begin{figure*}
-\includegraphics[width=0.45\textwidth]{adv_plots/cwl1.pdf}
-\includegraphics[width=0.45\textwidth]{adv_plots/cwl2.pdf}
-\caption{Performance of the \gls{cw} with different $\epsilon$ values for $\ell_1$ and $\ell_2$ distances.}
-\label{fig:adv_cw}
-\end{figure*}
+% \begin{figure*}
+% \includegraphics[width=0.45\textwidth]{adv_plots/cwl1.pdf}
+% \includegraphics[width=0.45\textwidth]{adv_plots/cwl2.pdf}
+% \caption{Performance of the \gls{cw} with different $\epsilon$ values for $\ell_1$ and $\ell_2$ distances.}
+% \label{fig:adv_cw}
+% \end{figure*}
 \autoref{fig:adv_cw} depicts the ratio of attack flows which were successfully misclassified as benign with respect to the final packet along with the resulting distance from the original sample. Evidently, the larger the $\epsilon$ parameter, the better the attack works, but also the distances become larger.
 
 Hence, with acceptable distance values we were able to generate adversarial samples for about 80\% of attack samples.
@@ -285,12 +285,12 @@ Of the investigated algorithms, thus the \gls{cw} with $\ell_2$ distance deliver
 
 \autoref{tab:adv_per_family} depicts how successful the attack is for individual attack families. For this table we used a $\ell_\infty$ bound of 0.3 for FGSM and $\ell_\infty$-bounded \gls{pgd} and a tradeoff of 0.5 for Carlini-Wagner. The table shows significant differences for detecting different attack families in the first place. However, also for generating adversarial flows some attack families are more susceptible than others.
 
-\begin{figure*}
-\includegraphics[width=0.45\textwidth]{adv_plots/fgsm.pdf}
-\includegraphics[width=0.45\textwidth]{adv_plots/l_inf_pgd.pdf}
-\caption{Performance of FSGM and $\ell_\infty$-bounded \gls{pgd} for different bounds.}
-\label{fig:fgsm}
-\end{figure*}
+% \begin{figure*}
+% \includegraphics[width=0.45\textwidth]{adv_plots/fgsm.pdf}
+% \includegraphics[width=0.45\textwidth]{adv_plots/l_inf_pgd.pdf}
+% \caption{Performance of FSGM and $\ell_\infty$-bounded \gls{pgd} for different bounds.}
+% \label{fig:fgsm}
+% \end{figure*}
 
 Finally, we investigated what adversarial flows look like and which features are manipulated to circumvent detection by the neural network.
 
@@ -456,6 +456,12 @@ I_{X,Y} = \mathbb E \left\{ \log\left(\frac{f_{X,Y}(x,y)}{f_X(x)f_Y(y)}\right) \
 with $f_X(x), f_Y(y)$ and $f_{X,Y}(x,y)$ denoting the distribution of $X,Y$ and their joint distribution, respectively. To obtain feature sensitivity, we compute mutual information between an input variable and the prediction output for one flow at one particular time step, and average over the result for the test dataset.
 
 \subsubsection{Results}
+\begin{figure*}
+\includegraphics[width=.49\textwidth]{figures/feat_imp_flow_2017.pdf}\hspace{.02\textwidth}
+\includegraphics[width=.49\textwidth]{figures/feat_imp_flow_2015.pdf}
+\caption{Feature importance metrics considering the final flow prediction for CIC-IDS-2017 (left side) and UNSW-NB15 (right side).}
+\label{fig:feat_imp}
+\end{figure*}
 Table~\ref{fig:featRandom} shows our results. The results match to a large extent with the expectations one has when classifying network flows. In particular, the most important features turn out to be the used protocol, packet length and the SYN TCP flag. While the first two features are essential for characterizing flows, a high number of packets with set SYN flag is an important characteristic for port scanning or certain DoS attacks. Also the fact that most of TCP flags do not play an important role in our dataset was expected. It is interesting to note, however, that the interarrival time of packets does not play a crucial role for the detection of attacks. 
 
 
@@ -504,10 +510,10 @@ As apparent from the above discussion, trying to explain how packet features inf
 To determine if this hypothesis is correct, we plot the attack confidence of the classifier for each time step for each attack class. At each time step we average over all flows and also show the first and third quartiles. \autoref{fig:confidence} shows that this hypothesis is correct for most attack classes. At the first couple of packets the confidence for maliciousness is not very high yet but towards the end of the flow it reaches values close to 1 and stays there.
 
 \begin{figure*}
-\includegraphics[width=0.48\textwidth]{{"../plots/plot2/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_0_Botnet-ARES"}.pdf}
-\includegraphics[width=0.48\textwidth]{{"../plots/plot2/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_7_DoS - DDoS-DoS slowloris"}.pdf}
-\includegraphics[width=0.48\textwidth]{{"../plots/plot2/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_11_PortScan-PortScan - Firewall off"}.pdf}
-\includegraphics[width=0.48\textwidth]{{"../plots/plot2/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_1_Brute Force-FTP-Patator"}.pdf}
+\includegraphics[width=0.48\textwidth]{{"../plots/plot2_adv/flows_pred_plots2_outcomes_flows_adv_1.0_notBidirectional_outcomes_0_3.pickle_0_3.pickle_0_Botnet-ARES"}.pdf}
+\includegraphics[width=0.48\textwidth]{{"../plots/plot2_adv/flows_pred_plots2_outcomes_flows_adv_1.0_notBidirectional_outcomes_0_3.pickle_0_3.pickle_7_DoS - DDoS-DoS slowloris"}.pdf}
+%\includegraphics[width=0.48\textwidth]{{"../plots/plot2_adv/flows_pred_plots2_outcomes_flows_adv_1.0_notBidirectional_outcomes_0_3.pickle_0_3.pickle_11_PortScan-PortScan - Firewall off"}.pdf}
+%\includegraphics[width=0.48\textwidth]{{"../plots/plot2_adv/flows_pred_plots2_outcomes_flows_adv_1.0_notBidirectional_outcomes_0_3.pickle_0_3.pickle_1_Brute Force-FTP-Patator"}.pdf}
 
 \caption{The solid line shows the mean value of the feature for all flows of a specific attack type. The shaded region shows the change in confidence that occurs when the feature is varied.}
 \label{fig:pred_plots2}

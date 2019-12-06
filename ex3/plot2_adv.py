@@ -3,6 +3,7 @@
 import matplotlib.pyplot as plt
 import matplotlib
 import matplotlib.colors as mc
+from matplotlib.lines import Line2D
 import colorsys
 import numpy as np
 import sys
@@ -14,6 +15,11 @@ import math
 
 DIR_NAME = "plots/plot2_adv"
 
+USE_LOG_SCALE = True
+OMIT_UPPER_AXIS = True
+ONLY_ONE_LEGEND = True
+
+plt.rcParams["font.family"] = "serif"
 dataroot_basename = sys.argv[1].split('_')[0]
 
 with open(dataroot_basename + "_categories_mapping.json", "r") as f:
@@ -21,7 +27,7 @@ with open(dataroot_basename + "_categories_mapping.json", "r") as f:
 categories_mapping, mapping = categories_mapping_content["categories_mapping"], categories_mapping_content["mapping"]
 reverse_mapping = {v: k for k, v in mapping.items()}
 
-with open(dataroot_basename+"_full_no_ttl_normalization_data.pickle", "rb") as f:
+with open(dataroot_basename+"_normalization_data.pickle", "rb") as f:
 	means, stds = pickle.load(f)
 
 file_name = sys.argv[1]
@@ -44,7 +50,8 @@ adv_orig_flows_by_attack_number = adv_loaded["orig_flows_by_attack_number"]
 
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 ORDERING = ["original", "adversarial"]
-FEATURE_NAMES = ["packet length", "iat"]
+FEATURE_NAMES = ["Packet length / B", "IAT / s"]
+FEATURE_SCALES = [1, 0.001] 
 
 def brighten(rgb, how_much=0.0):
 	hls = list(colorsys.rgb_to_hls(*rgb))
@@ -57,7 +64,6 @@ colors_rgb = [matplotlib.colors.to_rgb(item) for item in plt.rcParams['axes.prop
 COLOR_MAP_ELEMENTS = 100
 brightness_map = list(np.linspace(1.0, 0.5, num=COLOR_MAP_ELEMENTS))
 colors_rgb_ranges = [matplotlib.colors.ListedColormap([brighten(color, item) for item in brightness_map]) for color in colors_rgb]
-FEATURE_NAMES = ["packet length", "iat"]
 
 
 for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, result_ranges_by_attack_number_item, sample_indices_by_attack_number_item, adv_results_by_attack_number_item, adv_orig_results_by_attack_number_item, adv_modified_flows_by_attack_number_item, adv_orig_flows_by_attack_number_item) in enumerate(zip(results_by_attack_number, flows_by_attack_number, result_ranges_by_attack_number, sample_indices_by_attack_number, adv_results_by_attack_number, adv_orig_results_by_attack_number, adv_modified_flows_by_attack_number, adv_orig_flows_by_attack_number)):
@@ -147,41 +153,62 @@ for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, re
 
 
 	all_legends = []
-	plt.figure(attack_type)
+	plt.figure(attack_type, figsize=(5,4))
 	plt.title(reverse_mapping[attack_type])
 
-	for feature_index_from_zero, (feature_name, feature_index) in enumerate(zip(FEATURE_NAMES, (3, 4))):
+	for feature_index_from_zero, (feature_name, feature_index, feature_scale) in enumerate(zip(FEATURE_NAMES, (3, 4), FEATURE_SCALES)):
 		print("feature_index", feature_index)
 		plt.subplot("{}{}{}".format(len(FEATURE_NAMES), 1, feature_index_from_zero+1))
 		if feature_index_from_zero == len(FEATURE_NAMES)-1:
 			plt.xlabel('Sequence index')
 		plt.ylabel(feature_name)
 
-		legend = "{}".format(feature_name)
+		legend = "{}, {}".format(ORDERING[0], feature_name)
 		y_colormesh = (features[feature_index_from_zero] if not adv else features[attack_type][feature_index_from_zero])[1]*stds[feature_index]+means[feature_index]
 		print("y_colormesh", max(y_colormesh))
-		plt.pcolormesh(np.array(range(actual_flow_means.shape[0]+1))-0.5, y_colormesh, mean_ranges[:,feature_index_from_zero,:].transpose(), cmap=colors_rgb_ranges[feature_index_from_zero], vmin=0, vmax=1)
+		plt.pcolormesh(np.array(range(actual_flow_means.shape[0]+1))-0.5, y_colormesh*feature_scale, mean_ranges[:,feature_index_from_zero,:].transpose(), cmap=colors_rgb_ranges[feature_index_from_zero], vmin=0, vmax=1)
 
 		y_plt = actual_flow_means[:,feature_index]*stds[feature_index]+means[feature_index]
 		print("max plt", max(y_plt))
-		ret = plt.plot(range(max_length), y_plt, label=legend, color=colors[feature_index_from_zero])
-		plt.legend()
+		x = list(range(max_length))
+		y = y_plt * feature_scale
+		if feature_index == 4:
+			# iat for time 0 is always 0. hence, not interesting
+			x, y = x[1:], y[1:]
+		plot_function = plt.semilogy if USE_LOG_SCALE else plt.plot
+		ret = plot_function(x, y, label=legend, color=colors[feature_index_from_zero])
 		all_legends += ret
 
 		y_adv = adv_flow_means[:,1,feature_index]*stds[feature_index]+means[feature_index]
 		legend = "{}, {}".format(ORDERING[1], feature_name)
 		print("max adv", max(y_adv))
 		assert math.ceil(max(y_colormesh)) >= math.ceil(max(y_adv)) and math.ceil(max(y_colormesh)) >= math.ceil(max(y_plt))
-		ret = plt.plot(range(adv_max_length), y_adv, label=legend, linestyle="dashed", color=colors[feature_index_from_zero])
+		x = list(range(adv_max_length))
+		y = y_adv * feature_scale
+		if feature_index == 4:
+			x, y = x[1:], y[1:]
+		ret = plot_function(x, y, label=legend, linestyle="dashed", color=colors[feature_index_from_zero])
 		all_legends += ret
+		
+		if not ONLY_ONE_LEGEND:
+			plt.legend()
+		if OMIT_UPPER_AXIS and feature_name != FEATURE_NAMES[-1]:
+			plt.xticks([])
+		else:
+			ticks = plt.xticks()
+			plt.xticks([ tick for tick in ticks[0][1:-1] if tick.is_integer() ])
 
+	if ONLY_ONE_LEGEND:
+		plt.legend([Line2D([0], [0], c='k'), Line2D([0], [0], c='k', linestyle='dashed')], ['Original flows', 'Adversarial flows'], loc='lower right',  ncol=2)
 	plt.figure(attack_type)
 	plt.suptitle(reverse_mapping[attack_type])
 	plt.tight_layout()
 	plt.subplots_adjust(top=0.935)
+	if OMIT_UPPER_AXIS:
+		plt.subplots_adjust(hspace=0.05)
 
 	os.makedirs(DIR_NAME, exist_ok=True)
-	plt.savefig(DIR_NAME+'/{}_{}_{}.pdf'.format(file_name.split("/")[-1], attack_type, reverse_mapping[attack_type].replace("/", "-").replace(":", "-")))
+	plt.savefig(DIR_NAME+'/{}_{}_{}.pdf'.format(file_name.split("/")[-1], attack_type, reverse_mapping[attack_type].replace("/", "-").replace(":", "-")), bbox_inches = 'tight', pad_inches = 0)
 	plt.clf()
 
 
