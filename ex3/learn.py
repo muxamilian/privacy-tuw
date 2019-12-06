@@ -42,10 +42,12 @@ def pretty_print(*args, **kwargs):
 	outputs = []
 	for arg in args:
 		try:
-			outputs.append('%.6f' % arg)
+			outputs.append(('%.6f' % arg).rstrip('0').rstrip('.'))
 		except:
 			outputs.append(arg)
-	print('\t'.join(outputs), **kwargs)
+	if not "sep" in kwargs:
+		kwargs["sep"] = "\t"
+	print(*outputs, **kwargs)
 
 class OurDataset(Dataset):
 	def __init__(self, data, labels, categories):
@@ -389,7 +391,7 @@ def test():
 # This function takes a model that was trained with feature dropout and can compute features that are contain overlapping information (currently it looks at all combinations of features).
 def dropout_feature_correlation():
 
-	baseline_accuracy, accuracy_by_feature = dropout_feature_importance()
+	baseline_accuracy, baseline_flow_accuracy, accuracy_by_feature, accuracy_flow_by_feature = dropout_feature_importance()
 
 	# These features are constant throughout a flow
 	n_fold = opt.nFold
@@ -406,6 +408,7 @@ def dropout_feature_correlation():
 	attack_numbers = mapping.values()
 
 	dropout_results_by_attack_number = [{(i,j):[] for i in range(test_x.shape[0]) for j in range(i+1, test_x.shape[0])} for _ in range(min(attack_numbers), max(attack_numbers)+1)]
+	dropout_flow_results_by_attack_number = [{(i,j):[] for i in range(test_x.shape[0]) for j in range(i+1, test_x.shape[0])} for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 
 	for input_data, labels, categories in test_loader:
 
@@ -442,6 +445,7 @@ def dropout_feature_correlation():
 					assert (categories_padded[0, batch_index,:] == categories_padded[:flow_length, batch_index,:]).all()
 					flow_category = int(categories_padded[0, batch_index,:].squeeze().item())
 					dropout_results_by_attack_number[flow_category][(feat1, feat2)].append(flow_output)
+					dropout_flow_results_by_attack_number[flow_category][(feat1, feat2)].append(flow_output[-1])
 
 	with open("features.json", "r") as f:
 		feature_array = json.load(f)
@@ -452,12 +456,12 @@ def dropout_feature_correlation():
 	print("all scores:")
 	for feat1 in range(test_x.shape[0]):
 		for feat2 in range(feat1+1, test_x.shape[0]):
-			accuracy_for_feature_1 = accuracy_by_feature[feat1]
-			accuracy_for_feature_2 = accuracy_by_feature[feat2]
-			accuracy_for_feature_combination = np.mean(np.concatenate([feature for attack_type in dropout_results_by_attack_number for feature in attack_type[(feat1,feat2)]]))
+			accuracy_for_feature_1 = accuracy_flow_by_feature[feat1]
+			accuracy_for_feature_2 = accuracy_flow_by_feature[feat2]
+			accuracy_for_feature_combination = np.mean(np.concatenate([feature for attack_type in dropout_flow_results_by_attack_number for feature in attack_type[(feat1,feat2)]]))
 			joint_accuracy[(feat1, feat2)] = accuracy_for_feature_combination
-			numerator = max(float(baseline_accuracy-accuracy_for_feature_combination), 0)
-			denominator = max(float(baseline_accuracy-accuracy_for_feature_1), 0) + max(float(baseline_accuracy-accuracy_for_feature_2), 0)
+			numerator = max(float(baseline_flow_accuracy-accuracy_for_feature_combination), 0)
+			denominator = max(float(baseline_flow_accuracy-accuracy_for_feature_1), 0) + max(float(baseline_flow_accuracy-accuracy_for_feature_2), 0)
 			try:
 				overall_score = numerator/denominator
 			# accuracy doesn't fall if either feat1 or feat2 are omitted
@@ -469,13 +473,13 @@ def dropout_feature_correlation():
 				else:
 					overall_score = float("nan")
 			correlations[(feat1, feat2)] = overall_score
-			pretty_print("feat1", feat1, feature_array[feat1], feat2, "feat2", feature_array[feat2], "acc_feat1", baseline_accuracy-accuracy_by_feature[feat1], "acc_feat2", baseline_accuracy-accuracy_by_feature[feat2], "joint_acc", baseline_accuracy-joint_accuracy[(feat1, feat2)], "score", overall_score)
+			pretty_print("feat1", feat1, feature_array[feat1], feat2, "feat2", feature_array[feat2], "acc_feat1", baseline_flow_accuracy-accuracy_by_feature[feat1], "acc_feat2", baseline_flow_accuracy-accuracy_by_feature[feat2], "joint_acc", baseline_flow_accuracy-joint_accuracy[(feat1, feat2)], "score", overall_score, sep=" ")
 
 	N_MOST_CORRELATED_TO_SHOW = len(list(correlations.items()))
 	sorted_correlations = list(sorted([item for item in list(correlations.items()) if not math.isnan(item[1])], key=lambda item: item[1], reverse=True))[:N_MOST_CORRELATED_TO_SHOW]
 	print("highest", N_MOST_CORRELATED_TO_SHOW, "scores:")
 	for (feat1, feat2), score in sorted_correlations:
-		pretty_print("feat1", feat1, feature_array[feat1], feat2, "feat2", feature_array[feat2], "acc_feat1", baseline_accuracy-accuracy_by_feature[feat1], "acc_feat2", baseline_accuracy-accuracy_by_feature[feat2], "joint_acc", baseline_accuracy-joint_accuracy[(feat1, feat2)], "score", score)
+		pretty_print("feat1", feat1, feature_array[feat1], feat2, "feat2", feature_array[feat2], "acc_feat1", baseline_flow_accuracy-accuracy_by_feature[feat1], "acc_feat2", baseline_flow_accuracy-accuracy_by_feature[feat2], "joint_acc", baseline_flow_accuracy-joint_accuracy[(feat1, feat2)], "score", score, sep=" ")
 
 # This function takes a model that was trained with feature dropout and can compute feature importance using that model.
 def dropout_feature_importance():
@@ -573,7 +577,7 @@ def dropout_feature_importance():
 	for feature_index, _ in sorted(enumerate(accuracy_flow_for_features), key=lambda x: accuracy-x[1], reverse=True):
 		pretty_print("accuracy_for_feature", feature_index, feature_array[feature_index], max(accuracy-accuracy_for_features[feature_index], 0), max(flow_accuracy-accuracy_flow_for_features[feature_index], 0))
 
-	return (accuracy, accuracy_for_features)
+	return (accuracy, flow_accuracy, accuracy_for_features, accuracy_flow_for_features)
 
 def get_feature_importance_distribution(test_data):
 	distribution = np.concatenate([item[0] for item in test_data], axis=0).transpose(1,0)
