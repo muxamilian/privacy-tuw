@@ -87,12 +87,12 @@ firstname.lastname@tuwien.ac.at}}
 
 \begin{abstract}
 
-\glspl{rnn} seem like an attractive choice for performing intrusion detection on network data.
-However, with the rise of ubiquitous \gls{ml} systems, malicious actors have been catching up quickly to find new ways to exploit them for profit. Recently developed \gls{aml} techniques focus on computer vision and their applicability to network traffic is not straightforward: Network packets expose fewer features than an image, are sequential and impose several constraints on their features: For example, destination ports cannot be modified since that could impair communication.
+\glspl{rnn} yield attractive properties for performing intrusion detection on network data.
+However, with the rise of ubiquitous \gls{ml} systems, malicious actors have been catching up quickly to find new ways to exploit \gls{ml} for profit. Recently developed \gls{aml} techniques focus on computer vision and their applicability to network traffic is not straightforward: Network packets expose fewer features than an image, are sequential and impose several constraints on their features. For example, destination ports cannot be modified since that could impair communication.
 
 We show that despite these completely different characteristics, adversarial samples can be reliably generated for \glspl{rnn}.
 Since traditional evaluation metrics such as accuracy are not sufficient for quantifying the adversarial threat, we propose the \gls{ars}. %as a countermeasure. % AH. the score alone is not yet a countermeasure 
-To understand the classifier's potential for misclassification, we extend existing explainability techniques and propose new ones, particularly suitable % specifically crafted %AH most can also be used for non-sequential models, so lets not restrict applicability too much
+To understand a classifier's potential for misclassification, we extend existing explainability techniques and propose new ones, particularly suitable % specifically crafted %AH most can also be used for non-sequential models, so lets not restrict applicability too much
 for sequential data. Applying them shows that already the first packets of a communication flow are of crucial importance and are likely going to be targeted by attackers. Feature importance methods show that even though the modified features are not very relevant for the classifier, they can still be abused to generate adversarial samples.
 As a countermeasure, we develop an easy-to-use adversarial training procedure %and can confirm that it
 which significantly and successfully reduces the attack surface and improves \gls{ars}. 
@@ -472,7 +472,7 @@ with $f_X(x), f_Y(y)$ and $f_{X,Y}(x,y)$ denoting the distribution of $X,Y$ and 
 \caption{Feature importance metrics considering the final flow prediction for CIC-IDS-2017 (left side) and UNSW-NB15 (right side).}
 \label{fig:feat_imp}
 \end{figure*}
-\autoref{fig:featRandom} and \autoref{fig:feat_imp} show the results, which match to a large extent with domain-specific expectations for classifying network flows.
+Table~\ref{fig:featRandom} and \autoref{fig:feat_imp} show the results, which match to a large extent with domain-specific expectations for classifying network flows.
 In particular, rarely used \gls{tcp} flags like NS or URG are unimportant for the classifier. On the other hand, destination port and protocol are essential for characterizing flows by hinting at the type of traffic. Interarrival time and packet length are important for estimating the amount of transferred information and several flags hint at certain attacks like \gls{dos} attacks.
 
 The weights method is able to reveal features with a very low importance to a certain degree, but disagrees with the other methods to a large extent. Less anticipated, however, also input perturbation does not exhibit a considerable correlation with feature dropout. Considering its functioning, feature dropout is the most reliable method for evaluating importance for removing features. It is remarkable that none of the other methods is able to depict the distinct peak of importance for the destination port. 
