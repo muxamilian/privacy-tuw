@@ -40,7 +40,7 @@ plt.legend()
 plt.xticks(x, [group_names[i] for i in order], rotation=45, horizontalalignment='right')
 for tick in plt.gca().xaxis.get_major_ticks():
 	label = tick.label1
-	label.set_transform(label.get_transform() + Affine2D().translate(10,0))
+	label.set_transform(label.get_transform() + Affine2D().translate(8,0))
 plt.ylabel('Normalized metric')
 plt.tight_layout()
 
