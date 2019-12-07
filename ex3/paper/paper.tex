@@ -110,8 +110,7 @@ There is a significant body of scientific work focusing on the detection of unwa
 When analyzing flows, not only the aforementioned features are available but also features related to the timing of the individual packets as well as their size. For example, a specific attack might require the attacker to send three small packets and the victim to reply with two large packets followed by a small one the attacker. Various approaches have been proposed to extract features from flows and then perform anomaly detection with the results \cite{meghdouri_analysis_2018}. While these approaches work well, it is problematic that first the whole flow has to be received and only afterwards it can be determined if there was an anomaly. Thus, we design a network anomaly detection system that operates on a per-packet basis and decides if a packet is anomalous based on features that are available even for traffic that is encrypted above the transport layer, like for example TLS or QUIC.
 We show that our system has similar performance to other flow-based anomaly detection systems but can commonly detect anomalies \textit{before} the flow is over. 
 
-
-With the recent rise of interest in \gls{aml} techniques, also \gls{aml} for \glspl{ids} has been investigated. For example, \cite{Bachl2019} investigates remedies for poisoning attacks on \glspl{ids}.
+With the recent rise of interest in \gls{aml} techniques, also \gls{aml} for \glspl{ids} has been investigated. For example, \cite{bachl_walling_2019} investigates remedies for poisoning attacks on \glspl{ids}.
 In this research, we investigate whether adversarial samples can be found for \gls{ml} based on \glspl{rnn}. This is not a trivially answerable question since adversarial samples have mostly been analyzed in the context of computer vision. Our scenario significantly deviates from this in several ways because \begin{enumerate*}
 \item the number of features is significantly smaller and
 \item only certain features can be manipulated by an adversary (for example the destination port cannot be manipulated)
@@ -168,7 +167,7 @@ We implement a three-layer LSTM-based classifier with 512 neurons at each layer.
 \end{itemize*}. Of these features, source port, destination port and protocol identifier are constant over the whole flow while the others vary.
 We use Z-score normalization and a train/test split of 2:1.
 
-\autoref{tab:performance_results} shows that our classifier achieves an accuracy that is similar to previous work based on these datasets~\cite{meghdouri_analysis_2018,Bachl2019}. However, unlike these classifiers, our recurrent classifier has the advantage that it can detect attacks already before they are over.
+\autoref{tab:performance_results} shows that our classifier achieves an accuracy that is similar to previous work based on these datasets~\cite{meghdouri_analysis_2018,bachl_walling_2019}. However, unlike these classifiers, our recurrent classifier has the advantage that it can detect attacks already before they are over.
 
 \begin{table}
 % Evaluated using
@@ -436,7 +435,7 @@ Feature dropout also allows us to find correlated features or -- more general --
 \begin{equation}
 \text{score} = \frac{\text{acc}_\text{base}-\text{acc}_\text{-both\_features}}{\left(\text{acc}_\text{base}-\text{acc}_\text{-feature\_1}\right) + \left(\text{acc}_\text{base}-\text{acc}_\text{-feature\_2}\right)}
 \end{equation}
-With $\text{acc}_\text{base}$ we denote the average accuracy of the classifier with all features included, with $\text{acc}_\text{-feature\_i}$ the average accuracy if feature $i$ is omitted and with $\text{acc}_\text{-both\_features}$ the average accuracy if both features are omitted. The higher the resulting number, the larger the information that both features share. 
+With $\text{acc}_\text{base}$ we denote the average accuracy of the classifier with all features included, with $\text{acc}_\text{-feature\_i}$ the average accuracy if feature $i$ is omitted and with $\text{acc}_\text{-both\_features}$ the average accuracy if both features are omitted. The higher the resulting number, the larger the information that both features share. If the score is one, this means that both features contain no joint information. 
 
 \subsubsection{Mutual Information}
 \begin{figure}
