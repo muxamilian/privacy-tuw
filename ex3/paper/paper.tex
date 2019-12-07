@@ -194,7 +194,7 @@ Youden	&	0.972	&	0.990	&	0.873	&	0.719	\\
 \label{sec:adv}
 
 Most features such as, e.g., TCP flags cannot be easily manipulated because it might violate the TCP and thus cause communication to fail. Hence, we experiment whether by manipulating the interarrival times and packet lengths of the first packets, the classifier might be fooled. Our scenario is quite different from how generating adversarial samples usually works: We have significantly less features than in, for example, an image. Furthermore, only two out of those few features can be manipulated. And even these features cannot be manipulated freely: Besides the constraints that packet size and interarrival time cannot become negative there are also more problem-specific constraints:
-\begin{itemize}
+\begin{itemize}[topsep=0pt,wide,labelwidth=!,labelindent=0pt]
 \item Only packets can be manipulated which are transmitted by the attacker. This means the attacker can only control one direction (except for botnets where both sides are attackers).
 \item Packets must not be smaller than initially, as otherwise less information could be transmitted or packets might be rendered syntactically invalid.
 \item Interarrival times must not decrease, as otherwise the physical speed of data transmission can be violated in some cases. Since an in-depth analysis of when the reduction of interarrival times is possible, would come with substantial effort, we generally disallowed a reduction of this feature.
@@ -237,35 +237,37 @@ where $L(X)$ denotes the network's loss function and $\epsilon$ denotes the achi
 % \caption{Performance of the \gls{cw} with different $\epsilon$ values for $\ell_1$ and $\ell_2$ distances.}
 % \label{fig:adv_cw}
 % \end{figure*}
+\todo{Max: Fix me. Don't know how the reference became invalid...}
 \autoref{fig:adv_cw} depicts the ratio of attack flows which were successfully misclassified as benign with respect to the final packet along with the resulting distance from the original sample. Evidently, the larger the $\epsilon$ parameter, the better the attack works, but also the distances become larger.
 
 Hence, with acceptable distance values we were able to generate adversarial samples for about 80\% of attack samples.
 
 The figure suggests that a tradeoff value between 0.5 and 1 would be ideal to find adversarial samples with a low enough distance from real samples. This conclusion might be misleading, however, as the distance cannot become larger anymore as soon as an adversarial sample has been found, when performing optimization as depicted by the objective function \eqref{eq:carliniWagner}. Hence, the depicted increase of average distances presumably is due to samples for which no adversarial sample was found for lower $\epsilon$ values.
 
-
 \begin{table*}
 \caption{Attack success ratios per attack family. Depicted are flow detection accuracies for adversarial flows (left numbers) and flow detection accuracies for unmodified flows (right numbers).}
 \label{tab:adv_per_family}
 \centering
-\begin{tabular}{lllllllll}
+\begin{tabular}{llllllllll}
 \toprule
-Attack type & FGSM & Carlini-Wagner, $\ell_1$ & Carlini-Wagner, $\ell_2$ & $\ell_\infty$-bounded \gls{pgd} \\
+Attack type & \multicolumn{2}{l}{FGSM} & \multicolumn{2}{l}{Carlini-Wagner, $\ell_1$} & \multicolumn{2}{l}{Carlini-Wagner, $\ell_2$} & \multicolumn{2}{l}{$\ell_\infty$-bounded \gls{pgd}} \\
+\cmidrule(r){2-3} \cmidrule(lr){4-5} \cmidrule(l){6-7} \cmidrule(l){8-9}
+& adv. & orig. & adv. & orig. & adv. & orig. & adv. & orig. \\
 \midrule
-Botnet:ARES	&	0.0000 / 0.0000	&	0.0000 / 0.0000	&	0.0000 / 0.0000	&	0.0000 / 0.0000	\\
-Brute Force:FTP-Patator	&	0.2800 / 0.5800	&	0.1600 / 0.5800	&	0.1600 / 0.5800	&	0.2800 / 0.5800	\\
-Brute Force:SSH-Patator	&	0.8300 / 1.0000	&	0.0000 / 1.0000	&	0.0000 / 1.0000	&	0.8900 / 1.0000	\\
-DDoS:LOIT	&	0.8300 / 0.8600	&	0.6400 / 0.8600	&	0.5600 / 0.8600	&	0.8200 / 0.8600	\\
-DoS / DDoS:DoS GoldenEye	&	0.8900 / 1.0000	&	0.5000 / 1.0000	&	0.4200 / 1.0000	&	0.9200 / 1.0000	\\
-DoS / DDoS:DoS Hulk	&	0.6700 / 1.0000	&	0.5400 / 1.0000	&	0.4700 / 1.0000	&	1.0000 / 1.0000	\\
-DoS / DDoS:DoS Slowhttptest	&	0.8700 / 1.0000	&	0.4100 / 1.0000	&	0.1900 / 1.0000	&	0.7400 / 1.0000	\\
-DoS / DDoS:DoS slowloris	&	0.4400 / 0.9700	&	0.3100 / 0.9700	&	0.1300 / 0.9700	&	0.9200 / 0.9700	\\
-DoS / DDoS:Heartbleed	&	0.0000 / 0.0000	&	0.0000 / 0.0000	&	0.0000 / 0.0000	&	0.0000 / 0.0000	\\
-Infiltration:Dropbox download 	&	0.6100 / 0.9600	&	0.4300 / 0.9600	&	0.3800 / 0.9600	&	0.7400 / 0.9600	\\
-PortScan:PortScan - Firewall off	&	0.6800 / 0.9100	&	0.3500 / 0.9100	&	0.3500 / 0.9100	&	0.7200 / 0.9100	\\
-PortScan:PortScan - Firewall on	&	0.7400 / 0.8700	&	0.6100 / 0.8700	&	0.5300 / 0.8700	&	0.7300 / 0.8700	\\
-Web Attack:Sql Injection	&	0.0000 / 0.6923	&	0.0000 / 0.6923	&	0.0000 / 0.6923	&	0.0000 / 0.6923	\\
-Web Attack:XSS	&	0.6700 / 0.9500	&	0.7200 / 0.9500	&	0.6200 / 0.9500	&	0.6700 / 0.9500	\\
+Botnet:ARES	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	\\
+Brute Force:FTP-Patator	&	0.2800 & 0.5800	&	0.1600 & 0.5800	&	0.1600 & 0.5800	&	0.2800 & 0.5800	\\
+Brute Force:SSH-Patator	&	0.8300 & 1.0000	&	0.0000 & 1.0000	&	0.0000 & 1.0000	&	0.8900 & 1.0000	\\
+DDoS:LOIT	&	0.8300 & 0.8600	&	0.6400 & 0.8600	&	0.5600 & 0.8600	&	0.8200 & 0.8600	\\
+DoS / DDoS:DoS GoldenEye	&	0.8900 & 1.0000	&	0.5000 & 1.0000	&	0.4200 & 1.0000	&	0.9200 & 1.0000	\\
+DoS / DDoS:DoS Hulk	&	0.6700 & 1.0000	&	0.5400 & 1.0000	&	0.4700 & 1.0000	&	1.0000 & 1.0000	\\
+DoS / DDoS:DoS Slowhttptest	&	0.8700 & 1.0000	&	0.4100 & 1.0000	&	0.1900 & 1.0000	&	0.7400 & 1.0000	\\
+DoS / DDoS:DoS slowloris	&	0.4400 & 0.9700	&	0.3100 & 0.9700	&	0.1300 & 0.9700	&	0.9200 & 0.9700	\\
+DoS / DDoS:Heartbleed	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	\\
+Infiltration:Dropbox download 	&	0.6100 & 0.9600	&	0.4300 & 0.9600	&	0.3800 & 0.9600	&	0.7400 & 0.9600	\\
+PortScan:PortScan - Firewall off	&	0.6800 & 0.9100	&	0.3500 & 0.9100	&	0.3500 & 0.9100	&	0.7200 & 0.9100	\\
+PortScan:PortScan - Firewall on	&	0.7400 & 0.8700	&	0.6100 & 0.8700	&	0.5300 & 0.8700	&	0.7300 & 0.8700	\\
+Web Attack:Sql Injection	&	0.0000 & 0.6923	&	0.0000 & 0.6923	&	0.0000 & 0.6923	&	0.0000 & 0.6923	\\
+Web Attack:XSS	&	0.6700 & 0.9500	&	0.7200 & 0.9500	&	0.6200 & 0.9500	&	0.6700 & 0.9500	\\
 \bottomrule
 
 \end{tabular}
@@ -324,7 +326,7 @@ Setting the threshold for our metric to 50\% is arbitrary but we think that it i
 From a naive perspective, one might be tempted to reuse explainability methods for \glspl{rnn} by considering a flow the sum of its packet features.
 We identify several difficulties which occur when trying to explain decisions made by \glspl{rnn}. 
 
-\begin{itemize}
+\begin{itemize}[topsep=0pt,wide,labelwidth=!,labelindent=0pt]
 \item
 \textbf{Feature quantity.}
 The number of features that is fed into an \gls{rnn} is found as the product of packet features with the total length of the flow. For long flows, the total number of inputs can therefore grow to a substantial size.
@@ -340,9 +342,7 @@ If we, for example, consider a classification problem as in this document, we ex
 
 \item
 \textbf{Multiple prediction outputs.}
-Often an \gls{rnn} produces an output at each time step. When trying to apply explainability methods, hence, the question arises which output to base the methods on.
-
-The natural choice is to base the methods on the prediction output which occurs at the same time step as the feature under investigation. Not only does this approach require a substantially lower amount of computational resources compared to predictions occurring at a later time step, but we also expect the immediately occurring prediction outcome to exhibit a stronger correlation to the feature under investigation, compared to a prediction outcome occurring many time steps later.
+Often an \gls{rnn} produces an output at each time step. When trying to apply explainability methods, hence, the question arises which output to base the methods on. The natural choice is to base the methods on the prediction output which occurs at the same time step as the feature under investigation. Not only does this approach require a substantially lower amount of computational resources compared to predictions occurring at a later time step, but we also expect the immediately occurring prediction outcome to exhibit a stronger correlation to the feature under investigation, compared to a prediction outcome occurring many time steps later.
 However, due to the complex decision processes that can occur for deep neural networks, it is absolutely  uncertain if the network's final prediction is correctly depicted when following this approach.
 \end{itemize}
 
@@ -430,23 +430,21 @@ Considering the difficulties that arise from computing Shapley values, we propos
 
 Feature dropout also allows us to find correlated features or -- more general -- features that contain common information: 
 
-% numerator = max(float(baseline_accuracy-accuracy_for_feature_combination), 0)
-% 			denominator = max(float(baseline_accuracy-accuracy_for_feature_1), 0) + max(float(baseline_accuracy-accuracy_for_feature_2), 0)
 \begin{equation}
 \text{score} = \frac{\text{acc}_\text{base}-\text{acc}_\text{-both\_features}}{\left(\text{acc}_\text{base}-\text{acc}_\text{-feature\_1}\right) + \left(\text{acc}_\text{base}-\text{acc}_\text{-feature\_2}\right)}
 \end{equation}
-With $\text{acc}_\text{base}$ we denote the average accuracy of the classifier with all features included, with $\text{acc}_\text{-feature\_i}$ the average accuracy if feature $i$ is omitted and with $\text{acc}_\text{-both\_features}$ the average accuracy if both features are omitted. The higher the resulting number, the larger the information that both features share. If the score is one, this means that both features contain no joint information. 
+With $\text{acc}_\text{base}$ we denote the average accuracy of the classifier with all features included, with $\text{acc}_\text{-feature\_i}$ the average accuracy if feature $i$ is omitted and with $\text{acc}_\text{-both\_features}$ the average accuracy if both features are omitted. The higher the resulting number, the larger the information that both features share. If the score is one, this means that both features contain no joint information. For example, the score between RST and the protocol identifier is 8.5; the highest of all pairs of features. While this may seem unintuitive at the first glance, it likely stems from the fact that if the protocol identifier (TCP or UDP) is missing, then if RST is 1 at some point of the flow, the flow has to be TCP.
 
 \subsubsection{Mutual Information}
 \begin{figure}
 \includegraphics[width=\columnwidth]{../plots/mutinfo_example.pdf}
-\caption{Distributions $f_A(x)$ yielding an identical accuracy drop.}
+\caption{Two distributions yielding an identical accuracy drop.}
 \label{fig:mutinfo_example}
 \end{figure}
 Input Perturbation has some shortcomings when considering feature sensitivity. Assuming that the test dataset is representative for production use, for feature importance it is reasonable to equate the distribution of the perturbed feature with the feature distribution. On the other hand, when evaluating feature sensitivity, e.g. for analyzing potential for adversarial samples, the attacker is not limited by this distribution and frequently is able to choose arbitrary values in the feature space.
 
-Furthermore, let $f_A(x)$  denote the joint probability for classification as attack with a feature value $x$. Accuracy then is $\int f_A(x) dx$ for attacks and $1-\int f_A(x) dx$ for benign traffic. Consider \autoref{fig:mutinfo_example}. Evidently, both distributions
-yield the same accuracy, but clearly the right-side distribution has a larger influence on the prediction, as in the right-side case the prediction deterministically depends on the feature value.
+Furthermore, let $f_A(x)$  denote the joint probability \todo{Max: Ist joint probability nicht immer wenn man mehrere Ereignisse hat? Ich hätte hier probability density function geschrieben...} for classification as attack with a feature value $x$. Accuracy then is $\int f_A(x) dx$ for attacks and $1-\int f_A(x) dx$ for benign traffic. \autoref{fig:mutinfo_example} shows two different distributions
+yielding the same accuracy, but clearly the right-side distribution has a larger influence on the prediction, as in the right-side case the prediction deterministically depends on the feature value.
 To capture such dependencies, we propose to use mutual information instead of accuracy drop to determine feature sensitivity.
 Mutual Information between two random variables $X,Y$ is defined as 
 \begin{equation}
@@ -536,7 +534,7 @@ Looking at the plots of the features that vary over time (\autoref{fig:plot_feat
 
 \subsection{Reducing features}
 The most obvious defence, which is only possible because of the nature of the dataset, is to simply leave out features which the attacker can manipulate. For this, we try two different approaches:
-\begin{itemize}
+\begin{itemize}[topsep=0pt,wide,labelwidth=!,labelindent=0pt]
 \item Leaving out all features that are manipulable: packet size and interarrival time
 \item Leaving out manipulable features when the attacker can manipulate them: only in the direction from the attacker to the victim (This, however does not prevent adversarial samples for botnets, for which both sides are malicious)
 \end{itemize}
