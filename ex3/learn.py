@@ -1378,13 +1378,13 @@ def pred_plots2():
 	_, test_indices = get_nth_split(dataset, n_fold, fold)
 	subset = torch.utils.data.Subset(dataset, test_indices)
 
+	attack_numbers = mapping.values()
+	
 	if opt.pathToAdvOutput == "":
-		features = get_feature_ranges(subset, sampling_density=100)
+		features = [ get_feature_ranges(subset, sampling_density=100) ] * (max(attack_numbers)+1)
 	else:
 		features = get_feature_ranges_from_adv(sampling_density=100)
 	# print("features", features)
-
-	attack_numbers = mapping.values()
 
 	results_by_attack_number = [list() for _ in range(min(attack_numbers), max(attack_numbers)+1)]
 	flows_by_attack_number = [list() for _ in range(min(attack_numbers), max(attack_numbers)+1)]
@@ -1413,7 +1413,7 @@ def pred_plots2():
 			lstm_module.forgetting = True
 
 			input_data = torch.FloatTensor(flow[i,:][None,None,:]).repeat(1,max([len(item) for item in features])*max([(len(item[0][1])-1) if len(item) > 0 else 0 for item in features]),1)
-			for k, (feat_ind, values) in enumerate(features[cat] if opt.pathToAdvOutput!="" else features):
+			for k, (feat_ind, values) in enumerate(features[cat]):
 
 				for j in range(values.size-1):
 					# print("input_data.shape", input_data.shape, "k*values.size+j", k*values.size+j)
@@ -1428,7 +1428,7 @@ def pred_plots2():
 			output, _ = lstm_module(packed_input)
 			sigmoided = torch.sigmoid(output[0,:,0]).detach().cpu().tolist()
 
-			for k, (feat_ind, values) in enumerate(features[cat] if opt.pathToAdvOutput!="" else features):
+			for k, (feat_ind, values) in enumerate(features[cat]):
 				for j in range(values.size-1):
 					prediction_ranges[i,k,:] = sigmoided[k*(values.size-1):(k+1)*(values.size-1)]
 
