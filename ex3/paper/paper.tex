@@ -117,28 +117,36 @@ which significantly and successfully reduces the attack surface and improves \gl
 
 \section{Introduction}
 
-There is a significant body of scientific work focusing on the detection of unwanted behavior in networks. In the past, a viable way of performing intrusion detection was to inspect the content of packets themselves and detect if a packet delivers potentially harmful content. More recently, with the rise of omnipresent encryption, available features have changed. Since payload is not available anymore, the focus now lies on features that are always available to observers such as port numbers, protocol flags etc. Network communication is usually grouped into \textit{flows}, which are commonly defined as a sequence of packets sharing certain properties, between two applications that may be located at different physical locations.
+There is a significant body of scientific work focusing on the detection of unwanted behavior in networks. In the past, a viable way of performing intrusion detection was to inspect the content of packets themselves and detect if a packet delivers potentially harmful content. More recently, with the rise of omnipresent encryption, available features have changed. Since payload is no longer avilable, the focus now lies on features that are always available to network monitoring equipment such as port numbers, protocol flags, packet size etc. 
 
-When analyzing flows, not only the aforementioned features are available but also features related to the timing of the individual packets as well as their size. For example, a specific attack might require the attacker to send three small packets and the victim to reply with two large packets followed by a small one the attacker. Various approaches have been proposed to extract features from flows and then perform anomaly detection with the results \cite{meghdouri_analysis_2018}. While these approaches work well, it is problematic that first the whole flow has to be received and only afterwards it can be determined if there was an anomaly. Thus, we design a network anomaly detection system that operates on a per-packet basis and decides if a packet is anomalous based on features that are available even for traffic that is encrypted above the transport layer, like for example TLS or QUIC.
+Network communication is usually grouped into \textit{flows}, which are commonly defined as a sequence of packets sharing certain properties, between two applications that may be located at different physical locations.
+When analyzing flows, not only the aforementioned features are available but also features related to the timing of the individual packets. % as well as their size. %AH: don't see why pkt size is not available without flows
+For example, a specific attack might require the attacker to send three small packets and the victim to reply with two large packets followed by a small one to the attacker. Various approaches have been proposed to extract features from flows and then perform anomaly detection with the extracted flows \cite{meghdouri_analysis_2018}.
+While these approaches frequently work well, it is problematic that the whole flow has to be received first and only afterwards an anomaly can be detected. Thus, we design a network \gls{ids} that operates on a per-packet basis and decides if a packet is anomalous based on features that are available even for traffic that is encrypted above the transport layer, like for example TLS or QUIC.
+At the same time, an \gls{rnn}-based \gls{ids} has the benefit of avoiding tedious feature selection procedures while providing any available information to the classifier.
 We show that our system has similar performance to other flow-based anomaly detection systems but can commonly detect anomalies \textit{before} the flow is over. 
 
 With the recent rise of interest in \gls{aml} techniques, also \gls{aml} for \glspl{ids} has been investigated. For example, \cite{bachl_walling_2019} investigates remedies for poisoning attacks on \glspl{ids}.
-In this research, we investigate whether adversarial samples can be found for \gls{ml} based on \glspl{rnn}. This is not a trivially answerable question since adversarial samples have mostly been analyzed in the context of computer vision. Our scenario significantly deviates from this in several ways because \begin{enumerate*}
+In this research, we investigate whether adversarial samples can be found for our \gls{rnn}-based model. This is not a trivially answerable question since adversarial samples have mostly been analyzed in the context of computer vision. Our scenario significantly deviates from this in several ways because \begin{enumerate*}
 \item the number of features is significantly smaller and
 \item only certain features can be manipulated by an adversary (for example the destination port cannot be manipulated)
 \end{enumerate*}.
 
 Surprisingly, we can confirm that adversarial samples can be found even when considering these tight constraints. % mentioned before.
-Thus, we argue that traditional methods like accuracy are not sufficient for evaluating security-sensitive \gls{ml} systems.
+Thus, we argue that traditional methods like, e.g., accuracy are not sufficient for evaluating security-sensitive \gls{ml} systems.
 We propose the \acrfull{ars} as a new performance score, which precisely captures the notion of how easily an adversary can generate adversarial samples. 
 
-Astonishingly, feature importance methods reveal that the manipulable features, that are left for adversaries to modify are not even particularly significant for the classification outcome. %Especially the first packets of a flow are critical for determining the decision of a recurrent \gls{ids}. 
+In practice, a further crucial requirement for \gls{ml}-based \glspl{ids} 
+is that the classifiers decisions can be interpreted, recently giving rise to increasing interest in explainability methods. Also in this case, common methods are designed to work with images or tabular data but not with sequences. Hence, we extend existing explainability methods such as \glspl{pdp} \cite{friedman_greedy_2001} for sequential data. These show the varying characteristics of different attacks and they aid with visualizing potentially vulnerable features for adversaries.
+Astonishingly, feature importance methods reveal that the manipulable features, that are left for modification by adversaries are not even particularly significant for the classification outcome. %Especially the first packets of a flow are critical for determining the decision of a recurrent \gls{ids}. 
 
-Since common explainability methods are designed to work with images or tabular data but not sequences, we extend existing explainability methods such as \glspl{pdp} \cite{friedman_greedy_2001} for sequential data. These show the varying characteristics of different attacks and they aid with visualizing potentially vulnerable features for adversaries.
+%Since common explainability methods are designed to work with images or tabular data but not sequences, we extend existing explainability methods such as \glspl{pdp} \cite{friedman_greedy_2001} for sequential data. These show the varying characteristics of different attacks and they aid with visualizing potentially vulnerable features for adversaries.
 
-Based on the insights gained by the feature importance and explainability methods, we develop a simple method for defending against adversaries who can manipulate arbitrary packets by simply leaving out potentially manipulable information from the classification process. The resulting classifier is slightly less accurate but is still useful to be deployed in a real scenario. Furthermore, we develop a custom adversarial training procedure which especially focuses on ease of use and low resource consumption and aims to keep the number of additionally introduced training hyperparameters low. With this novel strategy we can reduce attack surface and harden the resulting \gls{ids} while retaining similar classification performance like for the original \gls{ml} model. 
+Based on the insights gained by the feature importance and explainability methods, we propose two defence methods.
+%develop a simple method for defending against adversaries who can manipulate arbitrary packets by simply leaving out potentially manipulable information from the classification process.
+On the one hand, by simply leaving out manipulable features, we obtain a classifier which is slightly less accurate but is still useful to be deployed in a real scenario. Furthermore, we develop a custom adversarial training procedure which especially focuses on ease of use and low resource consumption and aims to keep the number of additionally introduced training hyperparameters low. With this novel strategy we can reduce the attack surface and harden the resulting \gls{ids} while retaining similar classification performance. % like for the original \gls{ml} model. 
 
-\section{RNN-based classifier}
+\section{An \gls{rnn}-based classifier}
 
 \begin{table}[b]
 \caption{Occurence probability of attack types.} \label{tab:occurrence}
@@ -166,19 +174,21 @@ DoS / DDoS:Heartbleed                                          & $0.000001$ \\
 \label{tab:occurence}
 \end{table}
 
-In this research, we use the \textit{CIC-IDS-2017} \cite{sharafaldin_toward_2018} and \textit{UNSW-NB15} \cite{moustafa_unsw-nb15:_2015} datasets which each include more than 2 million flows of network data, containing both benign traffic and a large number of different attacks. Attacks contained in CIC-IDS-2017 are shown in \autoref{tab:occurence}.
-
-We implement a three-layer LSTM-based classifier with 512 neurons at each layer. As the input features we use \begin{itemize*}
-\item source port
-\item destination port
-\item protocol identifier
-\item packet sizes
-\item \glspl{iat} of packets
-\item packet directions (if packet goes there or back)
-\item all \gls{tcp} flags (0 if flow is not \gls{tcp})
-\end{itemize*}. We omitted \gls{ttl} values, as they are likely to lead to unwanted prediction behaviour \cite{bachl_walling_2019}.  Among the used features, source port, destination port and protocol identifier are constant over the whole flow while the others vary.
+We implemented a three-layer LSTM-based classifier with 512 neurons at each layer. As the input features we use 
+source port, destination port, protocol identifier, packet length, \gls{iat} to the previous packet in the flow, packet direction (if packet goes there or back) and all \gls{tcp} flags (0 if the flow is not \gls{tcp}).
+% \begin{itemize*}
+% \item source port
+% \item destination port
+% \item protocol identifier
+% \item packet sizes
+% \item \glspl{iat} of packets
+% \item packet directions (if packet goes there or back)
+% \item all \gls{tcp} flags (0 if the flow is not \gls{tcp})
+% \end{itemize*}.
+We omitted \gls{ttl} values, as they are likely to lead to unwanted prediction behaviour \cite{bachl_walling_2019}.  Among the used features, source port, destination port and protocol identifier are constant over the whole flow while the others vary.
 We use Z-score normalization and a train/test split of 2:1.
 
+For evaluation, we use the \textit{CIC-IDS-2017} \cite{sharafaldin_toward_2018} and \textit{UNSW-NB15} \cite{moustafa_unsw-nb15:_2015} datasets which each include more than 2 million flows of network data, containing both benign traffic and a large number of different attacks. Attacks contained in CIC-IDS-2017 are shown in \autoref{tab:occurence}.
 \autoref{tab:performance_results} shows that our classifier achieves an accuracy that is similar to previous work based on these datasets~\cite{meghdouri_analysis_2018,bachl_walling_2019}. However, unlike these classifiers, our recurrent classifier has the advantage that it can detect attacks already before they are over.
 
 \begin{table}
@@ -216,7 +226,7 @@ Our scenario is quite different from how generating adversarial samples usually 
 Several \gls{aml} methods have been proposed in the recent literature, achieving different speed-quality tradeoffs: 
 \cite{szegedy_intriguing_2014} show that it is possible to create adversarial samples for an image, which look similar to the original image but are classified wrongly. \cite{goodfellow_explaining_2015} develop the \gls{fgsm}, which makes easy generation of adversarial samples possible. \cite{papernot_crafting_2016} explore the use of \gls{aml} for \glspl{rnn}
 
-As finding adversarial flows is particularly difficult in our case for the reasons we discussed above, for the present research we preferred methods which produces high-quality adversarial samples while not being as fast as other methods. We implemented the several methods for generating adversarial flows.
+As finding adversarial flows is particularly difficult in our case for the reasons we discussed above, for the present research we preferred methods  producing high-quality adversarial samples while not being as fast as other methods. We implemented the following \gls{aml} methods.
 
 \subsection{Carlini-Wagner}
 We implemented the \gls{cw} \cite{carlini_towards_2017}, which performs gradient descent on the optimization objective
@@ -537,7 +547,7 @@ To determine if this hypothesis is correct, we plot the attack confidence of the
 \label{fig:pred_plots2}
 \end{figure*}
 
-Next, we want to investigate if our classifier just memorized its inputs. The most interesting packet features that can be used to visualize this in our use case are the \gls{iat} between packets in a flows and the packet length. To depict how the model comes to a decision, we determined the total minimum and maximum for these features that ever occur for all flows. For a given flow $X$ we then varied feature values at each time step between minimum and maximum and plot how the confidence changes when the feature varies (\autoref{fig:pred_plots2}) depict the averaged predictions for different attack families. It seems clear that the classifier didn't just memorize the inputs but actually learned them since there is always a smooth decrease of confidence if we change the feature values. Instead, when memorizing, we would expect a sharp decline of confidence to occur. Another interesting observation is that after the first couple of packets the classifier is certain about its decision and changing features doesn't change its confidence any longer. This allows the conclusion that if an attacker is able to change the first few packets, she could possibly change the decision of the classifier. We will further investigate this question in section \autoref{sec:adv}.
+Next, we want to investigate if our classifier just memorized its inputs. The most interesting packet features that can be used to visualize this in our use case are the \gls{iat} between packets in a flows and the packet length. To depict how the model comes to a decision, we determined the total minimum and maximum for these features that ever occur for all flows. For a given flow $X$ we then varied feature values at each time step between minimum and maximum and plot how the confidence changes when the feature varies (\autoref{fig:pred_plots2}) depict the averaged predictions for different attack families. It seems clear that the classifier didn't just memorize the inputs but actually learned them since there is always a smooth decrease of confidence if we change the feature values. Instead, when memorizing, we would expect a sharp decline of confidence to occur. Another interesting observation is that after the first couple of packets the classifier is certain about its decision and changing features doesn't change its confidence any longer. This allows the conclusion that if an attacker is able to change the first few packets, she could possibly change the decision of the classifier. We will further investigate this question in \autoref{sec:adv}.
 
 \begin{figure*}
 \includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_2_Brute Force-SSH-Patator"}.pdf}
