@@ -254,13 +254,13 @@ Finally, we also tested the Fast Gradient Sign Method (FGSM), which was initiall
 where $L(X)$ denotes the network's loss function and $\epsilon$ denotes the achieved $\ell_\infty$ distance.
 
 \subsection{Evaluation}
-% \begin{figure*}
-% \includegraphics[width=0.45\textwidth]{adv_plots/cwl1.pdf}
-% \includegraphics[width=0.45\textwidth]{adv_plots/cwl2.pdf}
-% \caption{Performance of the \gls{cw} with different $\epsilon$ values for $\ell_1$ and $\ell_2$ distances.}
-% \label{fig:adv_cw}
-% \end{figure*}
-\todo{Max: Fix me. Don't know how the reference became invalid...}
+\begin{figure*}
+\includegraphics[width=0.45\textwidth]{adv_plots/cwl1.pdf}
+\includegraphics[width=0.45\textwidth]{adv_plots/cwl2.pdf}
+\caption{Performance of the \gls{cw} with different $\epsilon$ values for $\ell_1$ and $\ell_2$ distances.}
+\label{fig:adv_cw}
+\end{figure*}
+\todo{compress figures somehow}
 \autoref{fig:adv_cw} depicts the ratio of attack flows which were successfully misclassified as benign with respect to the final packet along with the resulting distance from the original sample. Evidently, the larger the $\epsilon$ parameter, the better the attack works, but also the distances become larger.
 
 Hence, with acceptable distance values we were able to generate adversarial samples for about 80\% of attack samples.
@@ -309,12 +309,12 @@ Of the investigated algorithms, thus the \gls{cw} with $\ell_2$ distance deliver
 
 \autoref{tab:adv_per_family} depicts how successful the attack is for individual attack families. For this table we used a $\ell_\infty$ bound of 0.3 for FGSM and $\ell_\infty$-bounded \gls{pgd} and a tradeoff of 0.5 for Carlini-Wagner. The table shows significant differences for detecting different attack families in the first place. However, also for generating adversarial flows some attack families are more susceptible than others.
 
-% \begin{figure*}
-% \includegraphics[width=0.45\textwidth]{adv_plots/fgsm.pdf}
-% \includegraphics[width=0.45\textwidth]{adv_plots/l_inf_pgd.pdf}
-% \caption{Performance of FSGM and $\ell_\infty$-bounded \gls{pgd} for different bounds.}
-% \label{fig:fgsm}
-% \end{figure*}
+\begin{figure*}
+\includegraphics[width=0.45\textwidth]{adv_plots/fgsm.pdf}
+\includegraphics[width=0.45\textwidth]{adv_plots/l_inf_pgd.pdf}
+\caption{Performance of FSGM and $\ell_\infty$-bounded \gls{pgd} for different bounds.}
+\label{fig:fgsm}
+\end{figure*}
 
 Finally, we investigated what adversarial flows look like and which features are manipulated to circumvent detection by the neural network.
 
@@ -466,7 +466,11 @@ With $\text{acc}_\text{base}$ we denote the average accuracy of the classifier w
 \end{figure}
 Input Perturbation has some shortcomings when considering feature sensitivity. Assuming that the test dataset is representative for production use, for feature importance it is reasonable to equate the distribution of the perturbed feature with the feature distribution. On the other hand, when evaluating feature sensitivity, e.g. for analyzing potential for adversarial samples, the attacker is not limited by this distribution and frequently is able to choose arbitrary values in the feature space.
 
-Furthermore, let $f_A(x)$  denote the joint probability \todo{Max: Ist joint probability nicht immer wenn man mehrere Ereignisse hat? Ich hätte hier probability density function geschrieben...} for classification as attack with a feature value $x$. Accuracy then is $\int f_A(x) dx$ for attacks and $1-\int f_A(x) dx$ for benign traffic. \autoref{fig:mutinfo_example} shows two different distributions
+Furthermore, let $f(A,x)$  denote the joint probability
+%\todo{Max: Ist joint probability nicht immer wenn man mehrere Ereignisse hat? Ich hätte hier probability density function geschrieben...}
+%AH. changed notation and wording
+for classification as attack and a feature value $x$. Accuracy then is $\int f(A,x) dx$ for attacks and $1-\int f(A,x) dx$ for benign traffic.
+\autoref{fig:mutinfo_example} shows two different distributions
 yielding the same accuracy, but clearly the right-side distribution has a larger influence on the prediction, as in the right-side case the prediction deterministically depends on the feature value.
 To capture such dependencies, we propose to use mutual information instead of accuracy drop to determine feature sensitivity.
 Mutual Information between two random variables $X,Y$ is defined as 
