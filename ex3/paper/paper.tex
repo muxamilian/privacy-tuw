@@ -80,10 +80,22 @@ firstname.lastname@tuwien.ac.at}}
 \newacronym{pgd}{PGD}{Projected Gradient Descent}
 \newacronym{pdp}{PDP}{Partial Dependence Plot}
 \newacronym{ars}{ARS}{Adversarial Robustness Score}
+\newacronym{ttl}{TTL}{Time-to-Live}
+\newacronym{dos}{DoS}{Denial-of-Service}
+\newacronym{iat}{IAT}{Interarrival time}
+\newacronym{tcp}{TCP}{Transmission control protocol}
 
 \begin{abstract}
 
-With the rise of ubiquitous \gls{ml} systems, malicious actors have been catching up quickly to find new ways to exploit them for profit. Recently developed \gls{aml} techniques focus on computer vision and their applicability to network traffic is not straightforward: Network packets expose fewer features than an image, are sequential and impose several constraints on their features: For example, destination ports cannot be modified since that could impair communication. We show that despite these completely different characteristics, adversarial samples can be reliably generated. This shows that traditional evaluation metrics such as accuracy are not sufficient for quantifying the adversarial threat and we propose \gls{ars} as a countermeasure. Feature importance methods show that even though the modified features are not very relevant for the classifier, they can still be abused to generate adversarial samples. We then extend existing explainability techniques and propose new ones, specifically crafted for sequential data. Applying them shows that already the first couple of packets of a communication flow are of crucial importance and are likely going to be targeted by attackers. As a countermeasure we develop an easy-to-use adversarial training procedure and can confirm that it significantly and successfully reduces the attack surface and improves \gls{ars}. 
+\glspl{rnn} seem like an attractive choice for performing intrusion detection on network data.
+However, with the rise of ubiquitous \gls{ml} systems, malicious actors have been catching up quickly to find new ways to exploit them for profit. Recently developed \gls{aml} techniques focus on computer vision and their applicability to network traffic is not straightforward: Network packets expose fewer features than an image, are sequential and impose several constraints on their features: For example, destination ports cannot be modified since that could impair communication.
+
+We show that despite these completely different characteristics, adversarial samples can be reliably generated for \glspl{rnn}.
+Since traditional evaluation metrics such as accuracy are not sufficient for quantifying the adversarial threat, we propose the \gls{ars}. %as a countermeasure. % AH. the score alone is not yet a countermeasure 
+To understand the classifier's potential for misclassification, we extend existing explainability techniques and propose new ones, particularly suitable % specifically crafted %AH most can also be used for non-sequential models, so lets not restrict applicability too much
+for sequential data. Applying them shows that already the first packets of a communication flow are of crucial importance and are likely going to be targeted by attackers. Feature importance methods show that even though the modified features are not very relevant for the classifier, they can still be abused to generate adversarial samples.
+As a countermeasure, we develop an easy-to-use adversarial training procedure %and can confirm that it
+which significantly and successfully reduces the attack surface and improves \gls{ars}. 
 
 \end{abstract}
 
@@ -163,8 +175,8 @@ We implement a three-layer LSTM-based classifier with 512 neurons at each layer.
 \item packet sizes
 \item interarrival times of packets
 \item packet directions (if packet goes there or back)
-\item all TCP flags (0 if flow is not TCP)
-\end{itemize*}. Of these features, source port, destination port and protocol identifier are constant over the whole flow while the others vary.
+\item all \gls{tcp} flags (0 if flow is not \gls{tcp})
+\end{itemize*}. We omitted \gls{ttl} values, as they are likely to lead to unwanted prediction behaviour \cite{bachl_walling_2019}.  Among the used features, source port, destination port and protocol identifier are constant over the whole flow while the others vary.
 We use Z-score normalization and a train/test split of 2:1.
 
 \autoref{tab:performance_results} shows that our classifier achieves an accuracy that is similar to previous work based on these datasets~\cite{meghdouri_analysis_2018,bachl_walling_2019}. However, unlike these classifiers, our recurrent classifier has the advantage that it can detect attacks already before they are over.
@@ -192,15 +204,16 @@ Youden	&	0.972	&	0.990	&	0.873	&	0.719	\\
 
 \section{Adversarial attacks}
 \label{sec:adv}
-
-Most features such as, e.g., TCP flags cannot be easily manipulated because it might violate the TCP and thus cause communication to fail. Hence, we experiment whether by manipulating the interarrival times and packet lengths of the first packets, the classifier might be fooled. Our scenario is quite different from how generating adversarial samples usually works: We have significantly less features than in, for example, an image. Furthermore, only two out of those few features can be manipulated. And even these features cannot be manipulated freely: Besides the constraints that packet size and interarrival time cannot become negative there are also more problem-specific constraints:
+We now investigate whether known \gls{aml} methods can be used for generating adversarial flows, i.e. minimally different attack flows which are classified as benign.
+In our scenario, most features such as, e.g., \gls{tcp} flags cannot be easily manipulated because their manipulation might violate the \gls{tcp} and thus cause communication to fail. Hence, we experiment whether by manipulating the interarrival times and packet lengths of the first packets, the classifier might be fooled.
+Our scenario is quite different from how generating adversarial samples usually works: We have significantly less features than in, for example, an image. Furthermore, only two out of those few features can be manipulated. And even these features cannot be manipulated freely: Besides the constraints that packet size and interarrival time cannot become negative there are also more problem-specific constraints:
 \begin{itemize}[topsep=0pt,wide,labelwidth=!,labelindent=0pt]
 \item Only packets can be manipulated which are transmitted by the attacker. This means the attacker can only control one direction (except for botnets where both sides are attackers).
 \item Packets must not be smaller than initially, as otherwise less information could be transmitted or packets might be rendered syntactically invalid.
 \item Interarrival times must not decrease, as otherwise the physical speed of data transmission can be violated in some cases. Since an in-depth analysis of when the reduction of interarrival times is possible, would come with substantial effort, we generally disallowed a reduction of this feature.
 \end{itemize}
 
-Several methods for generating adversarial samples have been proposed in the recent literature, achieving different speed-quality tradeoffs: 
+Several \gls{aml} methods have been proposed in the recent literature, achieving different speed-quality tradeoffs: 
 \cite{szegedy_intriguing_2014} show that it is possible to create adversarial samples for an image, which look similar to the original image but are classified wrongly. \cite{goodfellow_explaining_2015} develop the \gls{fgsm}, which makes easy generation of adversarial samples possible. \cite{papernot_crafting_2016} explore the use of \gls{aml} for \glspl{rnn}
 
 As finding adversarial flows is particularly difficult in our case for the reasons we discussed above, for the present research we preferred methods which produces high-quality adversarial samples while not being as fast as other methods. We implemented the several methods for generating adversarial flows.
@@ -413,7 +426,7 @@ On the other hand, both adversarial machine learning and explainable machine lea
 To analyze features for our network, we use the following approaches.
 
 \subsubsection{Neural Network Weights}
-In previous works, a simple method for determining feature importance in neural networks, has been summing up neural network weights leading from a dertain input to the prediction outcome. The weights method can be considered for both feature importance and feature sensitivity, however, clearly, especially in the case of complex network architectures, this method is likely to provide wrong results. Hence, we provide results for the weights method mainly for comparison. Note that an LSTM cell alone has four weights leading from one input to an output. 
+In previous works, a simple method for determining feature importance in neural networks, has been summing up neural network weights leading from a certain input to the prediction outcome. The weights method can be considered for both feature importance and feature sensitivity, however, clearly, especially in the case of complex network architectures, this method is likely to provide wrong results. Hence, we provide results for the weights method mainly for comparison. Note that an LSTM cell alone has four weights leading from one input to an output. 
 
 \subsubsection{Input Perturbation}
 
@@ -433,7 +446,7 @@ Feature dropout also allows us to find correlated features or -- more general --
 \begin{equation}
 \text{score} = \frac{\text{acc}_\text{base}-\text{acc}_\text{-both\_features}}{\left(\text{acc}_\text{base}-\text{acc}_\text{-feature\_1}\right) + \left(\text{acc}_\text{base}-\text{acc}_\text{-feature\_2}\right)}
 \end{equation}
-With $\text{acc}_\text{base}$ we denote the average accuracy of the classifier with all features included, with $\text{acc}_\text{-feature\_i}$ the average accuracy if feature $i$ is omitted and with $\text{acc}_\text{-both\_features}$ the average accuracy if both features are omitted. The higher the resulting number, the larger the information that both features share. If the score is one, this means that both features contain no joint information. For example, the score between RST and the protocol identifier is 8.5; the highest of all pairs of features. While this may seem unintuitive at the first glance, it likely stems from the fact that if the protocol identifier (TCP or UDP) is missing, then if RST is 1 at some point of the flow, the flow has to be TCP.
+With $\text{acc}_\text{base}$ we denote the average accuracy of the classifier with all features included, with $\text{acc}_\text{-feature\_i}$ the average accuracy if feature $i$ is omitted and with $\text{acc}_\text{-both\_features}$ the average accuracy if both features are omitted. The higher the resulting number, the larger the information that both features share. If the score is one, this means that both features contain no joint information. For example, the score between RST and the protocol identifier is 8.5; the highest of all pairs of features. While this may seem unintuitive at the first glance, it likely stems from the fact that if the protocol identifier (\gls{tcp} or UDP) is missing, then if RST is 1 at some point of the flow, the flow has to be \gls{tcp}.
 
 \subsubsection{Mutual Information}
 \begin{figure}
@@ -459,8 +472,16 @@ with $f_X(x), f_Y(y)$ and $f_{X,Y}(x,y)$ denoting the distribution of $X,Y$ and 
 \caption{Feature importance metrics considering the final flow prediction for CIC-IDS-2017 (left side) and UNSW-NB15 (right side).}
 \label{fig:feat_imp}
 \end{figure*}
-Table~\ref{fig:featRandom} shows our results. The results match to a large extent with the expectations one has when classifying network flows. In particular, the most important features turn out to be the used protocol, packet length and the SYN TCP flag. While the first two features are essential for characterizing flows, a high number of packets with set SYN flag is an important characteristic for port scanning or certain DoS attacks. Also the fact that most of TCP flags do not play an important role in our dataset was expected. It is interesting to note, however, that the interarrival time of packets does not play a crucial role for the detection of attacks. 
+\autoref{fig:featRandom} and \autoref{fig:feat_imp} show the results, which match to a large extent with domain-specific expectations for classifying network flows.
+In particular, rarely used \gls{tcp} flags like NS or URG are unimportant for the classifier. On the other hand, destination port and protocol are essential for characterizing flows by hinting at the type of traffic. Interarrival time and packet length are important for estimating the amount of transferred information and several flags hint at certain attacks like \gls{dos} attacks.
 
+The weights method is able to reveal features with a very low importance to a certain degree, but disagrees with the other methods to a large extent. Less anticipated, however, also input perturbation does not exhibit a considerable correlation with feature dropout. Considering its functioning, feature dropout is the most reliable method for evaluating importance for removing features. It is remarkable that none of the other methods is able to depict the distinct peak of importance for the destination port. 
+
+It is not surprising that mutual information disagrees with feature dropout, since both their aim and their functioning are substantially different. For example, mutual information shows that the protocol field can have a substantial impact on the classification even though an identical accuracy can be achieved when omitting it.
+
+% In particular, the most important features turn out to be the used protocol, packet length and the SYN TCP flag. While the first two features are essential for characterizing flows, a high number of packets with set SYN flag is an important characteristic for port scanning or certain DoS attacks. Also the fact that most of TCP flags do not play an important role in our dataset was expected. It is interesting to note, however, that the interarrival time of packets does not play a crucial role for the detection of attacks. 
+
+Note that metrics for UNSW-NB15 differ substantially from CIC-IDS2017. However, due to the large number of different network attacks and network configurations, it is easily possible that different features are relevant for both datasets. We consider the question of model transferability of substantial importance for the presented application, but out of scope for the present research.
 
 \subsection{Explainability Plots}
 During flow extraction we used a usual 5-tuple flow key, which distinguishes flows based on the protocol they use and their source and destination port and IP address. Hence, these features are constant for all packets in one flow, which allows us to use explainability methods which have been proposed for non-recurrent classification methods.
