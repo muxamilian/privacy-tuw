@@ -173,7 +173,7 @@ We implement a three-layer LSTM-based classifier with 512 neurons at each layer.
 \item destination port
 \item protocol identifier
 \item packet sizes
-\item interarrival times of packets
+\item \glspl{iat} of packets
 \item packet directions (if packet goes there or back)
 \item all \gls{tcp} flags (0 if flow is not \gls{tcp})
 \end{itemize*}. We omitted \gls{ttl} values, as they are likely to lead to unwanted prediction behaviour \cite{bachl_walling_2019}.  Among the used features, source port, destination port and protocol identifier are constant over the whole flow while the others vary.
@@ -205,12 +205,12 @@ Youden	&	0.972	&	0.990	&	0.873	&	0.719	\\
 \section{Adversarial attacks}
 \label{sec:adv}
 We now investigate whether known \gls{aml} methods can be used for generating adversarial flows, i.e. minimally different attack flows which are classified as benign.
-In our scenario, most features such as, e.g., \gls{tcp} flags cannot be easily manipulated because their manipulation might violate the \gls{tcp} and thus cause communication to fail. Hence, we experiment whether by manipulating the interarrival times and packet lengths of the first packets, the classifier might be fooled.
-Our scenario is quite different from how generating adversarial samples usually works: We have significantly less features than in, for example, an image. Furthermore, only two out of those few features can be manipulated. And even these features cannot be manipulated freely: Besides the constraints that packet size and interarrival time cannot become negative there are also more problem-specific constraints:
+In our scenario, most features such as, e.g., \gls{tcp} flags cannot be easily manipulated because their manipulation might violate the \gls{tcp} and thus cause communication to fail. Hence, we experiment whether by manipulating the \glspl{iat} and packet lengths of the first packets, the classifier might be fooled.
+Our scenario is quite different from how generating adversarial samples usually works: We have significantly less features than in, for example, an image. Furthermore, only two out of those few features can be manipulated. And even these features cannot be manipulated freely: Besides the constraints that packet size and \gls{iat} cannot become negative there are also more problem-specific constraints:
 \begin{itemize}[topsep=0pt,wide,labelwidth=!,labelindent=0pt]
 \item Only packets can be manipulated which are transmitted by the attacker. This means the attacker can only control one direction (except for botnets where both sides are attackers).
 \item Packets must not be smaller than initially, as otherwise less information could be transmitted or packets might be rendered syntactically invalid.
-\item Interarrival times must not decrease, as otherwise the physical speed of data transmission can be violated in some cases. Since an in-depth analysis of when the reduction of interarrival times is possible, would come with substantial effort, we generally disallowed a reduction of this feature.
+\item \glspl{iat} must not decrease, as otherwise the physical speed of data transmission can be violated in some cases. Since an in-depth analysis of when the reduction of \glspl{iat} is possible, would come with substantial effort, we generally disallowed a reduction of this feature.
 \end{itemize}
 
 Several \gls{aml} methods have been proposed in the recent literature, achieving different speed-quality tradeoffs: 
@@ -227,7 +227,7 @@ Here, $d(\cdot)$ is a distance metric and $\epsilon \in \mathbb R^+$ is a parame
 
 We used $\ell_1$ norm as distance metric and \gls{pgd} for meeting the real-world constraints discussed above.
 
-The method minimizes the adversarial sample's distance so that the network's decision is just between attack and normal traffic. In the present context, we need to make sure that the classifier's prediction would actually be normal traffic, even though a certain level of noise will be added to interarrival times due to the network between attacker and victim. Instead of the above equation \ref{eq:carliniWagner} we therefore used the optimization objective
+The method minimizes the adversarial sample's distance so that the network's decision is just between attack and normal traffic. In the present context, we need to make sure that the classifier's prediction would actually be normal traffic, even though a certain level of noise will be added to \glspl{iat} due to the network between attacker and victim. Instead of the above equation \ref{eq:carliniWagner} we therefore used the optimization objective
 \begin{equation}
 d(X,\tilde X) + \epsilon  \max(Z(\tilde X), -0.2),
 \end{equation}
@@ -308,7 +308,7 @@ Of the investigated algorithms, thus the \gls{cw} with $\ell_2$ distance deliver
 
 Finally, we investigated what adversarial flows look like and which features are manipulated to circumvent detection by the neural network.
 
-To this end, we generated adversarial flows with the \gls{cw} with $\ell_2$ distance and a tradeoff of 0.5. \autoref{adv_plots} depicts how the method manipulates flows for some exemplary attack categories. Depicted is the mean of both unmodified flows and adversarial flows  of samples of individual attack families considering both interarrival time and packet length.
+To this end, we generated adversarial flows with the \gls{cw} with $\ell_2$ distance and a tradeoff of 0.5. \autoref{adv_plots} depicts how the method manipulates flows for some exemplary attack categories. Depicted is the mean of both unmodified flows and adversarial flows  of samples of individual attack families considering both \gls{iat} and packet length.
 
 The plots show that primarily features at the beginning of flows are modified. It is remarkable that it seems most promising to modify single packets while leaving most of the flow unchanged. In other cases, however, like depicted for the infiltration attack at the bottom, adversarial flows assume a complex pattern to circumvent detection.
 
@@ -473,7 +473,7 @@ with $f_X(x), f_Y(y)$ and $f_{X,Y}(x,y)$ denoting the distribution of $X,Y$ and 
 \label{fig:feat_imp}
 \end{figure*}
 Table~\ref{fig:featRandom} and \autoref{fig:feat_imp} show the results, which match to a large extent with domain-specific expectations for classifying network flows.
-In particular, rarely used \gls{tcp} flags like NS or URG are unimportant for the classifier. On the other hand, destination port and protocol are essential for characterizing flows by hinting at the type of traffic. Interarrival time and packet length are important for estimating the amount of transferred information and several flags hint at certain attacks like \gls{dos} attacks.
+In particular, rarely used \gls{tcp} flags like NS or URG are unimportant for the classifier. On the other hand, destination port and protocol are essential for characterizing flows by hinting at the type of traffic. \gls{iat} and packet length are important for estimating the amount of transferred information and several flags hint at certain attacks like \gls{dos} attacks.
 
 The weights method is able to reveal features with a very low importance to a certain degree, but disagrees with the other methods to a large extent. Less anticipated, however, also input perturbation does not exhibit a considerable correlation with feature dropout. Considering its functioning, feature dropout is the most reliable method for evaluating importance for removing features. It is remarkable that none of the other methods is able to depict the distinct peak of importance for the destination port. 
 
@@ -537,7 +537,7 @@ To determine if this hypothesis is correct, we plot the attack confidence of the
 \label{fig:pred_plots2}
 \end{figure*}
 
-Next, we want to investigate if our classifier just memorized its inputs. The most interesting packet features that can be used to visualize this in our use case are the inter-arrival time (IAT) between packets in a flows and the packet length. To depict how the model comes to a decision, we determined the total minimum and maximum for these features that ever occur for all flows. For a given flow $X$ we then varied feature values at each time step between minimum and maximum and plot how the confidence changes when the feature varies (\autoref{fig:pred_plots2}) depict the averaged predictions for different attack families. It seems clear that the classifier didn't just memorize the inputs but actually learned them since there is always a smooth decrease of confidence if we change the feature values. Instead, when memorizing, we would expect a sharp decline of confidence to occur. Another interesting observation is that after the first couple of packets the classifier is certain about its decision and changing features doesn't change its confidence any longer. This allows the conclusion that if an attacker is able to change the first few packets, she could possibly change the decision of the classifier. We will further investigate this question in section \autoref{sec:adv}.
+Next, we want to investigate if our classifier just memorized its inputs. The most interesting packet features that can be used to visualize this in our use case are the \gls{iat} between packets in a flows and the packet length. To depict how the model comes to a decision, we determined the total minimum and maximum for these features that ever occur for all flows. For a given flow $X$ we then varied feature values at each time step between minimum and maximum and plot how the confidence changes when the feature varies (\autoref{fig:pred_plots2}) depict the averaged predictions for different attack families. It seems clear that the classifier didn't just memorize the inputs but actually learned them since there is always a smooth decrease of confidence if we change the feature values. Instead, when memorizing, we would expect a sharp decline of confidence to occur. Another interesting observation is that after the first couple of packets the classifier is certain about its decision and changing features doesn't change its confidence any longer. This allows the conclusion that if an attacker is able to change the first few packets, she could possibly change the decision of the classifier. We will further investigate this question in section \autoref{sec:adv}.
 
 \begin{figure*}
 \includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_2_Brute Force-SSH-Patator"}.pdf}
@@ -549,18 +549,18 @@ Next, we want to investigate if our classifier just memorized its inputs. The mo
 \label{fig:plot_features}
 \end{figure*}
 
-Looking at the plots of the features that vary over time (\autoref{fig:plot_features}) we see that certain attack types have a characteristic pattern in which they send packets by which they are easily recognizable. We want to determine how the pattern of packet sizes and interarrival times is significant for the classification. \autoref{fig:plot_features} clearly shows that some attack types have very characteristic patterns of packet sizes and interarrival times.
+Looking at the plots of the features that vary over time (\autoref{fig:plot_features}) we see that certain attack types have a characteristic pattern in which they send packets by which they are easily recognizable. We want to determine how the pattern of packet sizes and \glspl{iat} is significant for the classification. \autoref{fig:plot_features} clearly shows that some attack types have very characteristic patterns of packet sizes and \glspl{iat}.
 
 \section{Defences}
 
 \subsection{Reducing features}
 The most obvious defence, which is only possible because of the nature of the dataset, is to simply leave out features which the attacker can manipulate. For this, we try two different approaches:
 \begin{itemize}[topsep=0pt,wide,labelwidth=!,labelindent=0pt]
-\item Leaving out all features that are manipulable: packet size and interarrival time
+\item Leaving out all features that are manipulable: packet size and \gls{iat}
 \item Leaving out manipulable features when the attacker can manipulate them: only in the direction from the attacker to the victim (This, however does not prevent adversarial samples for botnets, for which both sides are malicious)
 \end{itemize}
 
-Both approaches lead to complete resistance to adversarial samples (as we left out all manipulable features), except for botnets, which can still operate when only leaving out manipulable features in one direction. The results in \autoref{tab:performance_results_no_manipulable} show that -- surprisingly -- there is only a small difference in classification performance when only computing the accuracy for the last packet of each flow (flow accuracy). However, when looking at the packet accuracy, which considers all packets of all flows, there is a significant difference. Thus, apparently the interarrival time and packet size are especially important for determining whether a flow is malicious in the first packets of a flow.
+Both approaches lead to complete resistance to adversarial samples (as we left out all manipulable features), except for botnets, which can still operate when only leaving out manipulable features in one direction. The results in \autoref{tab:performance_results_no_manipulable} show that -- surprisingly -- there is only a small difference in classification performance when only computing the accuracy for the last packet of each flow (flow accuracy). However, when looking at the packet accuracy, which considers all packets of all flows, there is a significant difference. Thus, apparently the \gls{iat} and packet size are especially important for determining whether a flow is malicious in the first packets of a flow.
 
 \subsection{Adversarial training}
 In addition to omitting manipulable features we tried to make our network more robust against adversarial samples by augmenting the training set by adversarial flows generated using the Carlini-Wagner method, labeled as additional attacks.
@@ -584,7 +584,7 @@ However, the figure also shows that an increase of distance can only be achieved
 A possible explanation for this observation might be that the adversarial samples assumed too much the shape of normal flows, so that the network could not reliable tell them apart.
 
 \begin{table*}
-\caption{Comparing performance with all features, only safe features (interarrival time and packet size removed) and safe features in one direction (interarrival time and packet size removed for packets coming from source). \textit{packets} means that we consider the neural network output of all packets of the flow while \textit{flows} means that we only consider the last packet. At the last packet the classifier is usually already a lot more confident than at the first packets of a flow and thus metrics are always better in this case.}  \label{tab:performance_results_no_manipulable}
+\caption{Comparing performance with all features, only safe features (\gls{iat} and packet size removed) and safe features in one direction (\gls{iat} and packet size removed for packets coming from source). \textit{packets} means that we consider the neural network output of all packets of the flow while \textit{flows} means that we only consider the last packet. At the last packet the classifier is usually already a lot more confident than at the first packets of a flow and thus metrics are always better in this case.}  \label{tab:performance_results_no_manipulable}
 \newcommand{\cmidrulespace}{6pt}
 \centering
 \begin{tabular}{l l l l l l l} \toprule
