@@ -1203,10 +1203,11 @@ def adv_until_less_than_half():
 
 				successfully_changed_flows_mask = (np.round(numpy_sigmoid(np.array([item[-1] for item in prev_results[i][attack_index]]))) == 0).flatten()
 				# TODO: l1 or l2 norm?
-				distances = np.array([np.linalg.norm((orig_flows[attack_index][flow_index]-flow).flatten(), ord=2) for flow_index, flow in enumerate(prev_flows[i][attack_index])])
+				# guess it makes sense to use the same distance metric as in training
+				distances = np.array([np.linalg.norm((orig_flows[attack_index][flow_index]-flow).flatten(), ord=opt.order) for flow_index, flow in enumerate(prev_flows[i][attack_index])])
 				argsorted_distances = np.argsort(distances)
 				correct_indices = argsorted_distances[successfully_changed_flows_mask[argsorted_distances]]
-				lower_part = correct_indices[:int(math.ceil(len(distances)*min(ratio, THRESHOLD)))]
+				lower_part = correct_indices[:int(math.ceil(len(distances)*min(1-ratio, THRESHOLD)))]
 
 				distances_per_packet = [dist/len(flow) for dist, flow in zip(distances[lower_part], prev_flows[i][attack_index])]
 				distances_flows[attack_index] = float(np.mean(distances[lower_part]))
