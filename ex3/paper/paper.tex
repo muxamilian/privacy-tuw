@@ -95,7 +95,9 @@ Since traditional evaluation metrics such as accuracy are not sufficient for qua
 To understand a classifier's potential for misclassification, we extend existing explainability techniques and propose new ones, particularly suitable % specifically crafted %AH most can also be used for non-sequential models, so lets not restrict applicability too much
 for sequential data. Applying them shows that already the first packets of a communication flow are of crucial importance and are likely going to be targeted by attackers. Feature importance methods show that even though the modified features are not very relevant for the classifier, they can still be abused to generate adversarial samples.
 As a countermeasure, we develop an easy-to-use adversarial training procedure %and can confirm that it
-which significantly and successfully reduces the attack surface and improves \gls{ars}. 
+which significantly and successfully reduces the attack surface and improves \gls{ars}.
+
+\todo{Max: Abstract too long} 
 
 \end{abstract}
 
@@ -312,26 +314,27 @@ Of the investigated algorithms, thus the \gls{cw} with $\ell_2$ distance deliver
 \begin{figure*}
 \includegraphics[width=0.45\textwidth]{adv_plots/fgsm.pdf}
 \includegraphics[width=0.45\textwidth]{adv_plots/l_inf_pgd.pdf}
-\caption{Performance of FSGM and $\ell_\infty$-bounded \gls{pgd} for different bounds.}
+\caption{Performance of FSGM and $\ell_\infty$-bounded \gls{pgd} for different bounds.
+\todo{Max: Omit}}
 \label{fig:fgsm}
 \end{figure*}
 
-Finally, we investigated what adversarial flows look like and which features are manipulated to circumvent detection by the neural network.
+%Finally, we investigated what adversarial flows look like and which features are manipulated to circumvent detection by the neural network.
+%
+%To this end, we generated adversarial flows with the \gls{cw} with $\ell_2$ distance and a tradeoff of 0.5. \autoref{adv_plots} depicts how the method manipulates flows for some exemplary attack categories. Depicted is the mean of both unmodified flows and adversarial flows  of samples of individual attack families considering both \gls{iat} and packet length.
+%
+%The plots show that primarily features at the beginning of flows are modified. It is remarkable that it seems most promising to modify single packets while leaving most of the flow unchanged. In other cases, however, like depicted for the infiltration attack at the bottom, adversarial flows assume a complex pattern to circumvent detection.
 
-To this end, we generated adversarial flows with the \gls{cw} with $\ell_2$ distance and a tradeoff of 0.5. \autoref{adv_plots} depicts how the method manipulates flows for some exemplary attack categories. Depicted is the mean of both unmodified flows and adversarial flows  of samples of individual attack families considering both \gls{iat} and packet length.
-
-The plots show that primarily features at the beginning of flows are modified. It is remarkable that it seems most promising to modify single packets while leaving most of the flow unchanged. In other cases, however, like depicted for the infiltration attack at the bottom, adversarial flows assume a complex pattern to circumvent detection.
-
-\begin{figure*}[p]
-\includegraphics[width=0.48\textwidth]{../plots/plot_adv/1.pdf}
-\includegraphics[width=0.48\textwidth]{../plots/plot_adv/2.pdf}
-\includegraphics[width=0.48\textwidth]{../plots/plot_adv/3.pdf}
-\includegraphics[width=0.48\textwidth]{../plots/plot_adv/4.pdf}
-\includegraphics[width=0.48\textwidth]{../plots/plot_adv/5.pdf}
-\includegraphics[width=0.48\textwidth]{../plots/plot_adv/6.pdf}
-\caption{Successful manipulations performed by the \gls{cw}.}
-\label{adv_plots}
-\end{figure*}
+%\begin{figure*}[p]
+%\includegraphics[width=0.48\textwidth]{../plots/plot_adv/1.pdf}
+%\includegraphics[width=0.48\textwidth]{../plots/plot_adv/2.pdf}
+%\includegraphics[width=0.48\textwidth]{../plots/plot_adv/3.pdf}
+%\includegraphics[width=0.48\textwidth]{../plots/plot_adv/4.pdf}
+%\includegraphics[width=0.48\textwidth]{../plots/plot_adv/5.pdf}
+%\includegraphics[width=0.48\textwidth]{../plots/plot_adv/6.pdf}
+%\caption{Successful manipulations performed by the \gls{cw}. \todo{Max: Just keep one plot I'd say. Maximum two.}}
+%\label{adv_plots}
+%\end{figure*}
 
 \section{Adversarial Robustness Metric}
 
@@ -505,40 +508,37 @@ In particular,  in literature the use of Partial Dependency Plots (\gls{pdp}) is
 \text{\gls{pdp}}_i(y) = \mathbb E_{\boldsymbol X}\left(f(X_1,\ldots,X_{i-1},y,X_{i+1},\ldots X_n)\right)
 \end{equation}
 
-
 To inspect attack types in detail, in this research we experiment with a modified definition of the \gls{pdp}  (with C being the attack classes):
 \begin{equation} \label{eq:pdp_conditional}
 \text{\gls{pdp}}_{c,i}(y) = \mathbb E_{\boldsymbol X | C = c} \left(f \left( X_1,\ldots,X_{i-1},y,X_{i+1},\ldots X_n \right) \right)
 \end{equation}
+%
+%\begin{figure*}
+%\includegraphics[width=0.48\textwidth]{{"../plots/plot_pdp/flows_full_no_ttl_pdp_outcomes_0_3.pickle_8_DoS - DDoS-Heartbleed"}.pdf}
+%\includegraphics[width=0.48\textwidth]{{"../plots/plot_pdp/flows_full_no_ttl_pdp_outcomes_0_3.pickle_10_Normal"}.pdf}
+%
+%\caption{Examples of conditional PD plots for source and destination port. We only analyze these features with the \gls{pdp} since it is not straightforward to define the \gls{pdp} for features that can vary for each packet in a flow. The y-axis shows the probability for malicious traffic.}
+%\todo{Max: Remove these? Not really interesting or related to the rest of the paper. Refer to other paper where we talk about this already.}
+%\label{fig:pdp}
+%\end{figure*}
+%
+In this variant of the \gls{pdp} that we call conditional \gls{pdp}, we don't take the whole dataset for the computation for the \gls{pdp} but only a subset that belongs to a certain class. Specifically, we take each attack class and compute the \gls{pdp} only over samples of this attack class. The results (omitted for brevity) show that for some attack classes the port numbers play an important role. When looking at the class of normal traffic (non-attack traffic) it becomes apparent that traffic destined to a high source port is generally indicative of an attack. We argue that this is because most services that regular users use have low port numbers. A known issue about \glspl{pdp} in general is that dependencies of the feature under investigation and the remaining variables are not considered, hence potentially querying the neural network for feature combinations which cannot possibly occur. For a certain value of the $i$th feature, the whole dataset is used for averaging the neural network's outcome. 
 
-\begin{figure*}
-\includegraphics[width=0.48\textwidth]{{"../plots/plot_pdp/flows_full_no_ttl_pdp_outcomes_0_3.pickle_8_DoS - DDoS-Heartbleed"}.pdf}
-\includegraphics[width=0.48\textwidth]{{"../plots/plot_pdp/flows_full_no_ttl_pdp_outcomes_0_3.pickle_10_Normal"}.pdf}
-
-\caption{Examples of conditional PD plots for source and destination port. We only analyze these features with the \gls{pdp} since it is not straightforward to define the \gls{pdp} for features that can vary for each packet in a flow. The y-axis shows the probability for malicious traffic. }
-\label{fig:pdp}
-\end{figure*}
-
-In this variant of the \gls{pdp} that we call conditional \gls{pdp}, we don't take the whole dataset for the computation for the \gls{pdp} but only a subset that belongs to a certain class. Specifically, we take each attack class and compute the \gls{pdp} only over samples of this attack class. The results in \autoref{fig:pdp} show that for some attack classes the port numbers play an important role. When looking at the class of normal traffic (non-attack traffic) it becomes apparent that traffic destined to a high source port is generally indicative of an attack. We argue that this is because most services that regular users use have low port numbers. A known issue about \glspl{pdp} in general is that dependencies of the feature under investigation and the remaining variables are not considered, hence potentially querying the neural network for feature combinations which cannot possibly occur.
-
-As apparent from \autoref{eq:pdp}, for a certain value of the $i$th feature, the whole dataset is used for averaging the neural network's outcome.
-
-For this reason, Accumulated Local Effects (ALE) plots have been proposed in literature. The basic idea for ALE is that instead of using all samples, only the closest samples are used for assessing the effects of one feature. ALE plots therefore inherently require a distance measure for finding the closest samples, which, as revealed in the above discussion, in our case is not possible in a straight-forward manner.
+%For this reason, Accumulated Local Effects (ALE) plots have been proposed in literature. The basic idea for ALE is that instead of using all samples, only the closest samples are used for assessing the effects of one feature. ALE plots therefore inherently require a distance measure for finding the closest samples, which, as revealed in the above discussion, in our case is not possible in a straight-forward manner.
 
 \subsection{Plots for Sequences}
 
 As apparent from the above discussion, trying to explain how packet features influence the model's predictions, poses various difficulties. As a first step to explaining our model's predictions, we investigate how important features at different time steps are for the model's decisions. Intuitively, features at the beginning of a flow should be the most important while the model's predictions should not vary significantly anymore, as soon as the model has come to a decision.
 
-\begin{figure*}
-\includegraphics[width=0.48\textwidth]{{"../plots/plot/flows_pred_plots2_outcomes_0_3.pickle_5_DoS - DDoS-DoS Hulk"}.pdf}
+\begin{figure}
+%\includegraphics[width=0.48\textwidth]{{"../plots/plot/flows_pred_plots2_outcomes_0_3.pickle_5_DoS - DDoS-DoS Hulk"}.pdf}
 \includegraphics[width=0.48\textwidth]{{"../plots/plot/flows_pred_plots2_outcomes_0_3.pickle_6_DoS - DDoS-DoS Slowhttptest"}.pdf}
 % \includegraphics[width=0.48\textwidth]{{"../plots/plot/flows_full_no_ttl_pred_plots_outcomes_0_3.pickle_14_Web Attack-XSS"}.pdf}
 % \includegraphics[width=0.48\textwidth]{{"../plots/plot/flows_full_no_ttl_pred_plots_outcomes_0_3.pickle_11_PortScan-PortScan - Firewall off"}.pdf}
 
-\caption{Median confidence per time step and first and third quartiles for selected attack types. For the majority of attacks, confidence increases in the first few steps and then stays almost constant at 1.}
-\todo{as we cannot depict all figure, one averaged figure would be more meaningful}
+\caption{Median confidence per time step and first and third quartiles. For the majority of attacks types, confidence increases in the first few steps and then stays almost constant at 1.}
 \label{fig:confidence}
-\end{figure*}
+\end{figure}
 
 To determine if this hypothesis is correct, we plot the attack confidence of the classifier for each time step for each attack class. At each time step we average over all flows and also show the first and third quartiles. \autoref{fig:confidence} shows that this hypothesis is correct for most attack classes. At the first couple of packets the confidence for maliciousness is not very high yet but towards the end of the flow it reaches values close to 1 and stays there.
 
@@ -556,11 +556,12 @@ Next, we want to investigate if our classifier just memorized its inputs. The mo
 
 \begin{figure*}
 \includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_2_Brute Force-SSH-Patator"}.pdf}
-\includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_6_DoS - DDoS-DoS Slowhttptest"}.pdf}
+%\includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_6_DoS - DDoS-DoS Slowhttptest"}.pdf}
 \includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_11_PortScan-PortScan - Firewall off"}.pdf}
-\includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_7_DoS - DDoS-DoS slowloris"}.pdf}
+%\includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_7_DoS - DDoS-DoS slowloris"}.pdf}
 
 \caption{The solid line shows the median value of the feature for all flows of a specific attack type. The shaded region are the first and third quartile.}
+\todo{Max: Maybe here two figures are enough?}
 \label{fig:plot_features}
 \end{figure*}
 
@@ -575,7 +576,7 @@ The most obvious defence, which is only possible because of the nature of the da
 \item Leaving out manipulable features when the attacker can manipulate them: only in the direction from the attacker to the victim (This, however does not prevent adversarial samples for botnets, for which both sides are malicious)
 \end{itemize}
 
-Both approaches lead to complete resistance to adversarial samples (as we left out all manipulable features), except for botnets, which can still operate when only leaving out manipulable features in one direction. The results in \autoref{tab:performance_results_no_manipulable} show that -- surprisingly -- there is only a small difference in classification performance when only computing the accuracy for the last packet of each flow (flow accuracy). However, when looking at the packet accuracy, which considers all packets of all flows, there is a significant difference. Thus, apparently the \gls{iat} and packet size are especially important for determining whether a flow is malicious in the first packets of a flow.
+Both approaches lead to complete resistance to adversarial samples (as we left out all manipulable features), except for botnets, which can still operate when only leaving out manipulable features in one direction. The results show that -- surprisingly -- there is only a small difference in classification performance when only computing the accuracy for the last packet of each flow (flow accuracy): Flow accuracy stays over 99.93\%. However, packet accuracy is only 98\% when leaving out the features in one direction and 96.7\% when leaving them out in both directions, Thus, apparently the \gls{iat} and packet size are especially important for determining whether a flow is malicious in the first packets of a flow.
 
 \subsection{Adversarial training}
 In addition to omitting manipulable features we tried to make our network more robust against adversarial samples by augmenting the training set by adversarial flows generated using the Carlini-Wagner method, labeled as additional attacks.
@@ -588,6 +589,8 @@ One question which occurs in this process, is how many CPU cycles to spend on ne
 
 However, the figure also shows that an increase of distance can only be achieved after a considerable amount of training. It is, hence, questionable if the gained increase in robustness is enough for reliable attack detection.
 
+\todo{Max: Insert results that show that accuracy on normal data is still ok after adversarial training.}
+
 \begin{figure}
 \includegraphics[width=\columnwidth]{../plots/adv_training/avdistance.pdf}
 \caption{Distance of adversarial samples from original attack samples throughout adversarial training.}
@@ -598,30 +601,32 @@ However, the figure also shows that an increase of distance can only be achieved
 
 A possible explanation for this observation might be that the adversarial samples assumed too much the shape of normal flows, so that the network could not reliable tell them apart.
 
-\begin{table*}
-\caption{Comparing performance with all features, only safe features (\gls{iat} and packet size removed) and safe features in one direction (\gls{iat} and packet size removed for packets coming from source). \textit{packets} means that we consider the neural network output of all packets of the flow while \textit{flows} means that we only consider the last packet. At the last packet the classifier is usually already a lot more confident than at the first packets of a flow and thus metrics are always better in this case.}  \label{tab:performance_results_no_manipulable}
-\newcommand{\cmidrulespace}{6pt}
-\centering
-\begin{tabular}{l l l l l l l} \toprule
-& \multicolumn{2}{l}{all} & \multicolumn{2}{l}{safe features} & \multicolumn{2}{l}{safe features one direction} \\
-\cmidrule(r){2-3} \cmidrule(lr){4-5} \cmidrule(l){6-7}
-& packets & flows & packets & flows & packets & flows \\
-\midrule
-Accuracy & 0.9857054 & 0.99472587 & 0.96678023 & 0.99337596 & 0.98056073 & 0.99353386 \\
-Precision & 0.94963342 & 0.9894422 & 0.87175275 & 0.98798596 & 0.91359787 & 0.98994595 \\
-Recall & 0.96735895 & 0.98972051 & 0.94374958 & 0.98581328 & 0.97836672 & 0.9844478 \\
-F1 & 0.95841423 & 0.98958134 & 0.90632359 & 0.98689842 & 0.94487366 & 0.98718922 \\
-Youden & 0.95682951 & 0.98614231 & 0.91525628 & 0.98175163 & 0.95937772 & 0.9810602 \\
-\bottomrule
-\end{tabular}
-\end{table*}
+%\begin{table*}
+%\caption{Comparing performance with all features, only safe features (\gls{iat} and packet size removed) and safe features in one direction (\gls{iat} and packet size removed for packets coming from source). \textit{packets} means that we consider the neural network output of all packets of the flow while \textit{flows} means that we only consider the last packet. At the last packet the classifier is usually already a lot more confident than at the first packets of a flow and thus metrics are always better in this case. \todo{Max: Is this that interesting? Remove tables and inline the most interesting results?}}  \label{tab:performance_results_no_manipulable}
+%\newcommand{\cmidrulespace}{6pt}
+%\centering
+%\begin{tabular}{l l l l l l l} \toprule
+%& \multicolumn{2}{l}{all} & \multicolumn{2}{l}{safe features} & \multicolumn{2}{l}{safe features one direction} \\
+%\cmidrule(r){2-3} \cmidrule(lr){4-5} \cmidrule(l){6-7}
+%& packets & flows & packets & flows & packets & flows \\
+%\midrule
+%Accuracy & 0.9857054 & 0.99472587 & 0.96678023 & 0.99337596 & 0.98056073 & 0.99353386 \\
+%Precision & 0.94963342 & 0.9894422 & 0.87175275 & 0.98798596 & 0.91359787 & 0.98994595 \\
+%Recall & 0.96735895 & 0.98972051 & 0.94374958 & 0.98581328 & 0.97836672 & 0.9844478 \\
+%F1 & 0.95841423 & 0.98958134 & 0.90632359 & 0.98689842 & 0.94487366 & 0.98718922 \\
+%Youden & 0.95682951 & 0.98614231 & 0.91525628 & 0.98175163 & 0.95937772 & 0.9810602 \\
+%\bottomrule
+%\end{tabular}
+%\end{table*}
 
 
-\section{Conclusions}
+\section{Conclusion}
 
 We have implemented a recurrent classifier based on LSTM to detect network attacks. While attack detection performance is not better than that of non-recurrent approaches, we can already detect attacks before they are over. Furthermore, the recurrent approach allows us to inspect the influence of single packets on the detection performance and shows which packets are \textit{characteristic} for attacks.
 
 We show that adversarial samples are possible even though the data we use are very different from those that are usually used when finding adversarial samples.
+
+\todo{Max: Need more conclusion. Shouldn't be the same like abstract and intro.}
 
 \bibliographystyle{plain}
 \bibliography{bibliography}
