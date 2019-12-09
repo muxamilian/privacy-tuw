@@ -34,19 +34,20 @@ def importance():
 	values[values < 0] = 0
 	values /= np.sum(values,axis=0)
 
-	width = 1/(1+values.shape[1])
-	width = 0.85 / values.shape[1]
+	FACTOR = 0.85
+	# width = 1/(1+values.shape[1])
+	width = FACTOR / values.shape[1]
 
 	order = np.argsort(-np.mean(values, axis=1))
 	x = np.arange(len(group_names))
 
 	for i in range(values.shape[1]):
-		plt.bar(x +width*(i-values.shape[1]/2), values[order,i], width, alpha=0.9, label=feature_names[i])
+		plt.bar(x + width*i, values[order,i], width, alpha=0.9, label=feature_names[i])
 	for i in range(values.shape[1]):
-		plt.bar(x +width*(i-values.shape[1]/2), np.mean(values[order,:], axis=1), width, color='gray', alpha=0.5, **({'label': 'Mean'} if i==0 else {}), zorder=0)
+		plt.bar(x + width*i, np.mean(values[order,:], axis=1), width, color='gray', alpha=0.5, **({'label': 'Mean'} if i==0 else {}), zorder=0)
 
 	plt.legend()
-	plt.xticks(x, [group_names[i] for i in order], rotation=45, horizontalalignment='right')
+	plt.xticks(x + width*values.shape[1]/2-width*0.5, [group_names[i] for i in order], rotation=45, horizontalalignment='right')
 	for tick in plt.gca().xaxis.get_major_ticks():
 		label = tick.label1
 		# don't know how to specify translation in axis coordinates, so pdf output
@@ -54,7 +55,7 @@ def importance():
 		label.set_transform(label.get_transform() + Affine2D().translate(5,0))
 	plt.ylabel('Normalized metric')
 	plt.tight_layout()
-	
+
 def adv_results():
 	global values
 	plt.figure(figsize=(5,4))
@@ -76,7 +77,7 @@ def adv_results():
 	plt.ylabel('Accuracy')
 	plt.tight_layout()
 
-	
+
 def ars():
 	plt.figure(figsize=(5,2))
 	plt.plot(group_names, values)
@@ -86,7 +87,7 @@ def ars():
 	ylim1,ylim2 = plt.ylim()
 	plt.ylim((ylim1,ylim2+20)) # move plots away from legend
 	plt.tight_layout()
-	
+
 globals()[sys.argv[1]]()
 if len(sys.argv) > 2:
 	plt.savefig(sys.argv[2], bbox_inches = 'tight', pad_inches = 0)
