@@ -35,11 +35,16 @@ def importance():
 	values /= np.sum(values,axis=0)
 
 	width = 1/(1+values.shape[1])
+	width = 0.85 / values.shape[1]
 
 	order = np.argsort(-np.mean(values, axis=1))
 	x = np.arange(len(group_names))
+
 	for i in range(values.shape[1]):
-		plt.bar(x +width*(i-values.shape[1]/2), values[order,i], width, label=feature_names[i])
+		plt.bar(x +width*(i-values.shape[1]/2), values[order,i], width, alpha=0.9, label=feature_names[i])
+	for i in range(values.shape[1]):
+		plt.bar(x +width*(i-values.shape[1]/2), np.mean(values[order,:], axis=1), width, color='gray', alpha=0.5, **({'label': 'Mean'} if i==0 else {}), zorder=0)
+
 	plt.legend()
 	plt.xticks(x, [group_names[i] for i in order], rotation=45, horizontalalignment='right')
 	for tick in plt.gca().xaxis.get_major_ticks():
