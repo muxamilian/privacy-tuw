@@ -269,45 +269,38 @@ Hence, with acceptable distance values we were able to generate adversarial samp
 
 The figure suggests that a tradeoff value between 0.5 and 1 would be ideal to find adversarial samples with a low enough distance from real samples. This conclusion might be misleading, however, as the distance cannot become larger anymore as soon as an adversarial sample has been found, when performing optimization as depicted by the objective function \eqref{eq:carliniWagner}. Hence, the depicted increase of average distances presumably is due to samples for which no adversarial sample was found for lower $\epsilon$ values.
 
-% \begin{table*}
-% \caption{Attack success ratios per attack family. Depicted are flow detection accuracies for adversarial flows (left numbers) and flow detection accuracies for unmodified flows (right numbers).}
-% \label{tab:adv_per_family}
-% \centering
-% \begin{tabular}{llllllllll}
-% \toprule
-% Attack type & \multicolumn{2}{l}{FGSM} & \multicolumn{2}{l}{Carlini-Wagner, $\ell_1$} & \multicolumn{2}{l}{Carlini-Wagner, $\ell_2$} & \multicolumn{2}{l}{$\ell_\infty$-bounded \gls{pgd}} \\
-% \cmidrule(r){2-3} \cmidrule(lr){4-5} \cmidrule(l){6-7} \cmidrule(l){8-9}
-% & adv. & orig. & adv. & orig. & adv. & orig. & adv. & orig. \\
-% \midrule
-% Botnet:ARES	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	\\
-% Brute Force:FTP-Patator	&	0.2800 & 0.5800	&	0.1600 & 0.5800	&	0.1600 & 0.5800	&	0.2800 & 0.5800	\\
-% Brute Force:SSH-Patator	&	0.8300 & 1.0000	&	0.0000 & 1.0000	&	0.0000 & 1.0000	&	0.8900 & 1.0000	\\
-% DDoS:LOIT	&	0.8300 & 0.8600	&	0.6400 & 0.8600	&	0.5600 & 0.8600	&	0.8200 & 0.8600	\\
-% DoS / DDoS:DoS GoldenEye	&	0.8900 & 1.0000	&	0.5000 & 1.0000	&	0.4200 & 1.0000	&	0.9200 & 1.0000	\\
-% DoS / DDoS:DoS Hulk	&	0.6700 & 1.0000	&	0.5400 & 1.0000	&	0.4700 & 1.0000	&	1.0000 & 1.0000	\\
-% DoS / DDoS:DoS Slowhttptest	&	0.8700 & 1.0000	&	0.4100 & 1.0000	&	0.1900 & 1.0000	&	0.7400 & 1.0000	\\
-% DoS / DDoS:DoS slowloris	&	0.4400 & 0.9700	&	0.3100 & 0.9700	&	0.1300 & 0.9700	&	0.9200 & 0.9700	\\
-% DoS / DDoS:Heartbleed	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	\\
-% Infiltration:Dropbox download 	&	0.6100 & 0.9600	&	0.4300 & 0.9600	&	0.3800 & 0.9600	&	0.7400 & 0.9600	\\
-% PortScan:PortScan - Firewall off	&	0.6800 & 0.9100	&	0.3500 & 0.9100	&	0.3500 & 0.9100	&	0.7200 & 0.9100	\\
-% PortScan:PortScan - Firewall on	&	0.7400 & 0.8700	&	0.6100 & 0.8700	&	0.5300 & 0.8700	&	0.7300 & 0.8700	\\
-% Web Attack:Sql Injection	&	0.0000 & 0.6923	&	0.0000 & 0.6923	&	0.0000 & 0.6923	&	0.0000 & 0.6923	\\
-% Web Attack:XSS	&	0.6700 & 0.9500	&	0.7200 & 0.9500	&	0.6200 & 0.9500	&	0.6700 & 0.9500	\\
-% \bottomrule
+\begin{table*}
+\caption{Attack success ratios per attack family. Depicted are flow detection accuracies for adversarial flows (left numbers) and flow detection accuracies for unmodified flows (right numbers).}
+\label{tab:adv_per_family}
+\centering
+\begin{tabular}{llllllllll}
+\toprule
+Attack type & \multicolumn{2}{l}{FGSM} & \multicolumn{2}{l}{Carlini-Wagner, $\ell_1$} & \multicolumn{2}{l}{Carlini-Wagner, $\ell_2$} & \multicolumn{2}{l}{$\ell_\infty$-bounded \gls{pgd}} \\
+\cmidrule(r){2-3} \cmidrule(lr){4-5} \cmidrule(l){6-7} \cmidrule(l){8-9}
+& adv. & orig. & adv. & orig. & adv. & orig. & adv. & orig. \\
+\midrule
+Botnet:ARES	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	\\
+Brute Force:FTP-Patator	&	0.2800 & 0.5800	&	0.1600 & 0.5800	&	0.1600 & 0.5800	&	0.2800 & 0.5800	\\
+Brute Force:SSH-Patator	&	0.8300 & 1.0000	&	0.0000 & 1.0000	&	0.0000 & 1.0000	&	0.8900 & 1.0000	\\
+DDoS:LOIT	&	0.8300 & 0.8600	&	0.6400 & 0.8600	&	0.5600 & 0.8600	&	0.8200 & 0.8600	\\
+DoS / DDoS:DoS GoldenEye	&	0.8900 & 1.0000	&	0.5000 & 1.0000	&	0.4200 & 1.0000	&	0.9200 & 1.0000	\\
+DoS / DDoS:DoS Hulk	&	0.6700 & 1.0000	&	0.5400 & 1.0000	&	0.4700 & 1.0000	&	1.0000 & 1.0000	\\
+DoS / DDoS:DoS Slowhttptest	&	0.8700 & 1.0000	&	0.4100 & 1.0000	&	0.1900 & 1.0000	&	0.7400 & 1.0000	\\
+DoS / DDoS:DoS slowloris	&	0.4400 & 0.9700	&	0.3100 & 0.9700	&	0.1300 & 0.9700	&	0.9200 & 0.9700	\\
+DoS / DDoS:Heartbleed	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	\\
+Infiltration:Dropbox download 	&	0.6100 & 0.9600	&	0.4300 & 0.9600	&	0.3800 & 0.9600	&	0.7400 & 0.9600	\\
+PortScan:PortScan - Firewall off	&	0.6800 & 0.9100	&	0.3500 & 0.9100	&	0.3500 & 0.9100	&	0.7200 & 0.9100	\\
+PortScan:PortScan - Firewall on	&	0.7400 & 0.8700	&	0.6100 & 0.8700	&	0.5300 & 0.8700	&	0.7300 & 0.8700	\\
+Web Attack:Sql Injection	&	0.0000 & 0.6923	&	0.0000 & 0.6923	&	0.0000 & 0.6923	&	0.0000 & 0.6923	\\
+Web Attack:XSS	&	0.6700 & 0.9500	&	0.7200 & 0.9500	&	0.6200 & 0.9500	&	0.6700 & 0.9500	\\
+\bottomrule
 
-% \end{tabular}
+\end{tabular}
 
-% \todo{In the adv table, round the numbers!!! \\
-% For Max: Introduce two-level table\\
-% What's the tradeoff for CW?}
-% \end{table*}
-
-\begin{figure}
-\includegraphics[width=\columnwidth]{../plots/adv_comparison/adv_comparison_17.pdf}
-\label{fig:adv_per_family}
-\caption{Attack success ratios per attack family. Depicted are flow detection accuracies for adversarial flows and for unmodified flows.}
-\todo{update numbers, shorten attack names, What's the tradeoff for CW?}
-\end{figure}
+\todo{In the adv table, round the numbers!!! \\
+For Max: Introduce two-level table\\
+What's the tradeoff for CW?}
+\end{table*}
 
 It is interesting to note that for very large values of $\epsilon$ the success ratio starts to decrease again.This phenomenon might be due to numerical effects and might be preventable by a smaller learning rate.
 
@@ -457,9 +450,11 @@ In previous works, a simple method for determining feature importance in neural 
 While the method of adding noise to features/randomizing them is convenient since it is easy to implement and understand, we argue that it has some shortcomings: 
 The \gls{rnn} was never trained for dealing with ``garbage'' values that the noise/randomization methods create. For example, completely unrealistic feature combinations could occur that were never observed during training. Furthermore, sequences of features could occur that cannot occur in reality. 
  
-We think that the ``ideal'' feature importance method for our scenario are Shapley values \cite{shapley_value_1953}: To analyze feature importance with them, the feature under investigation is completely omitted from the dataset and a model is trained without it. The resulting accuracy is then compared to the baseline accuracy with all features. The effort required to do this is high both in terms of storage space as well as training time since for $n$ features $n$ models need to be separately trained and stored. While this seems tractable, when also analyzing the feature importance of combinations of features, the number of models required becomes even larger: Out of $n$ features, $2^n$ unique subsets can be chosen, meaning that the computational demand rises exponentially. 
+We think that the ``ideal'' feature importance method for our scenario are Shapley values \cite{shapley_value_1952}: To analyze feature importance with them, the feature under investigation is completely omitted from the dataset and a model is trained without it. The resulting accuracy is then compared to the baseline accuracy with all features. The effort required to do this is high both in terms of storage space as well as training time since for $n$ features $n$ models need to be separately trained and stored. While this seems tractable, when also analyzing the feature importance of combinations of features, the number of models required becomes even larger: Out of $n$ features, $2^n$ unique subsets can be chosen, meaning that the computational demand rises exponentially. 
 
-Considering the difficulties that arise from computing Shapley values, we propose a light-weight version of them, called \textit{feature dropout}: When training a model, for each sample, we leave out each feature with a certain probability by setting it to zero. On average, one feature gets zeroed out but it is also possible that none or more than one are left out. This procedure is equivalent to using dropout \cite{srivastava_dropout:_2014} with probability $\frac{1}{n}$ before the first layer. The result is the classifier learning to deal with missing features. As it can also happen that several features are left out for a sample, our method can also be used to analyze the effect of multiple features missing and can thus show possibly correlated features. The results in Table~\ref{fig:featDropout} show that, unlike the randomization feature importance method, the feature dropout method does not vastly overestimate features' importance. With feature dropout, it becomes apparent that there are very few features that actually contain unique information and that affect accuracy when left out: the destination port and the source port. A model trained with feature dropout typically yields slightly lower accuracy than a regularly trained model, even if no features are left out (flow accuracy of 0.9943 vs.~0.9965. We thus recommend training two models: One regular one and one with feature dropout to use for the feature importance. 
+\todo{Add SHAP}
+
+Considering the difficulties that arise from computing Shapley values, we propose a light-weight version of them, called \textit{feature dropout}: When training a model, for each sample, we leave out each feature with a certain probability by setting it to zero. On average, one feature gets zeroed out but it is also possible that none or more than one are left out. This procedure is equivalent to using dropout \cite{srivastava_dropout:_2014} with probability $\frac{1}{n}$ before the first layer. The result is the classifier learning to deal with missing features. As it can also happen that several features are left out for a sample, our method can also be used to analyze the effect of multiple features missing and can thus show possibly correlated features. The results in Table~\ref{fig:featDropout} show that, unlike the randomization feature importance method, the feature dropout method does not vastly overestimate features' importance. With feature dropout, it becomes apparent that there are very few features that actually contain unique information and that affect accuracy when left out: the destination port and the source port. A model trained with feature dropout typically yields slightly lower accuracy than a regularly trained model, even if no features are left out (flow accuracy of 0.9943 vs.~0.9965. We thus recommend training two models: One regular one and one with feature dropout to use for the feature importance. Another method that uses dropout for feature importance is \cite{chang_dropout_2017}, which, however, applies a technique called \textit{Variational Dropout} to learn the optimal dropout rate for each feature. It tries to leave out as many features as possible and at the same time keep accuracy high. Thus important features are going to be left out less often and one can then extract the dropout probabilities for each feature and assess their significance based on them. 
 
 Feature dropout also allows us to find correlated features or -- more general -- features that contain common information: 
 
@@ -599,8 +594,8 @@ However, the figure also shows that an increase of distance can only be achieved
 \todo{Max: Insert results that show that accuracy on normal data is still ok after adversarial training.}
 
 \begin{figure}
-\includegraphics[width=\columnwidth]{../plots/ars/ars_15.pdf}
-\caption{\gls{ars} during adversarial training for UNSW-NB15.}
+\includegraphics[width=\columnwidth]{../plots/adv_training/avdistance.pdf}
+\caption{Distance of adversarial samples from original attack samples throughout adversarial training.}
 \label{fig:avdistance}
 \end{figure}
 
