@@ -28,12 +28,13 @@ values = values[1:]
 #  print (values)
 values = np.array(values, dtype=float)
 
-def feat_imp():
+def importance():
+	global values
 	plt.figure(figsize=(5,4))
 	values[values < 0] = 0
 	values /= np.sum(values,axis=0)
 
-	width = 0.95 / values.shape[1]
+	width = 1/(1+values.shape[1])
 
 	order = np.argsort(-np.mean(values, axis=1))
 	x = np.arange(len(group_names))
@@ -43,12 +44,11 @@ def feat_imp():
 	plt.xticks(x, [group_names[i] for i in order], rotation=45, horizontalalignment='right')
 	for tick in plt.gca().xaxis.get_major_ticks():
 		label = tick.label1
-		label.set_transform(label.get_transform() + Affine2D().translate(8,0))
+		# don't know how to specify translation in axis coordinates, so pdf output
+		# looks slightly different from plot
+		label.set_transform(label.get_transform() + Affine2D().translate(5,0))
 	plt.ylabel('Normalized metric')
 	plt.tight_layout()
-
-	plt.savefig(sys.stdout.buffer, bbox_inches = 'tight', pad_inches = 0)
-	plt.show()
 	
 def adv_results():
 	global values
@@ -71,8 +71,6 @@ def adv_results():
 	plt.ylabel('Accuracy')
 	plt.tight_layout()
 
-	plt.savefig(sys.stdout.buffer, bbox_inches = 'tight', pad_inches = 0)
-	plt.show()
 	
 def ars():
 	plt.figure(figsize=(5,2))
@@ -80,11 +78,11 @@ def ars():
 	plt.legend(feature_names, ncol=2)
 	plt.xlabel('Training duration in epochs')
 	plt.ylabel('ARS')
-	plt.tight_layout()
 	ylim1,ylim2 = plt.ylim()
 	plt.ylim((ylim1,ylim2+20)) # move plots away from legend
-	plt.savefig(sys.stdout.buffer, bbox_inches = 'tight', pad_inches = 0)
-	plt.show()
+	plt.tight_layout()
 	
 globals()[sys.argv[1]]()
-
+if len(sys.argv) > 2:
+	plt.savefig(sys.argv[2], bbox_inches = 'tight', pad_inches = 0)
+plt.show()
