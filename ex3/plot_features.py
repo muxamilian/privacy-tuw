@@ -13,6 +13,9 @@ import json
 import pickle
 from learn import numpy_sigmoid
 
+plt.rcParams['font.family'] = 'serif'
+plt.rcParams['savefig.format'] = 'pdf'
+
 DIR_NAME = "plots/plot_features"
 
 dataroot_basename = sys.argv[1].split('_')[0]
@@ -51,7 +54,7 @@ colors_rgb_ranges = [matplotlib.colors.ListedColormap([brighten(color, item) for
 # print("colors", colors)
 # print("colors_rgb_ranges[0]", colors_rgb_ranges[0])
 # quit()
-FEATURE_NAMES = ["packet length", "iat"]
+FEATURE_NAMES = ["Packet length", "IAT"]
 
 for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, result_ranges_by_attack_number_item, sample_indices_by_attack_number_item) in enumerate(zip(results_by_attack_number, flows_by_attack_number, result_ranges_by_attack_number, sample_indices_by_attack_number)):
 
@@ -91,10 +94,10 @@ for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, re
 	# print("flow shapes", actual_flow_medians.shape, actual_flow_first_quartiles.shape, actual_flow_third_quartiles.shape)
 
 	# for i in range(medians.shape[1]):
-	plt.figure(attack_type)
+	# plt.figure(figsize=(5,4))
 	plt.title(reverse_mapping[attack_type])
 
-	fig, ax1 = plt.subplots()
+	fig, ax1 = plt.subplots(figsize=(5,4))
 	ax2 = ax1.twinx()
 
 	all_legends = []
@@ -114,15 +117,14 @@ for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, re
 		all_legends += [ret2]
 		# all_legends += [legend, legend+" 1st and 3rd quartile"]
 	all_labels = [item.get_label() for item in all_legends]
-	ax1.legend(all_legends, all_labels)
+	ax2.legend(all_legends, all_labels, loc="upper left")
 
 	ax1.set_xlabel('Sequence index')
 	plt.title(reverse_mapping[attack_type])
-	# plt.figure(attack_type)
 	plt.tight_layout()
 
 	os.makedirs(DIR_NAME, exist_ok=True)
-	plt.savefig(DIR_NAME+'/{}_{}_{}.pdf'.format(file_name.split("/")[-1], attack_type, reverse_mapping[attack_type].replace("/", "-").replace(":", "-")))
-	plt.clf()
+	plt.savefig(DIR_NAME+'/{}_{}_{}.pdf'.format(file_name.split("/")[-1], attack_type, reverse_mapping[attack_type].replace("/", "-").replace(":", "-")), bbox_inches='tight', pad_inches=0)
+	plt.close()
 
 

@@ -888,7 +888,7 @@ def adv_internal(in_training = False, tradeoff=None, lr=None, iterations=None, a
 	orig_indices, attack_indices = zip(*[(orig, i) for orig, i in zip(indices, range(len(subset_with_all_traffic))) if subset_with_all_traffic[i][1][0,0] == 1 and subset_with_all_traffic[i][2][0,0].item() not in attack_types_which_are_not_investigated_anymore])
 
 	subset = torch.utils.data.Subset(dataset, orig_indices)
-	print("len(subset)", len(subset))
+	# print("len(subset)", len(subset))
 
 	loader = torch.utils.data.DataLoader(subset, batch_size=opt.batchSize, shuffle=False, collate_fn=custom_collate)
 
@@ -1134,7 +1134,7 @@ def adv_internal(in_training = False, tradeoff=None, lr=None, iterations=None, a
 		per_flow_accuracy = (np.mean(np.round(numpy_sigmoid(np.array([item[-1] for item in per_attack_results])))))
 		# TODO: l1 or l2 norm?
 		dist = np.array([np.linalg.norm((per_attack_orig_item-per_attack_modified_item).flatten(), ord=1).mean() for per_attack_orig_item, per_attack_modified_item in zip(per_attack_orig, per_attack_modified)]).mean()
-		linf_dist = np.array([np.linalg.norm((per_attack_orig_item-per_attack_modified_item).flatten(), ord='inf').mean() for per_attack_orig_item, per_attack_modified_item in zip(per_attack_orig, per_attack_modified)]).mean()
+		linf_dist = np.array([np.linalg.norm((per_attack_orig_item-per_attack_modified_item).flatten(), ord=float("inf")).mean() for per_attack_orig_item, per_attack_modified_item in zip(per_attack_orig, per_attack_modified)]).mean()
 
 		print("Attack type: {}; number of samples: {}, average dist: {}, average inf. dist: {}, packet accuracy: {}/{}, flow accuracy: {}/{}".format(reverse_mapping[attack_number], len(per_attack_results), dist, linf_dist, per_packet_accuracy, per_packet_orig_accuracy, per_flow_accuracy, per_flow_orig_accuracy))
 
@@ -1168,7 +1168,7 @@ def adv_until_less_than_half():
 		results_dict = list(adv_internal(False, tradeoff, lr, iterations, next_filter))[0]
 		modified_flows_by_attack, modified_results_by_attack, original_flows_by_attack, original_results_by_attack = results_dict["modified_flows_by_attack_number"], results_dict["results_by_attack_number"], results_dict["orig_flows_by_attack_number"], results_dict["orig_results_by_attack_number"]
 		ratio_modified_by_attack_number = np.array([np.mean(np.round(numpy_sigmoid(np.array([item[-1] for item in modified_results])))) if len(modified_results)>0 else -float("inf") for modified_results in modified_results_by_attack])
-		next_filter = [index for index, item in enumerate(ratio_modified_by_attack_number) if item <= THRESHOLD or prev_ratios[-1][item] <= THRESHOLD]
+		next_filter = [index for index, item in enumerate(ratio_modified_by_attack_number) if item <= THRESHOLD or (len(prev_ratios) > 0 and prev_ratios[-1][index] <= THRESHOLD)]
 		if i==0:
 			orig_results = original_results_by_attack
 			orig_flows = original_flows_by_attack
@@ -1381,7 +1381,7 @@ def pred_plots2():
 	subset = torch.utils.data.Subset(dataset, test_indices)
 
 	attack_numbers = mapping.values()
-	
+
 	if opt.pathToAdvOutput == "":
 		features = [ get_feature_ranges(subset, sampling_density=100) ] * (max(attack_numbers)+1)
 	else:
