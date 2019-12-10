@@ -58,7 +58,7 @@ def importance():
 
 def adv_results():
 	global values
-	plt.figure(figsize=(5,4))
+	plt.figure(figsize=(5,3))
 	values = np.reshape(values, (-1,values.shape[1]//2,2))
 
 	order = np.argsort(np.mean(values[:,:,1], axis=1))
@@ -69,7 +69,7 @@ def adv_results():
 		plt.bar(x +width*(i-values.shape[1]/2), values[order,i,1], width, color='gray', alpha=.5, **({'label': 'Original'} if i==0 else {}))
 	for i in range(values.shape[1]):
 		plt.bar(x +width*(i-values.shape[1]/2), values[order,i,0], width, color=colors[i], label=feature_names[i*2].rstrip(' adv'))
-	plt.legend()
+	plt.legend(loc='lower center', bbox_to_anchor=(0.5,1), ncol=4)
 	plt.xticks(x, [group_names[i] for i in order], rotation=45, horizontalalignment='right')
 	for tick in plt.gca().xaxis.get_major_ticks():
 		label = tick.label1
