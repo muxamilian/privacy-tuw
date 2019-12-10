@@ -1134,8 +1134,9 @@ def adv_internal(in_training = False, tradeoff=None, lr=None, iterations=None, a
 		per_flow_accuracy = (np.mean(np.round(numpy_sigmoid(np.array([item[-1] for item in per_attack_results])))))
 		# TODO: l1 or l2 norm?
 		dist = np.array([np.linalg.norm((per_attack_orig_item-per_attack_modified_item).flatten(), ord=1).mean() for per_attack_orig_item, per_attack_modified_item in zip(per_attack_orig, per_attack_modified)]).mean()
+		linf_dist = np.array([np.linalg.norm((per_attack_orig_item-per_attack_modified_item).flatten(), ord='inf').mean() for per_attack_orig_item, per_attack_modified_item in zip(per_attack_orig, per_attack_modified)]).mean()
 
-		print("Attack type: {}; number of samples: {}, average dist: {}, packet confidence: {}/{}, flow confidence: {}/{}".format(reverse_mapping[attack_number], len(per_attack_results), dist, per_packet_accuracy, per_packet_orig_accuracy, per_flow_accuracy, per_flow_orig_accuracy))
+		print("Attack type: {}; number of samples: {}, average dist: {}, average inf. dist: {}, packet accuracy: {}/{}, flow accuracy: {}/{}".format(reverse_mapping[attack_number], len(per_attack_results), dist, linf_dist, per_packet_accuracy, per_packet_orig_accuracy, per_flow_accuracy, per_flow_orig_accuracy))
 
 	file_name = opt.dataroot[:-7]+"_adv_{}{}_outcomes_{}_{}.pickle".format(tradeoff, "_notBidirectional" if not opt.canManipulateBothDirections else "", opt.fold, opt.nFold)
 	results_dict = {"results_by_attack_number": results_by_attack_number, "orig_results_by_attack_number": orig_results_by_attack_number, "modified_flows_by_attack_number": modified_flows_by_attack_number, "orig_flows_by_attack_number": orig_flows_by_attack_number}
