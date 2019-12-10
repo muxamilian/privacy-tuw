@@ -257,8 +257,8 @@ where $L(X)$ denotes the network's loss function and $\epsilon$ denotes the achi
 
 \subsection{Evaluation}
 \begin{figure*}
-\includegraphics[width=0.45\textwidth]{adv_plots/cwl1.pdf}
-\includegraphics[width=0.45\textwidth]{adv_plots/cwl2.pdf}
+\includegraphics[width=0.49\textwidth]{adv_plots/cwl1.pdf}
+\includegraphics[width=0.49\textwidth]{adv_plots/cwl2.pdf}
 \caption{Performance of the \gls{cw} with different $\epsilon$ values for $\ell_1$ and $\ell_2$ distances.}
 \label{fig:adv_cw}
 \end{figure*}
@@ -304,8 +304,8 @@ The figure suggests that a tradeoff value between 0.5 and 1 would be ideal to fi
 
 \begin{figure}
 \includegraphics[width=\columnwidth]{../plots/adv_comparison/adv_comparison_17.pdf}
-\label{fig:adv_per_family}
 \caption{Attack success ratios per attack family. Depicted are flow detection accuracies for adversarial flows and for unmodified flows.}
+\label{fig:adv_per_family}
 \todo{update numbers, shorten attack names, What's the tradeoff for CW?}
 \end{figure}
 
@@ -323,19 +323,18 @@ UNSW-NB15 &	0.326&	0.629	& 0.774 \\
 It is interesting to note that for very large values of $\epsilon$ the success ratio starts to decrease again.This phenomenon might be due to numerical effects and might be preventable by a smaller learning rate.
 
 
-\autoref{fig:fgsm} depicts the performance for FGSM and $\ell_\infty$-bounded \gls{pgd}. As expected, while FGSM is the fastest of all algorithms, it delivers the worst performance.
+\autoref{tab:adv_accuracies} depicts the performance for FGSM and $\ell_\infty$-bounded \gls{pgd}. 
+As expected, while FGSM is the fastest of all algorithms, it delivers the worst performance. Of the investigated algorithms, thus the \gls{cw} with $\ell_2$ distance delivered the best performance.
 
-Of the investigated algorithms, thus the \gls{cw} with $\ell_2$ distance delivered the best performance.
+\autoref{fig:adv_per_family} depicts how successful the attack is for individual attack families. For this table we used a $\ell_\infty$ bound of 0.3 for FGSM and $\ell_\infty$-bounded \gls{pgd} and a tradeoff of 0.5 for Carlini-Wagner. The table shows significant differences for detecting different attack families in the first place. However, also for generating adversarial flows some attack families are more susceptible than others.
 
-\autoref{tab:adv_per_family} depicts how successful the attack is for individual attack families. For this table we used a $\ell_\infty$ bound of 0.3 for FGSM and $\ell_\infty$-bounded \gls{pgd} and a tradeoff of 0.5 for Carlini-Wagner. The table shows significant differences for detecting different attack families in the first place. However, also for generating adversarial flows some attack families are more susceptible than others.
-
-\begin{figure*}
-\includegraphics[width=0.45\textwidth]{adv_plots/fgsm.pdf}
-\includegraphics[width=0.45\textwidth]{adv_plots/l_inf_pgd.pdf}
-\caption{Performance of FSGM and $\ell_\infty$-bounded \gls{pgd} for different bounds.
-\todo{Max: Omit}}
-\label{fig:fgsm}
-\end{figure*}
+%\begin{figure*}
+%\includegraphics[width=0.49\textwidth]{adv_plots/fgsm.pdf}
+%\includegraphics[width=0.49\textwidth]{adv_plots/l_inf_pgd.pdf}
+%\caption{Performance of FSGM and $\ell_\infty$-bounded \gls{pgd} for different bounds.
+%\todo{Max: Omit}}
+%\label{fig:fgsm}
+%\end{figure*}
 
 %Finally, we investigated what adversarial flows look like and which features are manipulated to circumvent detection by the neural network.
 %
@@ -356,7 +355,7 @@ Of the investigated algorithms, thus the \gls{cw} with $\ell_2$ distance deliver
 
 \section{Adversarial Robustness Metric}
 
-As \autoref{tab:adv_per_family} shows, for most attack types, most samples can be modified to look benign by an adversary by using \gls{cw}. High accuracy for a particular attack category does not imply that adversarial attacks are more likely to fail for these attacks. Thus we argue that beside the classical metrics such as accuracy, false positives etc., a new metric is needed, which quantifies how easily an adversary can fool the classifier. 
+As \autoref{fig:adv_per_family} shows, for most attack types, most samples can be modified to look benign by an adversary by using \gls{cw}. High accuracy for a particular attack category does not imply that adversarial attacks are more likely to fail for these attacks. Thus we argue that beside the classical metrics such as accuracy, false positives etc., a new metric is needed, which quantifies how easily an adversary can fool the classifier. 
 
 Such a method should be easy to compute and easy to interpret. We thus propose the \gls{ars}, which roughly works as follows: Use \gls{cw} with a small tradeoff to try to generate adversarial samples for an attack type. If more than half of the samples are now wrongly classified, stop. Otherwise increase the tradeoff of \gls{cw} and repeat. If after a predefined number of iterations -- e.g. 100 -- still not more than half of the samples are adversarial, also break. 
 
@@ -462,18 +461,16 @@ In previous works, a simple method for determining feature importance in neural 
 
 \subsubsection{Input Perturbation}
 
- The most commonly used techniques for feature importance which are used by practitioners for \glspl{rnn} \cite{stackexchange_cross_validated_neural_2019} and \gls{dl} \cite{stackexchange_cross_validated_feature_2016} in general are based on adding noise to a particular feature and then evaluating the drop in accuracy that occurs. We argue that it is hard to find out the ``correct'' intensity of noise to add, we slightly vary the proposed approach: We do not add noise drawn from a probability distribution but instead sample the value for a feature from the distribution of all values of this feature. This makes the method non-parametric since the distribution of the noise does not need to be chosen. We ensured that features which stay constant for a flow, i.e. source port, destination port and protocol, also stay constant throughout the whole flow when randomizing the feature.
+ The most commonly used techniques for feature importance which are used by practitioners for \glspl{rnn} \cite{stackexchange_cross_validated_neural_2019} and \gls{dl} \cite{molnar_interpretable_2019,stackexchange_cross_validated_feature_2016} in general are based on adding noise to a particular feature and then evaluating the drop in accuracy that occurs. We argue that it is hard to find out the ``correct'' intensity of noise to add, we slightly vary the proposed approach: We do not add noise drawn from a probability distribution but instead sample the value for a feature from the distribution of all values of this feature. This makes the method non-parametric since the distribution of the noise does not need to be chosen. We ensured that features which stay constant for a flow, i.e. source port, destination port and protocol, also stay constant throughout the whole flow when randomizing the feature.
 
 
 \subsubsection{Feature Dropout}
 While the method of adding noise to features/randomizing them is convenient since it is easy to implement and understand, we argue that it has some shortcomings: 
 The \gls{rnn} was never trained for dealing with ``garbage'' values that the noise/randomization methods create. For example, completely unrealistic feature combinations could occur that were never observed during training. Furthermore, sequences of features could occur that cannot occur in reality. 
  
-We think that the ``ideal'' feature importance method for our scenario are Shapley values \cite{shapley_value_1952}: To analyze feature importance with them, the feature under investigation is completely omitted from the dataset and a model is trained without it. The resulting accuracy is then compared to the baseline accuracy with all features. The effort required to do this is high both in terms of storage space as well as training time since for $n$ features $n$ models need to be separately trained and stored. While this seems tractable, when also analyzing the feature importance of combinations of features, the number of models required becomes even larger: Out of $n$ features, $2^n$ unique subsets can be chosen, meaning that the computational demand rises exponentially. 
+%We think that the ``ideal'' feature importance method for our scenario are Shapley values \cite{shapley_value_1952}: To analyze feature importance with them, the feature under investigation is completely omitted from the dataset and a model is trained without it. The resulting accuracy is then compared to the baseline accuracy with all features. The effort required to do this is high both in terms of storage space as well as training time since for $n$ features $n$ models need to be separately trained and stored. While this seems tractable, when also analyzing the feature importance of combinations of features, the number of models required becomes even larger: Out of $n$ features, $2^n$ unique subsets can be chosen, meaning that the computational demand rises exponentially. 
 
-\todo{Add SHAP}
-
-Considering the difficulties that arise from computing Shapley values, we propose a light-weight version of them, called \textit{feature dropout}: When training a model, for each sample, we leave out each feature with a certain probability by setting it to zero. On average, one feature gets zeroed out but it is also possible that none or more than one are left out. This procedure is equivalent to using dropout \cite{srivastava_dropout:_2014} with probability $\frac{1}{n}$ before the first layer. The result is the classifier learning to deal with missing features. As it can also happen that several features are left out for a sample, our method can also be used to analyze the effect of multiple features missing and can thus show possibly correlated features. The results in Table~\ref{fig:featDropout} show that, unlike the randomization feature importance method, the feature dropout method does not vastly overestimate features' importance. With feature dropout, it becomes apparent that there are very few features that actually contain unique information and that affect accuracy when left out: the destination port and the source port. A model trained with feature dropout typically yields slightly lower accuracy than a regularly trained model, even if no features are left out (flow accuracy of 0.9943 vs.~0.9965. We thus recommend training two models: One regular one and one with feature dropout to use for the feature importance. Another method that uses dropout for feature importance is \cite{chang_dropout_2017}, which, however, applies a technique called \textit{Variational Dropout} to learn the optimal dropout rate for each feature. It tries to leave out as many features as possible and at the same time keep accuracy high. Thus important features are going to be left out less often and one can then extract the dropout probabilities for each feature and assess their significance based on them. 
+We thus develop a more sound method compared to input perturbation called \textit{feature dropout}: When training a model, for each sample, we leave out each feature with a certain probability by setting it to zero. On average, one feature gets zeroed out but it is also possible that none or more than one are left out. This procedure is equivalent to using dropout \cite{srivastava_dropout:_2014} with probability $\frac{1}{n}$ before the first layer. The result is the classifier learning to deal with missing features. As it can also happen that several features are left out for a sample, our method can also be used to analyze the effect of multiple features missing and can thus show possibly correlated features. The results in Table~\ref{fig:featDropout} show that, unlike the randomization feature importance method, the feature dropout method does not vastly overestimate features' importance. With feature dropout, it becomes apparent that there are very few features that actually contain unique information and that affect accuracy when left out: the destination port and the source port. A model trained with feature dropout typically yields slightly lower accuracy than a regularly trained model, even if no features are left out (flow accuracy of 0.9943 vs.~0.9965. We thus recommend training two models: One regular one and one with feature dropout to use for the feature importance. Another method that uses dropout for feature importance is \cite{chang_dropout_2017}, which, however, applies a technique called \textit{Variational Dropout} to learn the optimal dropout rate for each feature. It tries to leave out as many features as possible and at the same time keep accuracy high. Thus important features are going to be left out less often and one can then extract the dropout probabilities for each feature and assess their significance based on them. Feature dropout can also be used as a building block for computing the accuracy of datapoints with missing features that is necessary to compute Shapley values \cite{shapley_value_1952} or KernelSHAP \cite{lundberg_unified_2017}.
 
 Feature dropout also allows us to find correlated features or -- more general -- features that contain common information: 
 
@@ -565,7 +562,7 @@ To determine if this hypothesis is correct, we plot the attack confidence of the
 
 \begin{figure}
 %\includegraphics[width=0.48\textwidth]{{"../plots/plot2_adv/flows_pred_plots2_outcomes_flows_adv_1.0_notBidirectional_outcomes_0_3.pickle_0_3.pickle_0_Botnet-ARES"}.pdf}
-\includegraphics[width=0.48\textwidth]{{"../plots/plot2_adv/flows_pred_plots2_outcomes_flows_adv_1.0_notBidirectional_outcomes_0_3.pickle_0_3.pickle_7_DoS - DDoS-DoS slowloris"}.pdf}
+\includegraphics[width=\columnwidth]{{"../plots/plot2_adv/flows_pred_plots2_outcomes_flows_adv_1.0_notBidirectional_outcomes_0_3.pickle_0_3.pickle_7_DoS - DDoS-DoS slowloris"}.pdf}
 %\includegraphics[width=0.48\textwidth]{{"../plots/plot2_adv/flows_pred_plots2_outcomes_flows_adv_1.0_notBidirectional_outcomes_0_3.pickle_0_3.pickle_11_PortScan-PortScan - Firewall off"}.pdf}
 %\includegraphics[width=0.48\textwidth]{{"../plots/plot2_adv/flows_pred_plots2_outcomes_flows_adv_1.0_notBidirectional_outcomes_0_3.pickle_0_3.pickle_1_Brute Force-FTP-Patator"}.pdf}
 
@@ -578,7 +575,7 @@ Next, we want to investigate if our classifier just memorized its inputs. The mo
 \begin{figure}
 %\includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_2_Brute Force-SSH-Patator"}.pdf}
 %\includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_6_DoS - DDoS-DoS Slowhttptest"}.pdf}
-\includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_11_PortScan-PortScan - Firewall off"}.pdf}
+\includegraphics[width=\columnwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_11_PortScan-PortScan - Firewall off"}.pdf}
 %\includegraphics[width=0.48\textwidth]{{"../plots/plot_features/flows_full_no_ttl_pred_plots2_outcomes_0_3.pickle_7_DoS - DDoS-DoS slowloris"}.pdf}
 
 \caption{The solid line shows the median value of the feature for all flows of a specific attack type. The shaded region are the first and third quartile.}
