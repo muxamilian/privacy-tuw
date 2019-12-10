@@ -269,39 +269,57 @@ Hence, with acceptable distance values we were able to generate adversarial samp
 
 The figure suggests that a tradeoff value between 0.5 and 1 would be ideal to find adversarial samples with a low enough distance from real samples. This conclusion might be misleading, however, as the distance cannot become larger anymore as soon as an adversarial sample has been found, when performing optimization as depicted by the objective function \eqref{eq:carliniWagner}. Hence, the depicted increase of average distances presumably is due to samples for which no adversarial sample was found for lower $\epsilon$ values.
 
-\begin{table*}
-\caption{Attack success ratios per attack family. Depicted are flow detection accuracies for adversarial flows (left numbers) and flow detection accuracies for unmodified flows (right numbers).}
-\label{tab:adv_per_family}
+% \begin{table*}
+% \caption{Attack success ratios per attack family. Depicted are flow detection accuracies for adversarial flows (left numbers) and flow detection accuracies for unmodified flows (right numbers).}
+% \label{tab:adv_per_family}
+% \centering
+% \begin{tabular}{llllllllll}
+% \toprule
+% Attack type & \multicolumn{2}{l}{FGSM} & \multicolumn{2}{l}{Carlini-Wagner, $\ell_1$} & \multicolumn{2}{l}{Carlini-Wagner, $\ell_2$} & \multicolumn{2}{l}{$\ell_\infty$-bounded \gls{pgd}} \\
+% \cmidrule(r){2-3} \cmidrule(lr){4-5} \cmidrule(l){6-7} \cmidrule(l){8-9}
+% & adv. & orig. & adv. & orig. & adv. & orig. & adv. & orig. \\
+% \midrule
+% Botnet:ARES	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	\\
+% Brute Force:FTP-Patator	&	0.2800 & 0.5800	&	0.1600 & 0.5800	&	0.1600 & 0.5800	&	0.2800 & 0.5800	\\
+% Brute Force:SSH-Patator	&	0.8300 & 1.0000	&	0.0000 & 1.0000	&	0.0000 & 1.0000	&	0.8900 & 1.0000	\\
+% DDoS:LOIT	&	0.8300 & 0.8600	&	0.6400 & 0.8600	&	0.5600 & 0.8600	&	0.8200 & 0.8600	\\
+% DoS / DDoS:DoS GoldenEye	&	0.8900 & 1.0000	&	0.5000 & 1.0000	&	0.4200 & 1.0000	&	0.9200 & 1.0000	\\
+% DoS / DDoS:DoS Hulk	&	0.6700 & 1.0000	&	0.5400 & 1.0000	&	0.4700 & 1.0000	&	1.0000 & 1.0000	\\
+% DoS / DDoS:DoS Slowhttptest	&	0.8700 & 1.0000	&	0.4100 & 1.0000	&	0.1900 & 1.0000	&	0.7400 & 1.0000	\\
+% DoS / DDoS:DoS slowloris	&	0.4400 & 0.9700	&	0.3100 & 0.9700	&	0.1300 & 0.9700	&	0.9200 & 0.9700	\\
+% DoS / DDoS:Heartbleed	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	\\
+% Infiltration:Dropbox download 	&	0.6100 & 0.9600	&	0.4300 & 0.9600	&	0.3800 & 0.9600	&	0.7400 & 0.9600	\\
+% PortScan:PortScan - Firewall off	&	0.6800 & 0.9100	&	0.3500 & 0.9100	&	0.3500 & 0.9100	&	0.7200 & 0.9100	\\
+% PortScan:PortScan - Firewall on	&	0.7400 & 0.8700	&	0.6100 & 0.8700	&	0.5300 & 0.8700	&	0.7300 & 0.8700	\\
+% Web Attack:Sql Injection	&	0.0000 & 0.6923	&	0.0000 & 0.6923	&	0.0000 & 0.6923	&	0.0000 & 0.6923	\\
+% Web Attack:XSS	&	0.6700 & 0.9500	&	0.7200 & 0.9500	&	0.6200 & 0.9500	&	0.6700 & 0.9500	\\
+% \bottomrule
+
+% \end{tabular}
+
+% \todo{In the adv table, round the numbers!!! \\
+% For Max: Introduce two-level table\\
+% What's the tradeoff for CW?}
+% \end{table*}
+
+\begin{figure}
+\includegraphics[width=\columnwidth]{../plots/adv_comparison/adv_comparison_17.pdf}
+\label{fig:adv_per_family}
+\caption{Attack success ratios per attack family. Depicted are flow detection accuracies for adversarial flows and for unmodified flows.}
+\todo{update numbers, shorten attack names, What's the tradeoff for CW?}
+\end{figure}
+
+\begin{table}
 \centering
-\begin{tabular}{llllllllll}
-\toprule
-Attack type & \multicolumn{2}{l}{FGSM} & \multicolumn{2}{l}{Carlini-Wagner, $\ell_1$} & \multicolumn{2}{l}{Carlini-Wagner, $\ell_2$} & \multicolumn{2}{l}{$\ell_\infty$-bounded \gls{pgd}} \\
-\cmidrule(r){2-3} \cmidrule(lr){4-5} \cmidrule(l){6-7} \cmidrule(l){8-9}
-& adv. & orig. & adv. & orig. & adv. & orig. & adv. & orig. \\
-\midrule
-Botnet:ARES	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	\\
-Brute Force:FTP-Patator	&	0.2800 & 0.5800	&	0.1600 & 0.5800	&	0.1600 & 0.5800	&	0.2800 & 0.5800	\\
-Brute Force:SSH-Patator	&	0.8300 & 1.0000	&	0.0000 & 1.0000	&	0.0000 & 1.0000	&	0.8900 & 1.0000	\\
-DDoS:LOIT	&	0.8300 & 0.8600	&	0.6400 & 0.8600	&	0.5600 & 0.8600	&	0.8200 & 0.8600	\\
-DoS / DDoS:DoS GoldenEye	&	0.8900 & 1.0000	&	0.5000 & 1.0000	&	0.4200 & 1.0000	&	0.9200 & 1.0000	\\
-DoS / DDoS:DoS Hulk	&	0.6700 & 1.0000	&	0.5400 & 1.0000	&	0.4700 & 1.0000	&	1.0000 & 1.0000	\\
-DoS / DDoS:DoS Slowhttptest	&	0.8700 & 1.0000	&	0.4100 & 1.0000	&	0.1900 & 1.0000	&	0.7400 & 1.0000	\\
-DoS / DDoS:DoS slowloris	&	0.4400 & 0.9700	&	0.3100 & 0.9700	&	0.1300 & 0.9700	&	0.9200 & 0.9700	\\
-DoS / DDoS:Heartbleed	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	&	0.0000 & 0.0000	\\
-Infiltration:Dropbox download 	&	0.6100 & 0.9600	&	0.4300 & 0.9600	&	0.3800 & 0.9600	&	0.7400 & 0.9600	\\
-PortScan:PortScan - Firewall off	&	0.6800 & 0.9100	&	0.3500 & 0.9100	&	0.3500 & 0.9100	&	0.7200 & 0.9100	\\
-PortScan:PortScan - Firewall on	&	0.7400 & 0.8700	&	0.6100 & 0.8700	&	0.5300 & 0.8700	&	0.7300 & 0.8700	\\
-Web Attack:Sql Injection	&	0.0000 & 0.6923	&	0.0000 & 0.6923	&	0.0000 & 0.6923	&	0.0000 & 0.6923	\\
-Web Attack:XSS	&	0.6700 & 0.9500	&	0.7200 & 0.9500	&	0.6200 & 0.9500	&	0.6700 & 0.9500	\\
+\caption{Total flow accuracy for adversarial flows.}
+\label{tab:adv_accuracies}
+\begin{tabular}{lrrr} \toprule
+& CW & FGSM & PGD \\ \midrule
+CIC-IDS-2017 &	0.346	 & 0.445	& 0.539 \\ 
+UNSW-NB15 &	0.326&	0.629	& 0.774 \\
 \bottomrule
-
 \end{tabular}
-
-\todo{In the adv table, round the numbers!!! \\
-For Max: Introduce two-level table\\
-What's the tradeoff for CW?}
-\end{table*}
-
+\end{table}
 It is interesting to note that for very large values of $\epsilon$ the success ratio starts to decrease again.This phenomenon might be due to numerical effects and might be preventable by a smaller learning rate.
 
 
@@ -382,18 +400,19 @@ However, due to the complex decision processes that can occur for deep neural ne
 \begin{table}
 \caption{Accuracy drop for:}
 \label{tab:feat_importance}
+\centering
 \subfloat[Random replacement method\label{fig:featRandom}
 ]{
 \begin{tabular}{l r}
 \toprule
-Feature & Acc.~drop \\ \midrule
+Feature & \hspace*{-4mm}Accuracy~drop \\ \midrule
 Protocol & 0.207 \\
 Packet Length & 0.165 \\
 SYN Flag & 0.099 \\
 ACK Flag & 0.084 \\
 Direction & 0.073 \\
 Destination port & 0.071 \\
-Source port & 0.06 \\
+Source port & 0.060 \\
 RST Flag & 0.057 \\
 PSH Flag & 0.056 \\
 Interarrival time & 0.024 \\
@@ -409,7 +428,7 @@ NS Flag & 0 \\
 ]{
 \begin{tabular}{l r}
 \toprule
-Feature & Acc.~drop \\ \midrule
+Feature & \hspace*{-4mm}Accuracy~drop \\ \midrule
 Destination port & 0.025 \\
 Source port & 0.003 \\
 RST Flag & 0.001 \\
@@ -594,8 +613,8 @@ However, the figure also shows that an increase of distance can only be achieved
 \todo{Max: Insert results that show that accuracy on normal data is still ok after adversarial training.}
 
 \begin{figure}
-\includegraphics[width=\columnwidth]{../plots/adv_training/avdistance.pdf}
-\caption{Distance of adversarial samples from original attack samples throughout adversarial training.}
+\includegraphics[width=\columnwidth]{../plots/ars/ars_15.pdf}
+\caption{\gls{ars} during adversarial training for UNSW-NB15.}
 \label{fig:avdistance}
 \end{figure}
 
