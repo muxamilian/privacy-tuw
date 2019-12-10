@@ -66,11 +66,11 @@ def adv_results():
 
 	x = np.arange(len(group_names))
 	for i in range(values.shape[1]):
-		plt.bar(x +width*(i-values.shape[1]/2), values[order,i,1], width, color='gray', alpha=.5, **({'label': 'Original'} if i==0 else {}))
+		plt.bar(x +width*i, values[order,i,1], width, color='gray', alpha=.5, **({'label': 'Original'} if i==0 else {}))
 	for i in range(values.shape[1]):
-		plt.bar(x +width*(i-values.shape[1]/2), values[order,i,0], width, color=colors[i], label=feature_names[i*2].rstrip(' adv'))
+		plt.bar(x +width*i, values[order,i,0], width, color=colors[i], label=feature_names[i*2].rstrip(' adv'))
 	plt.legend(loc='lower center', bbox_to_anchor=(0.5,1), ncol=4)
-	plt.xticks(x, [group_names[i] for i in order], rotation=45, horizontalalignment='right')
+	plt.xticks(x + width*values.shape[1]/2-width*0.5, [group_names[i] for i in order], rotation=45, horizontalalignment='right')
 	for tick in plt.gca().xaxis.get_major_ticks():
 		label = tick.label1
 		label.set_transform(label.get_transform() + Affine2D().translate(8,0))
