@@ -424,14 +424,12 @@ They have applications in image and video recognition, recommender systems, imag
 
 @inproceedings{carlini_towards_2017,
 	title = {Towards {Evaluating} the {Robustness} of {Neural} {Networks}},
-	doi = {10.1109/SP.2017.49},
 	abstract = {Neural networks provide state-of-the-art results for most machine learning tasks. Unfortunately, neural networks are vulnerable to adversarial examples: given an input x and any target classification t, it is possible to find a new input x' that is similar to x but classified as t. This makes it difficult to apply neural networks in security-critical areas. Defensive distillation is a recently proposed approach that can take an arbitrary neural network, and increase its robustness, reducing the success rate of current attacks' ability to find adversarial examples from 95\% to 0.5\%. In this paper, we demonstrate that defensive distillation does not significantly increase the robustness of neural networks by introducing three new attack algorithms that are successful on both distilled and undistilled neural networks with 100\% probability. Our attacks are tailored to three distance metrics used previously in the literature, and when compared to previous adversarial example generation algorithms, our attacks are often much more effective (and never worse). Furthermore, we propose using high-confidence adversarial examples in a simple transferability test we show can also be used to break defensive distillation. We hope our attacks will be used as a benchmark in future defense attempts to create neural networks that resist adversarial examples.},
 	booktitle = {2017 {IEEE} {Symposium} on {Security} and {Privacy} ({SP})},
 	author = {Carlini, Nicholas and Wagner, David},
 	month = may,
 	year = {2017},
-	note = {ISSN: 2375-1207},
-	keywords = {machine learning, Robustness, Malware, security of data, neural nets, neural networks, Neural networks, attack algorithms, defensive distillation, distance metrics, high-confidence adversarial examples, Measurement, Resists, Security, Speech recognition, transferability test},
+	keywords = {attack algorithms, defensive distillation, distance metrics, high-confidence adversarial examples, machine learning, Malware, Measurement, neural nets, neural networks, Neural networks, Resists, Robustness, Security, security of data, Speech recognition, transferability test},
 	pages = {39--57}
 }
 
@@ -502,18 +500,6 @@ They have applications in image and video recognition, recommender systems, imag
 	year = {2016}
 }
 
-@misc{shapley_value_1952,
-	type = {Product {Page}},
-	title = {A {Value} for n-{Person} {Games}:},
-	shorttitle = {A {Value} for n-{Person} {Games}},
-	url = {https://www.rand.org/pubs/papers/P0295.html},
-	abstract = {An examination of a number of elementary properties of a value for the "essential" case.},
-	language = {en},
-	urldate = {2019-11-28},
-	author = {Shapley, Lloyd S.},
-	year = {1952}
-}
-
 @article{srivastava_dropout:_2014,
 	title = {Dropout: {A} {Simple} {Way} to {Prevent} {Neural} {Networks} from {Overfitting}},
 	volume = {15},
@@ -527,19 +513,14 @@ They have applications in image and video recognition, recommender systems, imag
 }
 
 @inproceedings{bachl_walling_2019,
-	address = {New York, NY, USA},
 	series = {Big-{DAMA} '19},
 	title = {Walling {Up} {Backdoors} in {Intrusion} {Detection} {Systems}},
-	isbn = {978-1-4503-6999-2},
-	url = {http://doi.acm.org/10.1145/3359992.3366638},
-	doi = {10.1145/3359992.3366638},
 	abstract = {Interest in poisoning attacks and backdoors recently resurfaced for Deep Learning (DL) applications. Several successful defense mechanisms have been recently proposed for Convolutional Neural Networks (CNNs), for example in the context of autonomous driving. We show that visualization approaches can aid in identifying a backdoor independent of the used classifier. Surprisingly, we find that common defense mechanisms fail utterly to remove backdoors in DL for Intrusion Detection Systems (IDSs). Finally, we devise pruning-based approaches to remove backdoors for Decision Trees (DTs) and Random Forests (RFs) and demonstrate their effectiveness for two different network security datasets.},
 	urldate = {2019-12-07},
 	booktitle = {Proceedings of the 3rd {ACM} {CoNEXT} {Workshop} on {Big} {DAta}, {Machine} {Learning} and {Artificial} {Intelligence} for {Data} {Communication} {Networks}},
 	publisher = {ACM},
 	author = {Bachl, Maximilian and Hartl, Alexander and Fabini, Joachim and Zseby, Tanja},
 	year = {2019},
-	note = {event-place: Orlando, FL, USA},
 	keywords = {Deep Learning, Explainable AI, Network security, Poisoning attack, Pruning, Random Forests},
 	pages = {8--13}
 }
@@ -615,4 +596,14 @@ They have applications in image and video recognition, recommender systems, imag
 	author = {Molnar, Christoph},
 	year = {2019},
 	annote = {https://christophm.github.io/interpretable-ml-book/}
+}
+
+@article{shapley_value_1953,
+	title = {A value for n-person games},
+	volume = {2},
+	number = {28},
+	journal = {Contributions to the Theory of Games},
+	author = {Shapley, Lloyd S},
+	year = {1953},
+	pages = {307--317}
 }
