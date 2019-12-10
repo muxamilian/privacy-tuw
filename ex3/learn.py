@@ -1222,8 +1222,8 @@ def adv_until_less_than_half():
 			"ratio", final_ratios[attack_index],
 			"flow_accuracy", np.mean(np.round(numpy_sigmoid(np.array([item[-1] for item in orig_results[attack_index]])))),
 			"packet_accuracy", np.mean(np.round(numpy_sigmoid(np.array([sublist for l in orig_results[attack_index] for sublist in l])))),
-			"flow_distance", distances_flows[attack_index],
-			"packet_distance", distances_packets[attack_index]
+			"flow_distance", distances_flows[attack_index] if ratio <= THRESHOLD else 0,
+			"packet_distance", distances_packets[attack_index] if ratio <= THRESHOLD else 0
 		)
 
 def eval_nn(data):
