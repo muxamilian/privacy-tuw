@@ -51,8 +51,8 @@ adv_orig_flows_by_attack_number = adv_loaded["orig_flows_by_attack_number"]
 
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 ORDERING = ["original", "adversarial"]
-FEATURE_NAMES = ["Pkt. length / B", "IAT / s"]
-FEATURE_SCALES = [1, 0.001] 
+FEATURE_NAMES = ["Pkt. length [B]", "IAT [s]"]
+FEATURE_SCALES = [1, 0.001]
 
 def brighten(rgb, how_much=0.0):
 	hls = list(colorsys.rgb_to_hls(*rgb))
@@ -190,7 +190,7 @@ for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, re
 			x, y = x[1:], y[1:]
 		ret = plot_function(x, y, label=legend, linestyle="dashed", color=colors[feature_index_from_zero])
 		all_legends += ret
-		
+
 		if not ONLY_ONE_LEGEND:
 			plt.legend()
 		if OMIT_UPPER_AXIS and feature_name != FEATURE_NAMES[-1]:
@@ -198,9 +198,9 @@ for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, re
 		else:
 			ticks = plt.xticks()
 			plt.xticks([ tick for tick in ticks[0][1:-1] if tick.is_integer() ])
-			
+
 		plt.gca().yaxis.set_major_locator(plt.LogLocator(numticks=5))
-		
+
 	if ONLY_ONE_LEGEND:
 		plt.legend([Line2D([0], [0], c='k'), Line2D([0], [0], c='k', linestyle='dashed')], ['Original flows', 'Adversarial flows'], loc='lower right',  ncol=2)
 	fig = plt.figure(attack_type)

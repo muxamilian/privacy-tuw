@@ -93,11 +93,9 @@ However, with the rise of ubiquitous \gls{ml} systems, malicious actors have bee
 We show that despite these completely different characteristics, adversarial samples can be reliably generated for \glspl{rnn}.
 Since traditional evaluation metrics such as accuracy are not sufficient for quantifying the adversarial threat, we propose the \gls{ars}. %as a countermeasure. % AH. the score alone is not yet a countermeasure 
 To understand a classifier's potential for misclassification, we extend existing explainability techniques and propose new ones, particularly suitable % specifically crafted %AH most can also be used for non-sequential models, so lets not restrict applicability too much
-for sequential data. Applying them shows that already the first packets of a communication flow are of crucial importance and are likely going to be targeted by attackers. Feature importance methods show that even though the modified features are not very relevant for the classifier, they can still be abused to generate adversarial samples.
+for sequential data. Applying them shows that already the first packets of a communication flow are of crucial importance and are likely going to be targeted by attackers. Feature importance methods show that even relatively unimportant features can be effectively abused to generate adversarial samples.
 As a countermeasure, we develop an easy-to-use adversarial training procedure %and can confirm that it
 which significantly and successfully reduces the attack surface and improves \gls{ars}.
-
-\todo{Max: Abstract too long} 
 
 \end{abstract}
 
@@ -114,8 +112,6 @@ which significantly and successfully reduces the attack surface and improves \gl
 %\end{abstract}
 
 \maketitle
-
-\todo{Legend in some figures is misplaced}
 
 \section{Introduction}
 
@@ -572,7 +568,7 @@ To determine if this hypothesis is correct, we plot the attack confidence of the
 %\includegraphics[width=0.48\textwidth]{{"../plots/plot2_adv/flows_pred_plots2_outcomes_flows_adv_1.0_notBidirectional_outcomes_0_3.pickle_0_3.pickle_11_PortScan-PortScan - Firewall off"}.pdf}
 %\includegraphics[width=0.48\textwidth]{{"../plots/plot2_adv/flows_pred_plots2_outcomes_flows_adv_1.0_notBidirectional_outcomes_0_3.pickle_0_3.pickle_1_Brute Force-FTP-Patator"}.pdf}
 
-\caption{Exemplary PD plot and adversarial flows for the DoS Slowloris attack in CIC-IDS-2017. The solid line shows the mean value of the feature for all flows of the attack type. The shaded region shows the change in confidence that occurs when the feature is varied.}
+\caption{Exemplary PD plot and adversarial flows for the DoS Slowloris attack in CIC-IDS-2017. The solid line shows the mean value of the feature for all flows of the attack type. The shaded region shows the change in confidence that occurs when the feature is varied. \todo{IAT plot is wrong: There shouldn't be step 0.}}
 \label{fig:pred_plots2}
 \end{figure}
 
@@ -647,11 +643,9 @@ A possible explanation for this observation might be that the adversarial sample
 
 \section{Conclusion}
 
-We have implemented a recurrent classifier based on LSTM to detect network attacks. While attack detection performance is not better than that of non-recurrent approaches, we can already detect attacks before they are over. Furthermore, the recurrent approach allows us to inspect the influence of single packets on the detection performance and shows which packets are \textit{characteristic} for attacks.
+We have implemented a recurrent classifier based on LSTM to detect network attacks. While attack detection performance is not necessarily better than that of non-recurrent approaches, we can already detect attacks before they are over. Furthermore, the recurrent approach allows us to inspect the influence of single packets on the detection performance and shows which packets are \textit{characteristic} for attacks. 
 
-We show that adversarial samples are possible even though the data we use are very different from those that are usually used when finding adversarial samples.
-
-\todo{Max: Need more conclusion. Shouldn't be the same like abstract and intro.}
+We showed that even though our use case is very different from computer vision, adversarial samples can be found even if only unimportant features are modified. We introduced the \gls{ars} as a new way to quantify adversarial threat and show that with our adversarial training procedure we can significantly reduce that threat. 
 
 \bibliographystyle{plain}
 \bibliography{bibliography}

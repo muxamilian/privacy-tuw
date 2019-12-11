@@ -56,7 +56,7 @@ colors_rgb_ranges = [matplotlib.colors.ListedColormap([brighten(color, item) for
 # print("colors", colors)
 # print("colors_rgb_ranges[0]", colors_rgb_ranges[0])
 # quit()
-FEATURE_NAMES = ["Pkt. length / B", "IAT / msec"]
+FEATURE_NAMES = ["Pkt. length [B]", "IAT [ms]"]
 
 for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, result_ranges_by_attack_number_item, sample_indices_by_attack_number_item) in enumerate(zip(results_by_attack_number, flows_by_attack_number, result_ranges_by_attack_number, sample_indices_by_attack_number)):
 
@@ -113,10 +113,10 @@ for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, re
 		legend = "{}".format(feature_name)
 		ret = ax.plot(range(max_length), actual_flow_medians[:,feature_index]*stds[feature_index]+means[feature_index], label=legend, color=colors[feature_index_from_zero])
 		ret2 = ax.fill_between(range(max_length), actual_flow_first_quartiles[:,feature_index]*stds[feature_index]+means[feature_index], actual_flow_third_quartiles[:,feature_index]*stds[feature_index]+means[feature_index], alpha=0.5, edgecolor=colors[feature_index_from_zero], facecolor=colors[feature_index_from_zero], label=legend+" 1st and 3rd quartile")
-		
+
 		ylim1,ylim2 = ax.get_ylim()
 		ax.set_ylim((ylim1,ylim2+(ylim2-ylim1)*0.25)) # move plots away from legend
-		
+
 		# print("ret", ret)
 		# print("ret2", ret2)
 		all_legends += ret
