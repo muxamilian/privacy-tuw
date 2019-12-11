@@ -18,6 +18,7 @@ DIR_NAME = "plots/plot2_adv"
 USE_LOG_SCALE = True
 OMIT_UPPER_AXIS = True
 ONLY_ONE_LEGEND = True
+SHOW_TITLE = False
 
 plt.rcParams["font.family"] = "serif"
 dataroot_basename = sys.argv[1].split('_')[0]
@@ -50,7 +51,7 @@ adv_orig_flows_by_attack_number = adv_loaded["orig_flows_by_attack_number"]
 
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 ORDERING = ["original", "adversarial"]
-FEATURE_NAMES = ["Packet length / B", "IAT / s"]
+FEATURE_NAMES = ["Pkt. length / B", "IAT / s"]
 FEATURE_SCALES = [1, 0.001] 
 
 def brighten(rgb, how_much=0.0):
@@ -153,7 +154,7 @@ for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, re
 
 
 	all_legends = []
-	plt.figure(attack_type, figsize=(5,4))
+	plt.figure(attack_type, figsize=(5,3))
 	plt.title(reverse_mapping[attack_type])
 
 	for feature_index_from_zero, (feature_name, feature_index, feature_scale) in enumerate(zip(FEATURE_NAMES, (3, 4), FEATURE_SCALES)):
@@ -197,11 +198,15 @@ for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, re
 		else:
 			ticks = plt.xticks()
 			plt.xticks([ tick for tick in ticks[0][1:-1] if tick.is_integer() ])
-
+			
+		plt.gca().yaxis.set_major_locator(plt.LogLocator(numticks=5))
+		
 	if ONLY_ONE_LEGEND:
 		plt.legend([Line2D([0], [0], c='k'), Line2D([0], [0], c='k', linestyle='dashed')], ['Original flows', 'Adversarial flows'], loc='lower right',  ncol=2)
-	plt.figure(attack_type)
-	plt.suptitle(reverse_mapping[attack_type])
+	fig = plt.figure(attack_type)
+	fig.align_ylabels()
+	if SHOW_TITLE:
+		plt.suptitle(reverse_mapping[attack_type])
 	plt.tight_layout()
 	plt.subplots_adjust(top=0.935)
 	if OMIT_UPPER_AXIS:
