@@ -1106,6 +1106,8 @@ def adv_internal(in_training = False, tradeoff=None, lr=None, iterations=None, a
 	print("Average confidence on original flows: {}".format(np.mean(numpy_sigmoid(np.array([item[-1] for item in original_results])))))
 	print("Average confidence on flows: {}".format(np.mean(numpy_sigmoid(np.array([item[-1] for item in results])))))
 	print("Ratio of successful adversarial attacks on flows: {}".format(1-np.mean(np.round(numpy_sigmoid(np.array([item[-1] for item in results]))))))
+	print("Average distance: {}".format(np.array([np.linalg.norm((orig_item-modified_item).flatten(), ord=1).mean() for ((orig_item,_,_), (modified_item,_,_)) in zip(original_dataset, subset)]).mean()))
+	print("Average inf. distance: {}".format(np.array([np.linalg.norm((orig_item-modified_item).flatten(), ord=float("inf")).mean() for ((orig_item,_,_), (modified_item,_,_)) in zip(original_dataset, subset)]).mean()))
 
 	attack_numbers = mapping.values()
 
