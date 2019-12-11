@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import sys
 from matplotlib.transforms import Affine2D
+from matplotlib.lines import Line2D
 
 group_names = []
 values = []
@@ -86,6 +87,22 @@ def ars():
 	plt.ylabel('ARS')
 	ylim1,ylim2 = plt.ylim()
 	plt.ylim((ylim1,ylim2+20)) # move plots away from legend
+	plt.tight_layout()
+	
+def adv():
+	plt.figure(figsize=(5,2))
+	x_values = [ float(value) for value in group_names ]
+	lines = plt.plot(x_values, values[:,:2])
+	plt.xlabel('Tradeoff')
+	plt.ylabel('Success ratio')
+	plt.gca().set_ylabel_legend(Line2D([0],[0], color='gray'))
+	plt.twinx()
+	plt.plot(x_values, values[:,2:], linestyle='--')
+	plt.ylabel('$\ell_1$ distance')
+	plt.gca().set_ylabel_legend(Line2D([0],[0], color='gray', linestyle='--'))
+	plt.legend(lines, ['CIC-IDS-2017', 'UNSW-NB15'])
+	#  ylim1,ylim2 = plt.ylim()
+	#  plt.ylim((ylim1,ylim2+20)) # move plots away from legend
 	plt.tight_layout()
 
 globals()[sys.argv[1]]()
