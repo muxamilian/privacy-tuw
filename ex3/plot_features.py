@@ -11,6 +11,8 @@ import sys
 import os
 import json
 import pickle
+from matplotlib.lines import Line2D
+from matplotlib.patches import Rectangle
 from learn import numpy_sigmoid
 
 plt.rcParams['font.family'] = 'serif'
@@ -26,7 +28,7 @@ categories_mapping, mapping = categories_mapping_content["categories_mapping"], 
 reverse_mapping = {v: k for k, v in mapping.items()}
 # print("reverse_mapping", reverse_mapping)
 
-with open(dataroot_basename+"_full_no_ttl_normalization_data.pickle", "rb") as f:
+with open(dataroot_basename+"_normalization_data.pickle", "rb") as f:
 	means, stds = pickle.load(f)
 
 file_name = sys.argv[1]
@@ -54,7 +56,7 @@ colors_rgb_ranges = [matplotlib.colors.ListedColormap([brighten(color, item) for
 # print("colors", colors)
 # print("colors_rgb_ranges[0]", colors_rgb_ranges[0])
 # quit()
-FEATURE_NAMES = ["Packet length", "IAT"]
+FEATURE_NAMES = ["Pkt. length / B", "IAT / msec"]
 
 for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, result_ranges_by_attack_number_item, sample_indices_by_attack_number_item) in enumerate(zip(results_by_attack_number, flows_by_attack_number, result_ranges_by_attack_number, sample_indices_by_attack_number)):
 
@@ -97,7 +99,7 @@ for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, re
 	# plt.figure(figsize=(5,4))
 	plt.title(reverse_mapping[attack_type])
 
-	fig, ax1 = plt.subplots(figsize=(5,4))
+	fig, ax1 = plt.subplots(figsize=(5,2.4))
 	ax2 = ax1.twinx()
 
 	all_legends = []
@@ -105,22 +107,29 @@ for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, re
 		# if feature_index_from_zero > 0:
 		# 	continue
 		# plt.subplot("{}{}{}".format(len(FEATURE_NAMES), 1, feature_index_from_zero+1))
-		ax.set_ylabel(feature_name, color=colors[feature_index_from_zero])
+		ax.set_ylabel(feature_name) #, color=colors[feature_index_from_zero])
+		ax.set_ylabel_legend(Rectangle((0,0),1,1, color=colors[feature_index_from_zero], alpha=0.5), handlelength=1)
 
 		legend = "{}".format(feature_name)
 		ret = ax.plot(range(max_length), actual_flow_medians[:,feature_index]*stds[feature_index]+means[feature_index], label=legend, color=colors[feature_index_from_zero])
 		ret2 = ax.fill_between(range(max_length), actual_flow_first_quartiles[:,feature_index]*stds[feature_index]+means[feature_index], actual_flow_third_quartiles[:,feature_index]*stds[feature_index]+means[feature_index], alpha=0.5, edgecolor=colors[feature_index_from_zero], facecolor=colors[feature_index_from_zero], label=legend+" 1st and 3rd quartile")
-
+		
+		ylim1,ylim2 = ax.get_ylim()
+		ax.set_ylim((ylim1,ylim2+(ylim2-ylim1)*0.25)) # move plots away from legend
+		
 		# print("ret", ret)
 		# print("ret2", ret2)
 		all_legends += ret
 		all_legends += [ret2]
 		# all_legends += [legend, legend+" 1st and 3rd quartile"]
 	all_labels = [item.get_label() for item in all_legends]
-	ax2.legend(all_legends, all_labels, loc="upper left")
+	#  ax2.legend(all_legends, all_labels, loc="upper left")
+	leg = plt.legend(ret +[ret2], ["Median", "1st and 3rd quartile"])
+	leg.legendHandles[0].set_color('gray')
+	leg.legendHandles[1].set_color('gray')
 
 	ax1.set_xlabel('Sequence index')
-	plt.title(reverse_mapping[attack_type])
+	#  plt.title(reverse_mapping[attack_type])
 	plt.tight_layout()
 
 	os.makedirs(DIR_NAME, exist_ok=True)
