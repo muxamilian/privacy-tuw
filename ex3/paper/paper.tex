@@ -252,14 +252,14 @@ Finally, we also tested the Fast Gradient Sign Method (FGSM), which was initiall
 where $L(X)$ denotes the network's loss function and $\epsilon$ denotes the achieved $\ell_\infty$ distance.
 
 \subsection{Evaluation}
-\begin{figure*}
-\includegraphics[width=0.49\textwidth]{adv_plots/cwl1.pdf}
-\includegraphics[width=0.49\textwidth]{adv_plots/cwl2.pdf}
-\caption{Performance of the \gls{cw} with different $\epsilon$ values for $\ell_1$ and $\ell_2$ distances.}
-\todo{Max: Need to be updated with current results that do not decrease at some point}
+\begin{figure}
+\includegraphics[width=\columnwidth]{../plots/adv_comparison/tradeoff.pdf}
+% \includegraphics[width=0.49\textwidth]{adv_plots/cwl1.pdf}
+% \includegraphics[width=0.49\textwidth]{adv_plots/cwl2.pdf}
+\caption{Performance of \gls{cw} with different $\epsilon$ values.}
+\todo{I guess the irregularity at eps=1 hints at too few iterations. Currently rerunning with 1000 base iterations}
 \label{fig:adv_cw}
-\todo{compress figures somehow}
-\end{figure*}
+\end{figure}
 \autoref{fig:adv_cw} depicts the ratio of attack flows which were successfully misclassified as benign with respect to the final packet along with the resulting distance from the original sample. Evidently, the larger the tradeoff $\epsilon$, the better the attack works, but also average distances from original flows become larger.
 Hence, with acceptable distance values we were able to generate adversarial samples for about 80\% of attack samples.
 
