@@ -278,19 +278,22 @@ As finding adversarial flows is particularly difficult in our case, % for the re
 we preferred methods  producing high-quality adversarial samples while not being as fast as other methods. We implemented the following \gls{aml} methods.
 
 \subsection{Carlini-Wagner}
-We implemented the \gls{cw} \cite{carlini_towards_2017}, which performs gradient descent on the optimization objective
+We implemented the \gls{cw} \cite{carlini_towards_2017}, performing gradient descent on the optimization objective
 \begin{equation} \label{eq:carliniWagner}
-d(X,\tilde X) + \epsilon  \max(Z(\tilde X), 0).
+d(X,\tilde X) + \epsilon  \max(Z(\tilde X), \delta).
 \end{equation}
 Here, $d(\cdot)$ is a distance metric and $\epsilon \in \mathbb R^+$ is a parameter governing the tradeoff achieved between attack success and distance from the original flow. Furthermore, $Z(\cdot)$ denotes the neural network's logit output, $X$ denotes the original flow and $\tilde X$ the adversarial flow under optimization.
 
+$\delta \in \mathbb R$ determines the logit output of successful adversarial.
+In the original publication $\delta=0$, which means that the network's decision for adversarial samples is just between attack and normal traffic. In the present context, we need to make sure that the classifier's prediction would actually be normal traffic, even though a certain level of noise will be added to \glspl{iat} due to the network between attacker and victim. Hence, we introduced $\delta=-0.2$, corresponding to a confidence of 55\% for the sample to be benign.
+
 We used $\ell_1$ norm as distance metric and \gls{pgd} for meeting the real-world constraints discussed above.
 
-The method minimizes the adversarial sample's distance so that the network's decision is just between attack and normal traffic. In the present context, we need to make sure that the classifier's prediction would actually be normal traffic, even though a certain level of noise will be added to \glspl{iat} due to the network between attacker and victim. Instead of the above equation \ref{eq:carliniWagner} we therefore used the optimization objective
-\begin{equation}
-d(X,\tilde X) + \epsilon  \max(Z(\tilde X), -0.2),
-\end{equation}
-i.e. we require a slight level of confidence that our adversarial samples are not classified as attack traffic. A logit value of $-0.2$ corresponds to a confidence of 55\% for the sample to be benign.
+% The method minimizes the adversarial sample's distance so that the network's decision for adversarial samples is just between attack and normal traffic. In the present context, we need to make sure that the classifier's prediction would actually be normal traffic, even though a certain level of noise will be added to \glspl{iat} due to the network between attacker and victim. Instead of the above equation \ref{eq:carliniWagner} we therefore used the optimization objective
+% \begin{equation}
+% d(X,\tilde X) + \epsilon  \max(Z(\tilde X), -0.2),
+% \end{equation}
+% i.e. we require a slight level of confidence that our adversarial samples are not classified as attack traffic. A logit value of $-0.2$ corresponds to a confidence of 55\% for the sample to be benign.
 
 \subsection{$\ell_\infty$-bounded Projected Gradient Descent}
 \cite{madry_towards_2018} uses a method for generating adversarial samples which deploys \gls{pgd}  to minimize the network's negative loss function while constraining the achieved $\ell_\infty$ distance from the original samples.
@@ -589,15 +592,19 @@ Note that metrics for UNSW-NB15 differ substantially from CIC-IDS2017. However, 
 Knowing which features to investigate, it is important to analyze which feature values lead to classification as attack.
 During flow extraction we used a usual 5-tuple flow key, which distinguishes flows based on the protocol they use and their source and destination port and IP address. Hence, these features are constant for all packets in one flow, which allows us to use explainability methods which have been proposed for non-recurrent classification methods.
 
-In particular,  in literature the use of Partial Dependency Plots (\gls{pdp}) is proposed~\cite{friedman_greedy_2001}. To inspect attack types in detail, in this research we experiment with a modified definition of the \gls{pdp}. If $\boldsymbol X \in \mathbb R ^n$ denotes a random vector drawn from feature space, $f(X) \in [0,1]$ denotes the neural network's prediction and $c$ the attack class, the \gls{pdp} for feature $i$ can be defined as
+In particular,  in literature the use of Partial Dependency Plots (\gls{pdp}) is proposed~\cite{friedman_greedy_2001}. To inspect attack types in detail, in this research we use a \textit{conditional} form of the \gls{pdp}. If $\boldsymbol X \in \mathbb R ^n$ denotes a random vector drawn from feature space, $f(\boldsymbol X) \in [0,1]$ the neural network's prediction and $c$ the attack class, we define the conditional \gls{pdp} for feature $i$  as
 % \begin{equation} \label{eq:pdp}
 % \text{\gls{pdp}}_i(y) = \mathbb E_{\boldsymbol X}\left(f(X_1,\ldots,X_{i-1},y,X_{i+1},\ldots X_n)\right)
 % \end{equation}
 
 % To inspect attack types in detail, in this research we experiment with a modified definition of the \gls{pdp}  (with C being the attack classes):
 \begin{equation} \label{eq:pdp_conditional}
-\text{\gls{pdp}}_{c,i}(y) = \mathbb E_{\boldsymbol X | C = c} \left(f \left( X_1,\ldots,X_{i-1},y,X_{i+1},\ldots X_n \right) \right)
+\text{\gls{pdp}}_{c,i}(w) = \mathbb E_{\boldsymbol X | C} \Big(f \left( X_1,\ldots,X_{i-1},w,X_{i+1},\ldots X_n \right) | c\Big),
 \end{equation}
+empirically approximating the conditional distribution by the observed subset that belongs to a certain class.
+
+By using a classical \gls{pdp} we would be likely to loose information due to the averaging over very different types of traffic. However, for network traffic in particular, investigating each sample individually is not possible. Hence, the conditional \gls{pdp} provides the ideal compromise for our application.
+
 %
 %\begin{figure*}
 %\includegraphics[width=0.48\textwidth]{{"../plots/plot_pdp/flows_full_no_ttl_pdp_outcomes_0_3.pickle_8_DoS - DDoS-Heartbleed"}.pdf}
@@ -608,7 +615,13 @@ In particular,  in literature the use of Partial Dependency Plots (\gls{pdp}) is
 %\label{fig:pdp}
 %\end{figure*}
 %
-In this variant of the \gls{pdp} that we call conditional \gls{pdp}, we don't take the whole dataset for the computation for the \gls{pdp} but only a subset that belongs to a certain class. Specifically, we take each attack class and compute the \gls{pdp} only over samples of this attack class. The results (omitted for brevity) show that for some attack classes the port numbers play an important role. When looking at the class of normal traffic (non-attack traffic) it becomes apparent that traffic destined to a high source port is generally indicative of an attack. We argue that this is because most services that regular users use have low port numbers. A known issue about \glspl{pdp} in general is that dependencies of the feature under investigation and the remaining variables are not considered, hence potentially querying the neural network for feature combinations which cannot possibly occur. For a certain value of the $i$th feature, the whole dataset is used for averaging the neural network's outcome. 
+%In this variant of the \gls{pdp} that we call conditional \gls{pdp}, we don't take the whole dataset for the computation for the \gls{pdp} but only a subset that belongs to a certain class. Specifically, we take each attack class and compute the \gls{pdp} only over samples of this attack class.
+
+The results (omitted for brevity) show that for some attack classes the port numbers play an important role. When looking at the class of benign traffic %(non-attack traffic)
+it becomes apparent that traffic destined to a high source port is generally indicative of an attack. We argue that this is because most services that regular users use have low port numbers.
+
+%AH. As ALE is removed, I case this also isnt needed
+%A known issue about \glspl{pdp} in general is that dependencies of the feature under investigation and the remaining variables are not considered, hence potentially querying the neural network for feature combinations which cannot possibly occur. For a certain value of the $i$th feature, the whole dataset is used for averaging the neural network's outcome. 
 
 %For this reason, Accumulated Local Effects (ALE) plots have been proposed in literature. The basic idea for ALE is that instead of using all samples, only the closest samples are used for assessing the effects of one feature. ALE plots therefore inherently require a distance measure for finding the closest samples, which, as revealed in the above discussion, in our case is not possible in a straight-forward manner.
 
