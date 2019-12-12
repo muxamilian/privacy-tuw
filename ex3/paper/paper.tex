@@ -146,30 +146,75 @@ On the one hand, by simply leaving out manipulable features, we obtain a classif
 
 \section{An \gls{rnn}-based classifier}
 
+% \begin{table}[b]
+% \caption{occurrence frequency of attack types.} \label{tab:occurrence}
+% \centering
+% \begin{tabular}{l r} \toprule
+% Attack type & Proportion \\
+% \midrule
+% Normal                                                         & $0.747468$ \\
+% DoS / DDoS:DoS Hulk                                            & $0.101014$ \\
+% PortScan:PortScan - Firewall off                               & $0.069020$ \\
+% DDoS:LOIT                                                      & $0.040784$ \\
+% Infiltration:Dropbox download                                  & $0.032982$ \\
+% DoS / DDoS:DoS GoldenEye                                       & $0.003224$ \\
+% DoS / DDoS:DoS Slowhttptest                                    & $0.001819$ \\
+% DoS / DDoS:DoS slowloris                                       & $0.001680$ \\
+% Brute Force:SSH-Patator                                        & $0.001107$ \\
+% Botnet:ARES                                                    & $0.000327$ \\
+% Web Attack:XSS                                                 & $0.000293$ \\
+% PortScan:PortScan - Firewall on                                & $0.000165$ \\
+% Brute Force:FTP-Patator                                        & $0.000110$ \\
+% Web Attack:Sql Injection                                       & $0.000006$ \\
+% DoS / DDoS:Heartbleed                                          & $0.000001$ \\
+% \bottomrule
+% \end{tabular}
+% \label{tab:occurrence}
+% \end{table}
+
 \begin{table}[b]
-\caption{Occurence probability of attack types.} \label{tab:occurrence}
+\caption{Occurrence frequency of attack types.}
+\label{tab:occurrence}
 \centering
-\begin{tabular}{l r} \toprule
-Attack type & Proportion \\
-\midrule
-Normal                                                         & $0.747468$ \\
-DoS / DDoS:DoS Hulk                                            & $0.101014$ \\
-PortScan:PortScan - Firewall off                               & $0.069020$ \\
-DDoS:LOIT                                                      & $0.040784$ \\
-Infiltration:Dropbox download                                  & $0.032982$ \\
-DoS / DDoS:DoS GoldenEye                                       & $0.003224$ \\
-DoS / DDoS:DoS Slowhttptest                                    & $0.001819$ \\
-DoS / DDoS:DoS slowloris                                       & $0.001680$ \\
-Brute Force:SSH-Patator                                        & $0.001107$ \\
-Botnet:ARES                                                    & $0.000327$ \\
-Web Attack:XSS                                                 & $0.000293$ \\
-PortScan:PortScan - Firewall on                                & $0.000165$ \\
-Brute Force:FTP-Patator                                        & $0.000110$ \\
-Web Attack:Sql Injection                                       & $0.000006$ \\
-DoS / DDoS:Heartbleed                                          & $0.000001$ \\
+\subfloat[CIC-IDS-2017\label{fig:cicids17proportions}
+]{
+\begin{tabular}{l r}
+\toprule
+Attack type & \hspace*{-4mm}Proportion \\ \midrule
+DoS Hulk	&	10.10\%	\\
+PortScan, Firewall	&	6.90\%	\\
+DDoS LOIT	&	4.08\%	\\
+Infiltration	&	3.30\%	\\
+DoS GoldenEye	&	0.32\%	\\
+DoS SlowHTTPTest	&	0.18\%	\\
+DoS Slowloris	&	0.17\%	\\
+Brute-force SSH	&	0.11\%	\\
+Botnet ARES	&	0.03\%	\\
+XSS attack	&	0.03\%	\\
+PortScan, no Fw.	&	0.02\%	\\
+Brute-force FTP	&	0.01\%	\\
+SQL injection	&	$<$0.01\%	\\
+Heartbleed	&	$<$0.01\%	\\
 \bottomrule
 \end{tabular}
-\label{tab:occurence}
+}{}
+\subfloat[UNSW-NB15\label{fig:unswnb15proportions}
+]{
+\begin{tabular}{l r}
+\toprule
+Attack type & \hspace*{-4mm}Proportion \\ \midrule
+Exploits	&	1.42\%	\\
+Fuzzers	&	1.01\%	\\
+Reconnaissance	&	0.58\%	\\
+Generic	&	0.21\%	\\
+DoS	&	0.19\%	\\
+Shellcode	&	0.08\%	\\
+Analysis	&	0.03\%	\\
+Backdoors	&	0.02\%	\\
+Worms	&	0.01\%	\\
+\bottomrule
+\end{tabular}
+}{}
 \end{table}
 
 We implemented a three-layer LSTM-based classifier with 512 neurons at each layer. As the input features we use 
@@ -186,8 +231,8 @@ source port, destination port, protocol identifier, packet length, \gls{iat} to 
 We omitted \gls{ttl} values, as they are likely to lead to unwanted prediction behaviour \cite{bachl_walling_2019}.  Among the used features, source port, destination port and protocol identifier are constant over the whole flow while the others vary.
 We use Z-score normalization and a train/test split of 2:1.
 
-For evaluation, we use the \textit{CIC-IDS-2017} \cite{sharafaldin_toward_2018} and \textit{UNSW-NB15} \cite{moustafa_unsw-nb15:_2015} datasets which each include more than 2 million flows of network data, containing both benign traffic and a large number of different attacks. Attacks contained in CIC-IDS-2017 are shown in \autoref{tab:occurence}.
-\autoref{tab:performance_results} shows that our classifier achieves an accuracy that is similar to previous work based on these datasets~\cite{meghdouri_analysis_2018,bachl_walling_2019}. However, unlike these classifiers, our recurrent classifier has the advantage that it can detect attacks already before they are over.
+For evaluation, we use the \textit{CIC-IDS-2017} \cite{sharafaldin_toward_2018} and \textit{UNSW-NB15} \cite{moustafa_unsw-nb15:_2015} datasets which each include more than 2 million flows of network data, containing both benign traffic and a large number of different attacks. Attacks contained in the datasets are shown in \autoref{tab:occurrence}.
+\autoref{tab:performance_results} shows that our classifiers achieve an accuracy that is similar to previous work based on these datasets~\cite{meghdouri_analysis_2018,bachl_walling_2019}. However, unlike these classifiers, our recurrent classifier has the advantage of being able to detect attacks already before they are over.
 
 \begin{table}
 % Evaluated using
@@ -212,19 +257,25 @@ Youden	&	0.972	&	0.990	&	0.873	&	0.719	\\
 
 \section{Adversarial attacks}
 \label{sec:adv}
-We now investigate whether known \gls{aml} methods can be used for generating adversarial flows, i.e. minimally different attack flows which are classified as benign, for out \gls{rnn}.
-In our scenario, most features such as, e.g., \gls{tcp} flags cannot be easily manipulated because their manipulation might violate the \gls{tcp} and thus cause communication to fail. Hence, we experiment whether by manipulating the \glspl{iat} and packet lengths of the first packets, the classifier might be fooled.
-Our scenario is quite different from how generating adversarial samples usually works: We have significantly less features than in, for example, an image. Furthermore, only two out of those few features can be manipulated. And even these features cannot be manipulated freely: Besides the constraints that packet size and \gls{iat} cannot become negative there are also more problem-specific constraints:
+We now investigate whether known \gls{aml} methods can be used for generating adversarial flows, i.e. minimally different attack flows which are classified as benign, for our \gls{rnn}.
+% In our scenario, most features such as, e.g., \gls{tcp} flags cannot be easily manipulated because their manipulation might violate the \gls{tcp} and thus cause communication to fail.
+% Hence, we experiment whether by manipulating the \glspl{iat} and packet lengths of the first packets, the classifier might be fooled.
+% Our scenario is quite different from how generating adversarial samples usually works: We have significantly less features than in, for example, an image. Furthermore, only two out of those few features can be manipulated. And even these features cannot be manipulated freely: Besides the constraints that packet size and \gls{iat} cannot become negative there are also more problem-specific constraints:
+
+A network packet contains significantly less features than, e.g., an image and, furthermore, most features such as \gls{tcp} flags cannot be easily manipulated, as their manipulation might violate the protocol specifications and thus cause communication to fail. We identify the packet length and the \gls{iat} as features which are most likely to be exploited, but even these features cannot be manipulated freely. Beside the non-negativity constraint,  there are also more problem-specific constraints:
 \begin{itemize}[topsep=0pt,wide,labelwidth=!,labelindent=0pt]
-\item Only packets can be manipulated which are transmitted by the attacker. This means the attacker can only control one direction (except for botnets where both sides are attackers).
+\item Only packets can be manipulated which are transmitted by the attacker.
+Except for botnet and backdoor traffic, which is entirely controlled by an attacker, thus only packets travelling in one direction can be manipulated.
+ %This means the attacker can only control one direction (except for botnets where both sides are attackers).
 \item Packets must not be smaller than initially, as otherwise less information could be transmitted or packets might be rendered syntactically invalid.
-\item \glspl{iat} must not decrease, as otherwise the physical speed of data transmission can be violated in some cases. Since an in-depth analysis of when the reduction of \glspl{iat} is possible, would come with substantial effort, we generally disallowed a reduction of this feature.
+\item \glspl{iat} must not decrease, as otherwise the physical speed of data transmission can be violated in some cases. An in-depth analysis of when the reduction of \glspl{iat} is possible, would come with substantial effort, so we generally disallowed it. %a reduction of this feature.
 \end{itemize}
 
 Several \gls{aml} methods have been proposed in the recent literature, achieving different speed-quality tradeoffs: 
-\cite{szegedy_intriguing_2014} show that it is possible to create adversarial samples for an image, which look similar to the original image but are classified wrongly. \cite{goodfellow_explaining_2015} develop the \gls{fgsm}, which makes easy generation of adversarial samples possible. \cite{papernot_crafting_2016} explore the use of \gls{aml} for \glspl{rnn}
+\cite{szegedy_intriguing_2014} shows that it is possible to create adversarial samples for an image, which look similar to the original image but are classified wrongly. \cite{goodfellow_explaining_2015} develops the \gls{fgsm}, which makes easy generation of adversarial samples possible. \cite{papernot_crafting_2016} explores the use of \gls{aml} for \glspl{rnn}, but lacks import \gls{aml} methods, which we consider in this paper.
 
-As finding adversarial flows is particularly difficult in our case for the reasons we discussed above, for the present research we preferred methods  producing high-quality adversarial samples while not being as fast as other methods. We implemented the following \gls{aml} methods.
+As finding adversarial flows is particularly difficult in our case, % for the reasons we discussed above,
+we preferred methods  producing high-quality adversarial samples while not being as fast as other methods. We implemented the following \gls{aml} methods.
 
 \subsection{Carlini-Wagner}
 We implemented the \gls{cw} \cite{carlini_towards_2017}, which performs gradient descent on the optimization objective
@@ -620,7 +671,9 @@ A question which occurs in this process, is how many CPU cycles to spend on netw
 \end{figure}
 
 For both datasets, after a small number of epochs, it was no longer possible to create a significant number of adversarial samples for most attack categories. For the datasets we considered, adversarial training left classification performance unaffected.
-\todo{Max: Insert results that show that accuracy on normal data is still ok after adversarial training.}
+%\todo{Max: Insert results that show that accuracy on normal data is still ok after adversarial training.}
+
+\autoref{tab:adv_training_performance} depicts classification on non-adversarial data after 50 epochs of adversarial training. Accuracy is essentially identical to results presented in \autoref{tab:performance_results}. Due to the higher proportion of attack samples in training data, we note, however, that recall increased at the expense of a slightly lower precision. 
 
 
 \begin{table}
@@ -629,6 +682,7 @@ For both datasets, after a small number of epochs, it was no longer possible to 
 % ./python learn.py --dataroot flows15.pickle --net runs/Oct28_15-41-46_gpu/lstm_module_997.pth --function test --batchSize 512
 % on Dec. 4th
 \caption{Detection performance after adversarial training.} \label{tab:adv_training_performance}
+\todo{Probably no space for table}
 \centering
 \begin{tabular}{l r r r r} \toprule
 & \multicolumn{2}{c}{CIC-IDS-17} & \multicolumn{2}{c}{UNSW-NB-15} \\
