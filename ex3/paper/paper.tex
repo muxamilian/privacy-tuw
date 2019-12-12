@@ -33,7 +33,7 @@
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{graphicx}
-\usepackage{natbib}
+\usepackage[numbers]{natbib}
 \usepackage{subfig}
 
 \usepackage[nomain, toc, acronym]{glossaries}
@@ -242,7 +242,7 @@ For evaluation, we use the \textit{CIC-IDS-2017} \cite{sharafaldin_toward_2018} 
 \caption{Detection performance on a packet and flow level.} \label{tab:performance_results}
 \centering
 \begin{tabular}{l r r r r} \toprule
-& \multicolumn{2}{c}{CIC-IDS-17} & \multicolumn{2}{c}{UNSW-NB-15} \\
+& \multicolumn{2}{c}{CIC-IDS-2017} & \multicolumn{2}{c}{UNSW-NB15} \\
 	&	Packet	&	Flow	&	Packet	&	Flow	\\	\midrule
 Accuracy	&	0.991	&	0.997	&	0.995	&	0.983	\\	
 Precision	&	0.970	&	0.997	&	0.834	&	0.786	\\	
@@ -589,12 +589,12 @@ Note that metrics for UNSW-NB15 differ substantially from CIC-IDS2017. However, 
 Knowing which features to investigate, it is important to analyze which feature values lead to classification as attack.
 During flow extraction we used a usual 5-tuple flow key, which distinguishes flows based on the protocol they use and their source and destination port and IP address. Hence, these features are constant for all packets in one flow, which allows us to use explainability methods which have been proposed for non-recurrent classification methods.
 
-In particular,  in literature the use of Partial Dependency Plots (\gls{pdp}) is proposed. If $\boldsymbol X \in \mathbb R ^n$ denotes a random vector drawn from feature space and $f(X) \in [0,1]$ denotes the neural network's prediction, the \gls{pdp} for feature $i$ can be defined as
-\begin{equation} \label{eq:pdp}
-\text{\gls{pdp}}_i(y) = \mathbb E_{\boldsymbol X}\left(f(X_1,\ldots,X_{i-1},y,X_{i+1},\ldots X_n)\right)
-\end{equation}
+In particular,  in literature the use of Partial Dependency Plots (\gls{pdp}) is proposed~\cite{friedman_greedy_2001}. To inspect attack types in detail, in this research we experiment with a modified definition of the \gls{pdp}. If $\boldsymbol X \in \mathbb R ^n$ denotes a random vector drawn from feature space, $f(X) \in [0,1]$ denotes the neural network's prediction and $c$ the attack class, the \gls{pdp} for feature $i$ can be defined as
+% \begin{equation} \label{eq:pdp}
+% \text{\gls{pdp}}_i(y) = \mathbb E_{\boldsymbol X}\left(f(X_1,\ldots,X_{i-1},y,X_{i+1},\ldots X_n)\right)
+% \end{equation}
 
-To inspect attack types in detail, in this research we experiment with a modified definition of the \gls{pdp}  (with C being the attack classes):
+% To inspect attack types in detail, in this research we experiment with a modified definition of the \gls{pdp}  (with C being the attack classes):
 \begin{equation} \label{eq:pdp_conditional}
 \text{\gls{pdp}}_{c,i}(y) = \mathbb E_{\boldsymbol X | C = c} \left(f \left( X_1,\ldots,X_{i-1},y,X_{i+1},\ldots X_n \right) \right)
 \end{equation}
@@ -658,7 +658,7 @@ We now propose two approaches to increase robustness of the \gls{rnn} against ad
 \subsection{Reducing features}
 The most obvious defence, which is only possible because of the nature of the dataset, is to simply leave out features which the attacker can manipulate. For this, we try two different approaches:
 \begin{itemize}[topsep=0pt,wide,labelwidth=!,labelindent=0pt]
-\item Leaving out all features that are manipulable: packet size and \gls{iat}
+\item Leaving out all manipulable features: packet size and \gls{iat}
 \item Leaving out manipulable features when the attacker can manipulate them: only in the direction from the attacker to the victim (This, however does not prevent adversarial samples for botnets, for which both sides are malicious)
 \end{itemize}
 
@@ -744,11 +744,14 @@ Even though the interpretation of \glspl{rnn} poses several difficulties, we hav
 We showed that even though our use case is very different from computer vision, adversarial samples can be found efficiently, even if only ostensibly unimportant features can be modified. We introduced the \gls{ars} as a new way to quantify the adversarial threat.
 Deploying an adversarial training procedure, we could significantly reduce the adversarial threat.
 
-\bibliographystyle{plain}
-\bibliography{bibliography}
-
 \section*{Acknowledgements}
 The Titan Xp used for this research was donated by the NVIDIA Corporation.
+
+
+\renewcommand*{\bibfont}{\small}
+\bibliographystyle{ieeetr}
+\bibliography{bibliography}
+
 
 \end{document}
 \endinput
