@@ -80,7 +80,7 @@ def adv_results():
 	for tick in plt.gca().xaxis.get_major_ticks():
 		label = tick.label1
 		label.set_transform(label.get_transform() + Affine2D().translate(8,0))
-	plt.ylabel('Accuracy')
+	plt.ylabel('Recall')
 	plt.tight_layout()
 
 
