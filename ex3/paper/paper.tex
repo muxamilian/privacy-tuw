@@ -660,7 +660,7 @@ To determine if this hypothesis is correct, we plot the attack confidence of the
 \label{fig:pred_plots2}
 \end{figure}
 
-Next, we want to investigate if our classifier just memorized its inputs. The most interesting packet features that can be used to visualize this in our use case are the \gls{iat} between packets in a flows and the packet length. To depict how the model comes to a decision, we determined the total minimum and maximum for these features that ever occur for all flows. For a given flow $X$ we then varied feature values at each time step between minimum and maximum and plot how the confidence changes when the feature varies (\autoref{fig:pred_plots2}) depict the averaged predictions for different attack families. It seems clear that the classifier didn't just memorize the inputs but actually learned them since there is always a smooth decrease of confidence if we change the feature values. Instead, when memorizing, we would expect a sharp decline of confidence to occur. Another interesting observation is that after the first couple of packets the classifier is certain about its decision and changing features doesn't change its confidence any longer. This allows the conclusion that if an attacker is able to change the first few packets, she could possibly change the decision of the classifier. We will further investigate this question in \autoref{sec:adv}.
+Next, we want to investigate if our classifier just memorized its inputs. The most interesting packet features that can be used to visualize this in our use case are the \gls{iat} between packets in a flows and the packet length. To depict how the model comes to a decision, we determined the total minimum and maximum for these features that ever occur for all flows. For a given flow $X$ we then varied feature values at each time step between minimum and maximum and plot how the confidence changes when the feature varies (\autoref{fig:pred_plots2}) depict the averaged predictions for different attack families. It seems clear that the classifier didn't just memorize the inputs but actually learned them since there is always a smooth decrease of confidence if we change the feature values. Instead, when memorizing, we would expect a sharp decline of confidence to occur. Another interesting observation is that after the first couple of packets the classifier is certain about its decision and changing features doesn't change its confidence any longer. This allows the conclusion that if an attacker is able to change the first few packets, she could change the decision of the classifier. This is consistent with our observations in \autoref{sec:adv}. %We will further investigate this question in \autoref{sec:adv}.
 
 \begin{figure}
 %AH. I think the 'Firewall off' plot is not a good example as it shows only 4 packets
@@ -705,9 +705,8 @@ A question which occurs in this process, is how many CPU cycles to spend on netw
 \label{fig:avdistance}
 \end{figure}
 
-For both datasets, after a small number of epochs, it was no longer possible to create a significant number of adversarial samples for most attack categories. For the datasets we considered, adversarial training left classification performance unaffected.
+For both datasets, after a small number of epochs, it was no longer possible to create a significant number of adversarial samples for most attack categories. %For the datasets we considered, adversarial training left classification performance unaffected.
 %\todo{Max: Insert results that show that accuracy on normal data is still ok after adversarial training.}
-
 \autoref{tab:adv_training_performance} depicts classification on non-adversarial data after 50 epochs of adversarial training. Accuracy is essentially identical to results presented in \autoref{tab:performance_results}. Due to the higher proportion of attack samples in training data, we note, however, that recall increased at the expense of a slightly lower precision. 
 
 
