@@ -300,21 +300,21 @@ The figure suggests that a tradeoff value between 0.5 and 1 would be ideal to fi
 
 \begin{figure}
 \includegraphics[width=\columnwidth]{../plots/adv_comparison/adv_comparison_17.pdf}
-\caption{Attack success ratios per attack family. Depicted are flow detection accuracies for adversarial flows and for unmodified flows.}
+\caption{Attack success ratios for both dataset and per attack family for CIC-IDS-2017. Depicted are flow detection accuracies for adversarial flows and for unmodified flows.}
 \label{fig:adv_per_family}
 \end{figure}
 
-\begin{table}
-\centering
-\caption{Total flow accuracy for adversarial flows.}
-\label{tab:adv_accuracies}
-\begin{tabular}{lrrr} \toprule
-& CW & FGSM & PGD \\ \midrule
-CIC-IDS-2017 &	0.346	 & 0.445	& 0.539 \\ 
-UNSW-NB15 &	0.326&	0.629	& 0.774 \\
-\bottomrule
-\end{tabular}
-\end{table}
+% \begin{table}
+% \centering
+% \caption{Total flow accuracy for adversarial flows.}
+% \label{tab:adv_accuracies}
+% \begin{tabular}{lrrr} \toprule
+% & CW & FGSM & PGD \\ \midrule
+% CIC-IDS-2017 &	0.346	 & 0.445	& 0.539 \\ 
+% UNSW-NB15 &	0.326&	0.629	& 0.774 \\
+% \bottomrule
+% \end{tabular}
+% \end{table}
 %It is interesting to note that for very large values of $\epsilon$ the success ratio starts to decrease again.This phenomenon might be due to numerical effects and might be preventable by a smaller learning rate.
 
 
@@ -621,6 +621,28 @@ A question which occurs in this process, is how many CPU cycles to spend on netw
 
 For both datasets, after a small number of epochs, it was no longer possible to create a significant number of adversarial samples for most attack categories. For the datasets we considered, adversarial training left classification performance unaffected.
 \todo{Max: Insert results that show that accuracy on normal data is still ok after adversarial training.}
+
+
+\begin{table}
+% Evaluated using
+% ./python learn.py --dataroot flows.pickle --net runs/Oct26_00-03-50_gpu/lstm_module_1284.pth --function test --batchSize 512
+% ./python learn.py --dataroot flows15.pickle --net runs/Oct28_15-41-46_gpu/lstm_module_997.pth --function test --batchSize 512
+% on Dec. 4th
+\caption{Detection performance after adversarial training.} \label{tab:adv_training_performance}
+\centering
+\begin{tabular}{l r r r r} \toprule
+& \multicolumn{2}{c}{CIC-IDS-17} & \multicolumn{2}{c}{UNSW-NB-15} \\
+	&	Packet	&	Flow	&	Packet	&	Flow	\\	\midrule
+Accuracy	&	0.991	&	0.997	&	0.994	&	0.981	\\
+Precision	&	0.971	&	0.996	&	0.761	&	0.704	\\
+Recall	&	0.979	&	0.992	&	0.970	&	0.824	\\
+F1	&	0.975	&	0.994	&	0.853	&	0.759	\\
+Youden	&	0.973	&	0.991	&	0.965	&	0.811	\\
+
+
+\bottomrule
+\end{tabular}
+\end{table}
 
 % AH. guess this is no longer true
 %However, against our expectations, this approach did not lead to satisfactory results in the sense that the network would learn to classify adversarial samples as attacks. In fact, classification accuracy stayed about constant during the training of the network.

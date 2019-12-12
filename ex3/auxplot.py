@@ -62,16 +62,21 @@ def adv_results():
 	plt.figure(figsize=(5,3))
 	values = np.reshape(values, (-1,values.shape[1]//2,2))
 
-	order = np.argsort(np.mean(values[:,:,1], axis=1))
+	order = (2+np.argsort(np.mean(values[2:,:,1], axis=1))).tolist()
+	order = [0, 1] + order
 	width = 0.95 / values.shape[1]
 
-	x = np.arange(len(group_names))
+	x = np.arange(len(group_names), dtype=float)
+	x[:2] -= .5
 	for i in range(values.shape[1]):
 		plt.bar(x +width*i, values[order,i,1], width, color='gray', alpha=.5, **({'label': 'Original'} if i==0 else {}))
 	for i in range(values.shape[1]):
 		plt.bar(x +width*i, values[order,i,0], width, color=colors[i], label=feature_names[i*2].rstrip(' adv'))
 	plt.legend(loc='lower center', bbox_to_anchor=(0.5,1), ncol=4)
 	plt.xticks(x + width*values.shape[1]/2-width*0.5, [group_names[i] for i in order], rotation=45, horizontalalignment='right')
+	for i,label in  enumerate(plt.gca().get_xticklabels()):
+		if i < 2:
+			label.set_fontweight('bold')
 	for tick in plt.gca().xaxis.get_major_ticks():
 		label = tick.label1
 		label.set_transform(label.get_transform() + Affine2D().translate(8,0))
