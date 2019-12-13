@@ -645,23 +645,24 @@ it becomes apparent that traffic destined to a high source port is generally ind
 \subsection{Plots for Sequences}
 
 %As apparent from the above discussion, trying to explain how packet features influence the model's predictions, poses various difficulties. As a first step to explaining our model's predictions, we investigate how important features at different time steps are for the model's decisions.
-Intuitively, features at the beginning of a flow should be the most important while the model's predictions should not vary significantly anymore, as soon as the model has come to a decision.
-
+Intuitively, features at the beginning of a flow should be the most important while the classifier's predictions should not vary significantly anymore, as soon as it has come to a decision.
 \begin{figure}
 %\includegraphics[width=0.48\textwidth]{{"../plots/plot/flows_pred_plots2_outcomes_0_3.pickle_5_DoS - DDoS-DoS Hulk"}.pdf}
 \includegraphics[width=\columnwidth]{{"../plots/plot/flows_pred_plots2_outcomes_0_3.pickle_15_All samples"}.pdf}
 % \includegraphics[width=\columnwidth]{{"../plots/plot/flows_pred_plots2_outcomes_0_3.pickle_6_DoS - DDoS-DoS Slowhttptest"}.pdf}
 % \includegraphics[width=0.48\textwidth]{{"../plots/plot/flows_full_no_ttl_pred_plots_outcomes_0_3.pickle_14_Web Attack-XSS"}.pdf}
 % \includegraphics[width=0.48\textwidth]{{"../plots/plot/flows_full_no_ttl_pred_plots_outcomes_0_3.pickle_11_PortScan-PortScan - Firewall off"}.pdf}
-
 \caption{Classifier confidence per time step for CIC-IDS-2017. % and first and third quartiles.
 For the majority of attack types, confidence increases in the first few steps and then stays almost constant at 1.}
 \label{fig:confidence}
 \end{figure}
+To evaluate this hypothesis, we plot the classifier's prediction confidence for each time step. % for each attack class.
+%averaging over all flows. %AH. there's no averaging happening
+% and also show the first and third quartiles.
+\autoref{fig:confidence} shows that %this hypothesis is correct for most attack classes. 
+while at the first couple of packets the confidence is not very high, towards the end of the flow it reaches values close to 1 and stays there. Hence, not only is the classifier able to make a reasonable classification after just a few packets, the figure also suggests that indeed later packets have a neglectible influence on the prediction.
 
-To determine if this hypothesis is correct, we plot the attack confidence of the classifier for each time step for each attack class. At each time step we average over all flows and also show the first and third quartiles. \autoref{fig:confidence} shows that this hypothesis is correct for most attack classes. At the first couple of packets the confidence for maliciousness is not very high yet but towards the end of the flow it reaches values close to 1 and stays there.
-
-For investigating, how features influence the prediction outcome, we extend \glspl{pdp} to the sequential setting. 
+For investigating in more detail how features influence the prediction outcome, we extend \glspl{pdp} to the sequential setting. 
 Denoting as $X=\{\boldsymbol X^1, \ldots, \boldsymbol X^m\}$ the series of packet features $\boldsymbol X^t \in \mathbb R^n$ and $h_t(X)$ the network's hidden state at time step $t$, we define the sequential \gls{pdp} as 
 \begin{align}
 \text{PD}&\text{P}_{c,i}(t,w)= \\ &\mathbb E_{X | C} \Big(f \left(h_{t-1}( X), X_1^t,\ldots,X_{i-1}^t,w,X_{i+1}^t,\ldots X_n^t \right) | c\Big). \nonumber 
@@ -669,17 +670,19 @@ Denoting as $X=\{\boldsymbol X^1, \ldots, \boldsymbol X^m\}$ the series of packe
 
 \autoref{fig:pred_plots2} shows an example together with the mean values for both unmodified samples and adversarial samples. Also in this figure we notice that mainly the first few packets are able to influence the prediction outcome and modifying features at a later time step does not change its confidence any longer. In many cases, the adversarial sample generation indeed moves packet features to areas where the network is less likely to be classified as attacks, confirming the effectiveness of \glspl{pdp}. In other cases, however, we did not observe an agreement between \gls{pdp} and adversarial modifications, hinting at dependencies which cannot be presented by \glspl{pdp}.
 
-\begin{figure}
+\begin{figure}[b]
 %\includegraphics[width=0.48\textwidth]{{"../plots/plot2_adv/flows_pred_plots2_outcomes_flows_adv_1.0_notBidirectional_outcomes_0_3.pickle_0_3.pickle_0_Botnet-ARES"}.pdf}
 \includegraphics[width=\columnwidth]{{"../plots/plot2_adv/flows_pred_plots2_outcomes_flows_adv_1.0_notBidirectional_outcomes_0_3.pickle_0_3.pickle_7_DoS - DDoS-DoS slowloris"}.pdf}
 %\includegraphics[width=0.48\textwidth]{{"../plots/plot2_adv/flows_pred_plots2_outcomes_flows_adv_1.0_notBidirectional_outcomes_0_3.pickle_0_3.pickle_11_PortScan-PortScan - Firewall off"}.pdf}
 %\includegraphics[width=0.48\textwidth]{{"../plots/plot2_adv/flows_pred_plots2_outcomes_flows_adv_1.0_notBidirectional_outcomes_0_3.pickle_0_3.pickle_1_Brute Force-FTP-Patator"}.pdf}
 
-\caption{Exemplary sequential PD plot and adversarial flows for the DoS Slowloris attack in CIC-IDS-2017. The solid line shows the mean value of the feature for all flows of the attack type. The shaded region shows the change in confidence that occurs when the feature is varied.}
+\caption{Exemplary sequential PD plot and adversarial flows for the DoS Slowloris attack in CIC-IDS-2017. The lines show the feature's mean values. % for all flows of the attack type.
+The shaded region shows the change in confidence that occurs when the feature is varied.}
 %\todo{IAT plot is wrong: There shouldn't be step 0.} %AH. guess this is fine now
 \label{fig:pred_plots2}
 \end{figure}
 
+% AH. I guess this can only be properly formulated with a formula
 %Next, we want to investigate if our classifier just memorized its inputs. The most interesting packet features that can be used to visualize this in our use case are the \gls{iat} between packets in a flows and the packet length. To depict how the model comes to a decision, we determined the total minimum and maximum for these features that ever occur for all flows. For a given flow $X$ we then varied feature values at each time step between minimum and maximum and plot how the confidence changes when the feature varies (\autoref{fig:pred_plots2}) depict the averaged predictions for different attack families.
 
 Furthermore, it seems clear that the classifier did not just memorize the inputs but actually learned appropriate space representations, as there is always a smooth decrease of confidence when modifying feature values. When memorizing, we would  instead expect a sharp decline of confidence. % to occur. 
@@ -695,8 +698,12 @@ Furthermore, it seems clear that the classifier did not just memorize the inputs
 \caption{\gls{iat} and packet length for SSH brute-force attacks in CIC-IDS-2017.}% The solid line shows the median value of the feature for all flows of a specific attack type. The shaded region are the first and third quartile.} % think legend is enough for unterstanding
 \label{fig:plot_features}
 \end{figure}
-
-Looking at the plots of the features that vary over time (\autoref{fig:plot_features}) we see that certain attack types have a characteristic pattern in which they send packets by which they are easily recognizable. We want to determine how the pattern of packet sizes and \glspl{iat} is significant for the classification. \autoref{fig:plot_features} clearly shows that some attack types have very characteristic patterns of packet sizes and \glspl{iat}.
+Finally, we investigated whether our classification task involves recognizing complex patterns in the feature space.
+As example, \autoref{fig:plot_features} shows that
+%Looking at the plots of the features that vary over time (\autoref{fig:plot_features}) we see that certain 
+attack types indeed have a characteristic pattern in which they send packets by which they are easily recognizable.
+Other attack families similarly show characteristic patterns.
+%We want to determine how the pattern of packet sizes and \glspl{iat} is significant for the classification. \autoref{fig:plot_features} clearly shows that some attack types have very characteristic patterns of packet sizes and \glspl{iat}.
 
 \section{Defences}
 We now propose two approaches to increase robustness of the \gls{rnn} against adversarial attacks.
