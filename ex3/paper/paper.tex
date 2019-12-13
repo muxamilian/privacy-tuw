@@ -645,10 +645,18 @@ it becomes apparent that traffic destined to a high source port is generally ind
 \subsection{Plots for Sequences}
 
 As apparent from the above discussion, trying to explain how packet features influence the model's predictions, poses various difficulties. As a first step to explaining our model's predictions, we investigate how important features at different time steps are for the model's decisions. Intuitively, features at the beginning of a flow should be the most important while the model's predictions should not vary significantly anymore, as soon as the model has come to a decision.
+$X=\{\boldsymbol X^1, \ldots, \boldsymbol X^m\}$
+
+\begin{align}
+\begin{split} \label{eq:pdp_conditional}
+&\text{PDP}_{c,i}(t,w)= \\ &\mathbb E_{X | C} \Big(f \left(h_{t-1}( X), X_1^t,\ldots,X_{i-1}^t,w,X_{i+1}^t,\ldots X_n^t \right) | c\Big),
+\end{split}
+\end{align}
 
 \begin{figure}
 %\includegraphics[width=0.48\textwidth]{{"../plots/plot/flows_pred_plots2_outcomes_0_3.pickle_5_DoS - DDoS-DoS Hulk"}.pdf}
-\includegraphics[width=\columnwidth]{{"../plots/plot/flows_pred_plots2_outcomes_0_3.pickle_6_DoS - DDoS-DoS Slowhttptest"}.pdf}
+\includegraphics[width=\columnwidth]{{"../plots/plot/flows_pred_plots2_outcomes_0_3.pickle_15_All samples"}.pdf}
+% \includegraphics[width=\columnwidth]{{"../plots/plot/flows_pred_plots2_outcomes_0_3.pickle_6_DoS - DDoS-DoS Slowhttptest"}.pdf}
 % \includegraphics[width=0.48\textwidth]{{"../plots/plot/flows_full_no_ttl_pred_plots_outcomes_0_3.pickle_14_Web Attack-XSS"}.pdf}
 % \includegraphics[width=0.48\textwidth]{{"../plots/plot/flows_full_no_ttl_pred_plots_outcomes_0_3.pickle_11_PortScan-PortScan - Firewall off"}.pdf}
 

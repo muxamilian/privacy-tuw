@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 import numpy as np
 import sys
 import os
@@ -9,6 +10,12 @@ import pickle
 
 DIR_NAME = "plots/plot"
 ORDERING = ['', 'Length min', 'IAT min', 'Length max', 'IAT max']
+
+MAX_X = 18
+SHOW_TITLE = False
+
+plt.rcParams["font.family"] = "serif"
+
 
 dataroot_basename = sys.argv[1].split('_')[0]
 
@@ -33,7 +40,22 @@ assert lens_results == lens_indices
 
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 
+all_seqs = []
+all_attacks = []
 for attack_type, seqs in enumerate(results_by_attack_number):
+	if reverse_mapping[attack_type] == 'Normal':
+		all_seqs.extend([ 1-seq for seq in seqs ])
+	else:
+		all_seqs.extend(seqs)
+		all_attacks.extend(seqs)
+	
+reverse_mapping[len(results_by_attack_number)] = 'All samples'
+results_by_attack_number.append(all_seqs)
+reverse_mapping[len(results_by_attack_number)] = 'All attacks'
+results_by_attack_number.append(all_attacks)
+	
+for attack_type, seqs in enumerate(results_by_attack_number):
+	print (attack_type, reverse_mapping[attack_type], len(seqs))
 	if len(seqs) <= 0:
 		continue
 
@@ -50,6 +72,9 @@ for attack_type, seqs in enumerate(results_by_attack_number):
 		for seq in seqs:
 			if len(seq) < i+1:
 				break
+				
+			if len(seq.shape) == 1:
+				seq = seq[:,None]
 
 			values_by_length[i].append(seq[i:i+1,:])
 
@@ -64,6 +89,8 @@ for attack_type, seqs in enumerate(results_by_attack_number):
 	# stds = np.array([np.std(item, axis=0) for item in values_by_length])
 	first_quartiles = np.array([np.quantile(item, 0.25, axis=0) for item in values_by_length])
 	third_quartiles = np.array([np.quantile(item, 0.75, axis=0) for item in values_by_length])
+	tens_percentiles = np.array([np.quantile(item, 0.1, axis=0) for item in values_by_length])
+	ninetieth_percentiles = np.array([np.quantile(item, 0.9, axis=0) for item in values_by_length])
 
 	# print(medians.shape, first_quartiles.shape, third_quartiles.shape)
 	# quit()
@@ -72,16 +99,17 @@ for attack_type, seqs in enumerate(results_by_attack_number):
 	# print("values_by_length", [item.shape for item in values_by_length])
 	lens = [item.shape[0] for item in values_by_length]
 
-	fig, ax1 = plt.subplots()
+	fig, ax1 = plt.subplots(figsize=(5,2.5))
 	# print("lens", lens)
-	ret = ax1.bar(range(len(lens)), lens, width=1, color="gray", alpha=0.2, label="number of samples")
+	x_values = list(range(min(len(lens), MAX_X)))
+	ret = ax1.bar(x_values, lens[:MAX_X], width=1, color="gray", alpha=0.2, label="number of samples")
 	# print("ret", ret)
-	all_legends.append(ret)
+	#  all_legends.append(ret)
 
 	ax2 = ax1.twinx()
 
 	ax2.set_ylabel('Confidence')
-	ax1.set_ylabel("number of flows")
+	ax1.set_ylabel("Occurrence frequency")
 
 	ax1.yaxis.tick_right()
 	ax1.yaxis.set_label_position("right")
@@ -91,8 +119,11 @@ for attack_type, seqs in enumerate(results_by_attack_number):
 	# for i in range(medians.shape[1]):
 	for i in range(1):
 		# print("i", i)
-		ret = ax2.plot(medians[:,i], color=colors[i], label="median")
-		ret2 = ax2.fill_between(range(medians.shape[0]), first_quartiles[:,i], third_quartiles[:,i], alpha=0.5, edgecolor=colors[i], facecolor=colors[i], label="1st and 3rd quartile")
+		ret = ax2.plot(medians[:MAX_X,i], color=colors[i], label="Median")
+
+		ret2 = ax2.fill_between(x_values, first_quartiles[:MAX_X,i], third_quartiles[:MAX_X,i], alpha=0.5, edgecolor=colors[i], facecolor=colors[i], label="1st and 3rd quartile")
+		plt.autoscale(False)
+		ret3 = ax2.fill_between(x_values, tens_percentiles[:MAX_X,i], ninetieth_percentiles[:MAX_X,i], alpha=0.2, edgecolor=colors[i], facecolor=colors[i], label="10th and 90th percentile")
 		# legend = ORDERING[i:i+1]*2
 		# # legend = ORDERING[i:i+1]
 		# legend[0] = " median"
@@ -101,13 +132,20 @@ for attack_type, seqs in enumerate(results_by_attack_number):
 		# print("legend", legend)
 		all_legends += ret
 		all_legends.append(ret2)
+		all_legends.append(ret3)
 
 	all_labels = [item.get_label() for item in all_legends]
-	ax1.legend(all_legends, all_labels)
+	ax1.legend(all_legends, all_labels, loc='upper right', bbox_to_anchor=(1,0.95))
+	#  plt.ylim((min(first_quartiles), max(third_quartiles)))
+	
+	ax2.set_ylabel_legend(all_legends[0])
+	ax1.set_ylabel_legend(Rectangle((0,0), 1, 1, fc='gray', alpha=0.2), handlelength=1)
 
-	plt.title(reverse_mapping[attack_type])
+	if SHOW_TITLE:
+		plt.title(reverse_mapping[attack_type])
 	# plt.legend(all_legends)
 	ax1.set_xlabel('Sequence index')
+	plt.xlim((-0.5,max(x_values)+0.5))
 	plt.tight_layout()
 	# plt.xticks(range(medians.shape[0]))
 	#plt.savefig('%s.pdf' % os.path.splitext(fn)[0])
