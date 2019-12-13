@@ -86,7 +86,8 @@ def adv_results():
 
 def ars():
 	plt.figure(figsize=(5,2))
-	plt.plot(group_names, values)
+	x_values = [ float(value) for value in group_names ]
+	plt.plot(x_values, values)
 	plt.legend(feature_names, ncol=2)
 	plt.xlabel('Training duration in epochs')
 	plt.ylabel('ARS')
@@ -107,7 +108,7 @@ def adv():
 	plt.gca().set_ylabel_legend(Line2D([0],[0], color='gray', linestyle='--'), handlelength=1.4)
 	plt.legend(lines, ['CIC-IDS-2017', 'UNSW-NB15'])
 	ylim1,ylim2 = plt.ylim()
-	plt.ylim((ylim1,12))
+	plt.ylim((ylim1,11))
 	#  plt.ylim((ylim1,ylim2+20)) # move plots away from legend
 	plt.tight_layout()
 
