@@ -1215,10 +1215,10 @@ def adv_until_less_than_half():
 				lower_part = correct_indices[:int(math.ceil(len(distances)*min(1-ratio, THRESHOLD)))]
 
 				distances_per_packet = [dist/len(flow) for dist, flow in zip(distances[lower_part], prev_flows[i][attack_index])]
-				distances_flows[attack_index] = float(np.mean(distances[lower_part]))
-				max_distance_flows[attack_index] = float(distances[lower_part[-1]])
-				distances_packets[attack_index] = float(distances_per_packet)
-				max_distance_packets[attack_index] = float(distances_per_packet[-1])
+				distances_flows[attack_index] = float(np.mean(distances[lower_part]) if len(lower_part) else np.nan)
+				max_distance_flows[attack_index] = float(distances[lower_part[-1]] if len(lower_part) else np.nan)
+				distances_packets[attack_index] = float(np.mean(distances_per_packet) if len(distances_per_packet) else np.nan)
+				max_distance_packets[attack_index] = float(distances_per_packet[-1] if len(distances_per_packet) else np.nan)
 
 	for attack_index in range(len(distances_packets)):
 		if len(orig_results[attack_index]) <= 0:
