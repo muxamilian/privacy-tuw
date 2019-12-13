@@ -436,8 +436,8 @@ Such a method should be easy to compute and easy to interpret. We thus propose t
 The result is a number of adversarial samples (more than half in the ideal case) and some that could not be made adversarial. For example, if in total, there are 100 samples, there might be 54 which could be made adversarial. Out of these 54, the 50 with the smallest distance to the original samples are taken. Of these samples, the distance of each adversarial sample to the original sample is taken and averaged over all 50 samples. The resulting average distance is the \gls{ars}. The larger it is the better since then an adversary needs to modify the samples more to make them adversarial. If not more then half of the samples could be made adversarial, our metric is undefined since then apparently it is not possible for an adversary conduct adversarial attacks on the majority of samples.
 
 Setting the threshold for the \gls{ars} to 50\% is arbitrary, but
- reasonable as this way the \gls{ars} approximates the median of the distances of all samples and, additionally, marks the distance where an adversarial attack is more likely to be successful than unsuccessful.
-%we think that it is reasonable since if an attacker can make the majority of samples adversarial, we think that its attack is ``successful''.
+ % reasonable as this way the \gls{ars} approximates the median of the distances of all samples and, additionally, marks the distance where an adversarial attack is more likely to be successful than unsuccessful.
+we think that it is reasonable since if an attacker can make the majority of samples adversarial, we think that its attack is ``successful''.
 
 \todo{Insert results}
 
