@@ -87,15 +87,16 @@ firstname.lastname@tuwien.ac.at}}
 
 \begin{abstract}
 
-\glspl{rnn} yield attractive properties for performing intrusion detection on network data.
-However, with the rise of ubiquitous \gls{ml} systems, malicious actors have been catching up quickly to find new ways to exploit \gls{ml} for profit. Recently developed \gls{aml} techniques focus on computer vision and their applicability to network traffic is not straightforward: Network packets expose fewer features than an image, are sequential and impose several constraints on their features. For example, destination ports cannot be modified since that could impair communication.
+\glspl{rnn} yield attractive properties for %performing intrusion detection on network data.
+constructing \glspl{ids} for network data.
+However, with the rise of ubiquitous \gls{ml} systems, malicious actors have been catching up quickly to find new ways to exploit \gls{ml} for profit. Recently developed adversarial \gls{ml} techniques focus on computer vision and their applicability to network traffic is not straightforward: Network packets expose fewer features than an image, are sequential and impose several constraints on their features. %For example, destination ports cannot be modified since that could impair communication.
 
 We show that despite these completely different characteristics, adversarial samples can be reliably generated for \glspl{rnn}.
-Since traditional evaluation metrics such as accuracy are not sufficient for quantifying the adversarial threat, we propose the \gls{ars}. %as a countermeasure. % AH. the score alone is not yet a countermeasure 
-To understand a classifier's potential for misclassification, we extend existing explainability techniques and propose new ones, particularly suitable % specifically crafted %AH most can also be used for non-sequential models, so lets not restrict applicability too much
-for sequential data. Applying them shows that already the first packets of a communication flow are of crucial importance and are likely going to be targeted by attackers. Feature importance methods show that even relatively unimportant features can be effectively abused to generate adversarial samples.
-As a countermeasure, we develop an easy-to-use adversarial training procedure %and can confirm that it
-which significantly and successfully reduces the attack surface and improves \gls{ars}.
+To understand a classifier's potential for misclassification, we extend existing explainability techniques and propose new ones, suitable particularly % specifically crafted %AH most can also be used for non-sequential models, so lets not restrict applicability too much
+for sequential data. Applying them shows that already the first packets of a communication flow are of crucial importance and are likely to be targeted by attackers. Feature importance methods show that even relatively unimportant features can be effectively abused to generate adversarial samples.
+Since traditional evaluation metrics such as accuracy are not sufficient for quantifying the adversarial threat, we propose the \gls{ars} for comparing \glspl{ids}, capturing a common notion of adversarial robustness, and show that an adversarial training procedure can significantly and successfully reduce the attack surface.% and improve \gls{ars}. %as a countermeasure. % AH. the score alone is not yet a countermeasure 
+%As a countermeasure, we develop an easy-to-use adversarial training procedure %and can confirm that it
+%which significantly and successfully reduces the attack surface and improves \gls{ars}.
 
 \end{abstract}
 
@@ -115,17 +116,18 @@ which significantly and successfully reduces the attack surface and improves \gl
 
 \section{Introduction}
 
-There is a significant body of scientific work focusing on the detection of unwanted behavior in networks. In the past, a viable way of performing intrusion detection was to inspect the content of packets themselves and detect if a packet delivers potentially harmful content. More recently, with the rise of omnipresent encryption, available features have changed. Since payload is no longer avilable, the focus now lies on features that are always available to network monitoring equipment such as port numbers, protocol flags, packet size etc. 
+There is a significant body of scientific work focusing on the detection of unwanted behavior in networks. In the past, a viable way of performing intrusion detection was to inspect the content of packets themselves and detect if a packet delivers potentially harmful content. More recently, with the rise of omnipresent encryption, available features have changed. Since payload is no longer available, the focus now lies on features that are always available to network monitoring equipment such as port numbers, protocol flags or packet sizes. 
 
-Network communication is usually grouped into \textit{flows}, which are commonly defined as a sequence of packets sharing certain properties, between two applications that may be located at different physical locations.
+Network communication is usually grouped into \textit{flows}, which are commonly defined as a sequence of packets sharing certain properties, between two applications potentially being located at different physical locations.
 When analyzing flows, not only the aforementioned features are available but also features related to the timing of the individual packets. % as well as their size. %AH: don't see why pkt size is not available without flows
-For example, a specific attack might require the attacker to send three small packets and the victim to reply with two large packets followed by a small one to the attacker. Various approaches have been proposed to extract features from flows and then perform anomaly detection with the extracted flows \cite{meghdouri_analysis_2018}.
+%For example, a specific attack might require the attacker to send three small packets and the victim to reply with two large packets followed by a small one to the attacker.
+Various approaches have been proposed to extract features from flows and then perform anomaly detection with the extracted flows \cite{meghdouri_analysis_2018}.
 While these approaches frequently work well, it is problematic that the whole flow has to be received first and only afterwards an anomaly can be detected. Thus, we design a network \gls{ids} that operates on a per-packet basis and decides if a packet is anomalous based on features that are available even for traffic that is encrypted above the transport layer, like for example TLS or QUIC.
 At the same time, an \gls{rnn}-based \gls{ids} has the benefit of avoiding tedious feature selection procedures while providing any available information to the classifier.
 We show that our system has similar performance to other flow-based anomaly detection systems but can commonly detect anomalies \textit{before} the flow is over. 
 
-With the recent rise of interest in \gls{aml} techniques, also \gls{aml} for \glspl{ids} has been investigated. For example, \cite{bachl_walling_2019} investigates remedies for poisoning attacks on \glspl{ids}.
-In this research, we investigate whether adversarial samples can be found for our \gls{rnn}-based model. This is not a trivially answerable question since adversarial samples have mostly been analyzed in the context of computer vision. Our scenario significantly deviates from this in several ways because \begin{enumerate*}
+However, for practical use, high accuracy is not enough. With the recent rise of interest in \gls{aml} techniques, also \gls{aml} for \glspl{ids} has been investigated. For example, \cite{bachl_walling_2019} investigates remedies for poisoning attacks on \glspl{ids}.
+In this research, we investigate whether adversarial samples can be found for our \gls{rnn}-based model, i.e. minimally different attack flows which are classified as benign. This is not a trivially answerable question since adversarial samples have mostly been analyzed in the context of computer vision. Our scenario significantly deviates from this in several ways because \begin{enumerate*}
 \item the number of features is significantly smaller and
 \item only certain features can be manipulated by an adversary (for example the destination port cannot be manipulated)
 \end{enumerate*}.
@@ -135,14 +137,21 @@ Thus, we argue that traditional methods like, e.g., accuracy are not sufficient 
 We propose the \acrfull{ars} as a new performance score, which precisely captures the notion of how easily an adversary can generate adversarial samples. 
 
 In practice, a further crucial requirement for \gls{ml}-based \glspl{ids} 
-is that the classifiers decisions can be interpreted, recently giving rise to increasing interest in explainability methods. Also in this case, common methods are designed to work with images or tabular data but not with sequences. Hence, we extend existing explainability methods such as \glspl{pdp} \cite{friedman_greedy_2001} for sequential data. These show the varying characteristics of different attacks and they aid with visualizing potentially vulnerable features for adversaries.
-Astonishingly, feature importance methods reveal that the manipulable features, that are left for modification by adversaries are not even particularly significant for the classification outcome. %Especially the first packets of a flow are critical for determining the decision of a recurrent \gls{ids}. 
+is that the classifier's decisions are interpretable, recently giving rise to increasing interest in explainability methods. Also in this case, common methods are designed to work with images or tabular data but not with sequences. Hence, we extend existing explainability methods such as \glspl{pdp} \cite{friedman_greedy_2001} for sequential data. %These show the varying characteristics of different attacks and they aid with visualizing potentially vulnerable features for adversaries.
+Astonishingly, feature importance methods reveal that
+features manipulable for adversarial flows,
+%the that are manipulable features, that are left for modification by adversaries
+are not even particularly important for the \gls{rnn}'s classification outcome. %Especially the first packets of a flow are critical for determining the decision of a recurrent \gls{ids}. 
 
 %Since common explainability methods are designed to work with images or tabular data but not sequences, we extend existing explainability methods such as \glspl{pdp} \cite{friedman_greedy_2001} for sequential data. These show the varying characteristics of different attacks and they aid with visualizing potentially vulnerable features for adversaries.
 
 Based on the insights gained by the feature importance and explainability methods, we propose two defence methods.
 %develop a simple method for defending against adversaries who can manipulate arbitrary packets by simply leaving out potentially manipulable information from the classification process.
-On the one hand, by simply leaving out manipulable features, we obtain a classifier which is slightly less accurate but is still useful to be deployed in a real scenario. Furthermore, we develop a custom adversarial training procedure which especially focuses on ease of use and low resource consumption and aims to keep the number of additionally introduced training hyperparameters low. With this novel strategy we can reduce the attack surface and harden the resulting \gls{ids} while retaining similar classification performance. % like for the original \gls{ml} model. 
+On the one hand, by simply leaving out manipulable features, we obtain a classifier which is slightly less accurate but is still useful to be deployed in a real scenario. Furthermore, 
+by deploying an adversarial training procedure,
+%AH. compared to other research about adversarial training, I dont feel that out approach is so special
+%develop a custom adversarial training procedure which especially focuses on ease of use and low resource consumption and aims to keep the number of additionally introduced training hyperparameters low. With this novel strategy
+we can reduce the attack surface and harden the resulting \gls{ids} while retaining similar classification performance. % like for the original \gls{ml} model. 
 
 \section{An \gls{rnn}-based classifier}
 
@@ -257,7 +266,7 @@ Youden	&	0.972	&	0.990	&	0.873	&	0.719	\\
 
 \section{Adversarial attacks}
 \label{sec:adv}
-We now investigate whether known \gls{aml} methods can be used for generating adversarial flows, i.e. minimally different attack flows which are classified as benign, for our \gls{rnn}.
+We now investigate whether known \gls{aml} methods can be used for generating adversarial flows for our \gls{rnn}..
 % In our scenario, most features such as, e.g., \gls{tcp} flags cannot be easily manipulated because their manipulation might violate the \gls{tcp} and thus cause communication to fail.
 % Hence, we experiment whether by manipulating the \glspl{iat} and packet lengths of the first packets, the classifier might be fooled.
 % Our scenario is quite different from how generating adversarial samples usually works: We have significantly less features than in, for example, an image. Furthermore, only two out of those few features can be manipulated. And even these features cannot be manipulated freely: Besides the constraints that packet size and \gls{iat} cannot become negative there are also more problem-specific constraints:
@@ -655,7 +664,8 @@ To determine if this hypothesis is correct, we plot the attack confidence of the
 %\includegraphics[width=0.48\textwidth]{{"../plots/plot2_adv/flows_pred_plots2_outcomes_flows_adv_1.0_notBidirectional_outcomes_0_3.pickle_0_3.pickle_11_PortScan-PortScan - Firewall off"}.pdf}
 %\includegraphics[width=0.48\textwidth]{{"../plots/plot2_adv/flows_pred_plots2_outcomes_flows_adv_1.0_notBidirectional_outcomes_0_3.pickle_0_3.pickle_1_Brute Force-FTP-Patator"}.pdf}
 
-\caption{Exemplary PD plot and adversarial flows for the DoS Slowloris attack in CIC-IDS-2017. The solid line shows the mean value of the feature for all flows of the attack type. The shaded region shows the change in confidence that occurs when the feature is varied. \todo{IAT plot is wrong: There shouldn't be step 0.}}
+\caption{Exemplary PD plot and adversarial flows for the DoS Slowloris attack in CIC-IDS-2017. The solid line shows the mean value of the feature for all flows of the attack type. The shaded region shows the change in confidence that occurs when the feature is varied.}
+%\todo{IAT plot is wrong: There shouldn't be step 0.} %AH. guess this is fine now
 \label{fig:pred_plots2}
 \end{figure}
 
