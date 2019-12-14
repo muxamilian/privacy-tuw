@@ -1153,7 +1153,7 @@ def adv():
 	list(adv_internal(False))
 
 def adv_until_less_than_half():
-	MAX = 100
+	MAX = 10
 	SCALING = 0.5
 	THRESHOLD = 0.5
 	i = 0
