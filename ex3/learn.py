@@ -1197,7 +1197,9 @@ def adv_until_less_than_half():
 
 	reverse_mapping = {v: k for k, v in mapping.items()}
 	distances_packets = [None]*len(orig_results)
+	max_distance_packets = [None]*len(orig_results)
 	distances_flows = [None]*len(orig_results)
+	max_distance_flows = [None]*len(orig_results)
 	final_ratios = [None]*len(orig_results)
 	for i in range(len(prev_results)):
 		for attack_index, ratio in enumerate(prev_ratios[i]):
@@ -1213,8 +1215,10 @@ def adv_until_less_than_half():
 				lower_part = correct_indices[:int(math.ceil(len(distances)*min(1-ratio, THRESHOLD)))]
 
 				distances_per_packet = [dist/len(flow) for dist, flow in zip(distances[lower_part], prev_flows[i][attack_index])]
-				distances_flows[attack_index] = float(np.mean(distances[lower_part]))
-				distances_packets[attack_index] = float(np.mean(distances_per_packet))
+				distances_flows[attack_index] = float(np.mean(distances[lower_part]) if len(lower_part) else np.nan)
+				max_distance_flows[attack_index] = float(distances[lower_part[-1]] if len(lower_part) else np.nan)
+				distances_packets[attack_index] = float(np.mean(distances_per_packet) if len(distances_per_packet) else np.nan)
+				max_distance_packets[attack_index] = float(distances_per_packet[-1] if len(distances_per_packet) else np.nan)
 
 	for attack_index in range(len(distances_packets)):
 		if len(orig_results[attack_index]) <= 0:
@@ -1225,7 +1229,9 @@ def adv_until_less_than_half():
 			"flow_accuracy", np.mean(np.round(numpy_sigmoid(np.array([item[-1] for item in orig_results[attack_index]])))),
 			"packet_accuracy", np.mean(np.round(numpy_sigmoid(np.array([sublist for l in orig_results[attack_index] for sublist in l])))),
 			"flow_distance", distances_flows[attack_index] if ratio <= THRESHOLD else 0,
-			"packet_distance", distances_packets[attack_index] if ratio <= THRESHOLD else 0
+			"packet_distance", distances_packets[attack_index] if ratio <= THRESHOLD else 0,
+			"max_flow_distance", max_distance_flows[attack_index] if ratio <= THRESHOLD else 0,
+			"max_packet_distance", max_distance_packets[attack_index] if ratio <= THRESHOLD else 0
 		)
 
 def eval_nn(data):

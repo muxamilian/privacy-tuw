@@ -62,26 +62,32 @@ def adv_results():
 	plt.figure(figsize=(5,3))
 	values = np.reshape(values, (-1,values.shape[1]//2,2))
 
-	order = np.argsort(np.mean(values[:,:,1], axis=1))
+	order = (2+np.argsort(np.mean(values[2:,:,1], axis=1))).tolist()
+	order = [0, 1] + order
 	width = 0.95 / values.shape[1]
 
-	x = np.arange(len(group_names))
+	x = np.arange(len(group_names), dtype=float)
+	x[:2] -= .5
 	for i in range(values.shape[1]):
 		plt.bar(x +width*i, values[order,i,1], width, color='gray', alpha=.5, **({'label': 'Original'} if i==0 else {}))
 	for i in range(values.shape[1]):
 		plt.bar(x +width*i, values[order,i,0], width, color=colors[i], label=feature_names[i*2].rstrip(' adv'))
 	plt.legend(loc='lower center', bbox_to_anchor=(0.5,1), ncol=4)
 	plt.xticks(x + width*values.shape[1]/2-width*0.5, [group_names[i] for i in order], rotation=45, horizontalalignment='right')
+	for i,label in  enumerate(plt.gca().get_xticklabels()):
+		if i < 2:
+			label.set_fontweight('bold')
 	for tick in plt.gca().xaxis.get_major_ticks():
 		label = tick.label1
 		label.set_transform(label.get_transform() + Affine2D().translate(8,0))
-	plt.ylabel('Accuracy')
+	plt.ylabel('Recall')
 	plt.tight_layout()
 
 
 def ars():
 	plt.figure(figsize=(5,2))
-	plt.plot(group_names, values)
+	x_values = [ float(value) for value in group_names ]
+	plt.plot(x_values, values)
 	plt.legend(feature_names, ncol=2)
 	plt.xlabel('Training duration in epochs')
 	plt.ylabel('ARS')
@@ -93,15 +99,16 @@ def adv():
 	plt.figure(figsize=(5,2))
 	x_values = [ float(value) for value in group_names ]
 	lines = plt.plot(x_values, values[:,:2])
-	plt.xlabel('Tradeoff')
+	plt.xlabel('Tradeoff $\epsilon$')
 	plt.ylabel('Success ratio')
-	plt.gca().set_ylabel_legend(Line2D([0],[0], color='gray'))
+	plt.gca().set_ylabel_legend(Line2D([0],[0], color='gray'), handlelength=1.4)
 	plt.twinx()
 	plt.plot(x_values, values[:,2:], linestyle='--')
 	plt.ylabel('$\ell_1$ distance')
-	plt.gca().set_ylabel_legend(Line2D([0],[0], color='gray', linestyle='--'))
+	plt.gca().set_ylabel_legend(Line2D([0],[0], color='gray', linestyle='--'), handlelength=1.4)
 	plt.legend(lines, ['CIC-IDS-2017', 'UNSW-NB15'])
-	#  ylim1,ylim2 = plt.ylim()
+	ylim1,ylim2 = plt.ylim()
+	plt.ylim((ylim1,11))
 	#  plt.ylim((ylim1,ylim2+20)) # move plots away from legend
 	plt.tight_layout()
 

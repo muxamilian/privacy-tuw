@@ -51,7 +51,7 @@ adv_orig_flows_by_attack_number = adv_loaded["orig_flows_by_attack_number"]
 
 colors = plt.rcParams['axes.prop_cycle'].by_key()['color']
 ORDERING = ["original", "adversarial"]
-FEATURE_NAMES = ["Pkt. length [B]", "IAT [s]"]
+FEATURE_NAMES = ["Pkt. length (B)", "IAT (s)"]
 FEATURE_SCALES = [1, 0.001]
 
 def brighten(rgb, how_much=0.0):

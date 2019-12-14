@@ -56,7 +56,7 @@ colors_rgb_ranges = [matplotlib.colors.ListedColormap([brighten(color, item) for
 # print("colors", colors)
 # print("colors_rgb_ranges[0]", colors_rgb_ranges[0])
 # quit()
-FEATURE_NAMES = ["Pkt. length [B]", "IAT [ms]"]
+FEATURE_NAMES = ["Pkt. length (B)", "IAT (ms)"]
 
 for attack_type, (results_by_attack_number_item, flows_by_attack_number_item, result_ranges_by_attack_number_item, sample_indices_by_attack_number_item) in enumerate(zip(results_by_attack_number, flows_by_attack_number, result_ranges_by_attack_number, sample_indices_by_attack_number)):
 
