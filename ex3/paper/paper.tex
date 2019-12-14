@@ -740,26 +740,28 @@ A question which occurs in this process, is how many CPU cycles to spend on netw
 
 For both datasets, after a small number of epochs, it was no longer possible to create a significant number of adversarial samples for most attack categories. %For the datasets we considered, adversarial training left classification performance unaffected.
 %\todo{Max: Insert results that show that accuracy on normal data is still ok after adversarial training.}
-\autoref{tab:adv_training_performance} depicts classification on non-adversarial data after 50 epochs of adversarial training. Accuracy is essentially identical to results presented in \autoref{tab:performance_results}. Due to the higher proportion of attack samples in training data, we note, however, that recall increased at the expense of a slightly lower precision. 
+%\autoref{tab:adv_training_performance} depicts classification on non-adversarial data after 50 epochs of adversarial training.
+After 50 epochs of training, accuracy is essentially identical to results presented in \autoref{tab:performance_results}. Recall and Youden increased and precision slightly decreased. However, this is due to the higher proportion of attack samples in training data.
+We conclude that adversarial training is effective for reducing the attack surface for adversarial attacks in our scenario.
 
 
-\begin{table}
-\caption{Detection performance after adversarial training.} \label{tab:adv_training_performance}
-\todo{Probably no space for table}
-\centering
-\begin{tabular}{l r r r r} \toprule
-& \multicolumn{2}{c}{CIC-IDS-17} & \multicolumn{2}{c}{UNSW-NB-15} \\
-	&	Packet	&	Flow	&	Packet	&	Flow	\\	\midrule
-Accuracy	&	0.991	&	0.997	&	0.994	&	0.981	\\
-Precision	&	0.971	&	0.996	&	0.761	&	0.704	\\
-Recall	&	0.979	&	0.992	&	0.970	&	0.824	\\
-F1	&	0.975	&	0.994	&	0.853	&	0.759	\\
-Youden	&	0.973	&	0.991	&	0.965	&	0.811	\\
+% \begin{table}
+% \caption{Detection performance after adversarial training.} \label{tab:adv_training_performance}
+% \todo{Probably no space for table}
+% \centering
+% \begin{tabular}{l r r r r} \toprule
+% & \multicolumn{2}{c}{CIC-IDS-17} & \multicolumn{2}{c}{UNSW-NB-15} \\
+	% &	Packet	&	Flow	&	Packet	&	Flow	\\	\midrule
+% Accuracy	&	0.991	&	0.997	&	0.994	&	0.981	\\
+% Precision	&	0.971	&	0.996	&	0.761	&	0.704	\\
+% Recall	&	0.979	&	0.992	&	0.970	&	0.824	\\
+% F1	&	0.975	&	0.994	&	0.853	&	0.759	\\
+% Youden	&	0.973	&	0.991	&	0.965	&	0.811	\\
 
 
-\bottomrule
-\end{tabular}
-\end{table}
+% \bottomrule
+% \end{tabular}
+% \end{table}
 
 % AH. guess this is no longer true
 %However, against our expectations, this approach did not lead to satisfactory results in the sense that the network would learn to classify adversarial samples as attacks. In fact, classification accuracy stayed about constant during the training of the network.
