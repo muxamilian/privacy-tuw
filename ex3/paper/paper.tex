@@ -434,7 +434,7 @@ As \autoref{fig:adv_per_family} shows, for most attack types, most samples can b
 Such a metric should be easy to compute, easy to interpret and robust with respect to outliers.  We thus propose the \gls{ars}, as the average of the lower half  of minimum distances of adversarial samples. Since \gls{cw} is able to find adversarial samples with minimum distance, the \gls{ars} can 
   be found efficiently as follows: Use \gls{cw} with a small tradeoff to try to generate adversarial samples for an attack type. If more than half of the samples are now wrongly classified, stop. Otherwise increase the tradeoff of \gls{cw} and repeat. If after a predefined number of iterations -- e.g. 100 -- still not more than half of the samples are adversarial, also break. 
 
-\todo{Alex: I think this is quite technical curretnly and can be shortened a bit}
+\todo{Alex: I think this is quite technical curretnly and can be shortened a bit, if necessary}
 The result is a number of adversarial samples (more than half in the ideal case) and some that could not be made adversarial. For example, if in total, there are 100 samples, there might be 54 which could be made adversarial. Out of these 54, the 50 with the smallest distance to the original samples are taken. Of these samples, the distance of each adversarial sample to the original sample is taken and averaged over all 50 samples. The resulting average distance is the \gls{ars}. The larger it is the better since then an adversary needs to modify the samples more to make them adversarial. If not more then half of the samples could be made adversarial, our metric is undefined since then apparently it is not possible for an adversary conduct adversarial attacks on the majority of samples.
 
 Setting the threshold for the \gls{ars} to 50\% is arbitrary, but
@@ -541,7 +541,6 @@ When investigating an \gls{ml} classifier, it is natural to ask which inputs hav
 A large amount of research has been spent on finding \emph{feature importance} metrics, which allow the selection  of high-importance features, providing a reasonably good classification performance while resulting in a more light-weight classifier.
 
 On the other hand, both adversarial machine learning and explainable machine learning bring up the question to what extent individual features are able to change the prediction outcome. While being seemingly similar at first sight, traditional feature importance can yield markedly wrong results for this case.  To distinguish, we propose the term \emph{feature sensitivity} for such metrics.
-
 To analyze features for our network, we use the following approaches.
 
 \subsubsection{Neural Network Weights}
@@ -560,20 +559,26 @@ The \gls{rnn} was never trained for dealing with ``garbage'' values that the ran
  
 %We think that the ``ideal'' feature importance method for our scenario are Shapley values \cite{shapley_value_1953}: To analyze feature importance with them, the feature under investigation is completely omitted from the dataset and a model is trained without it. The resulting accuracy is then compared to the baseline accuracy with all features. The effort required to do this is high both in terms of storage space as well as training time since for $n$ features $n$ models need to be separately trained and stored. While this seems tractable, when also analyzing the feature importance of combinations of features, the number of models required becomes even larger: Out of $n$ features, $2^n$ unique subsets can be chosen, meaning that the computational demand rises exponentially. 
 
-We thus develop a more sound method compared to input perturbation called \textit{feature dropout}: When training a model, for each sample, we leave out each feature with a certain probability by setting it to zero. On average, one feature gets zeroed out but it is also possible that none or more than one are left out. This procedure is equivalent to using dropout \cite{srivastava_dropout:_2014} with probability $\frac{1}{n}$ before the first layer.
+To evaluate true feature importance, we thus develop a more sound method %compared to input perturbation
+called \textit{feature dropout}: When training a model, for each sample, we leave out each feature  with independent probability $\frac{1}{n}$, $n \in \mathbb N$ being the number of features, by setting it to zero. On average, one feature gets zeroed out but it is also possible that none or more than one are left out. This procedure is equivalent to using dropout \cite{srivastava_dropout:_2014} with probability $\frac{1}{n}$ before the first layer.
 
-An important implementation detail is that for each feature we add another input which is 1 if the feature is suppressed and 0 otherwise. This is necessary so that the neural network can distinguish between a feature missing and a feature genuinely being zero. The overall outcome is a classifier being able to deal with missing features. As it can also happen that several features are left out for a sample, our method can also be used to analyze the effect of multiple features missing and can thus show possibly correlated features. The results in \autoref{fig:feat_imp} show that, unlike input perturbation, feature dropout  does not vastly overestimate features' importance. With feature dropout, it becomes apparent that only very few features  actually contain unique information, affecting accuracy when left out: the destination port and the source port.
+An important implementation detail is that for each feature we add another input which is 1 if the feature is suppressed and 0 otherwise. This is necessary for the neural network to be able to distinguish between a feature missing and a feature genuinely being zero. The overall outcome is a classifier being able to deal with missing features.
+The results in \autoref{fig:feat_imp} show that, unlike input perturbation, feature dropout  does not vastly overestimate features' importance. With feature dropout, it becomes apparent that only very few features  actually contain unique information, affecting accuracy when left out: the destination port and the source port.
 
 A model trained with feature dropout typically yields slightly lower accuracy than a regularly trained model, even if no features are left out (flow accuracy of 0.9943 vs.~0.9965). We thus recommend training two models: One regular one and one with feature dropout to use for the feature importance.
 
 Another method that uses dropout for feature importance is \cite{chang_dropout_2017}, applying a technique called \textit{Variational Dropout} to learn the optimal dropout rate for each feature. It tries to leave out as many features as possible and at the same time keep accuracy high. Thus important features are going to be left out less often and one can then extract the dropout probabilities for each feature and assess their significance based on them. Feature dropout can also be used as a building block for computing the accuracy of datapoints with missing features that is necessary to compute Shapley values \cite{shapley_value_1953} or KernelSHAP \cite{lundberg_unified_2017}. 
 
-Feature dropout also allows us to find correlated features or -- more general -- features that contain common information: 
-
+As it can also happen that several features are left out for a sample, our method can also be used to analyze the effect of multiple features missing and can thus show possibly correlated features or -- more general -- features that contain common information, relevant for the classification task:
+%Feature dropout also allows us to find correlated features or -- more general -- features that contain common information: 
 \begin{equation}
 \text{score} = \frac{\text{acc}_\text{base}-\text{acc}_\text{-both\_features}}{\left(\text{acc}_\text{base}-\text{acc}_\text{-feature\_1}\right) + \left(\text{acc}_\text{base}-\text{acc}_\text{-feature\_2}\right)}
 \end{equation}
-With $\text{acc}_\text{base}$ we denote the average accuracy of the classifier with all features included, with $\text{acc}_\text{-feature\_i}$ the average accuracy if feature $i$ is omitted and with $\text{acc}_\text{-both\_features}$ the average accuracy if both features are omitted. The higher the resulting number, the larger the information that both features share. If the score is one, this means that both features contain no joint information. For example, the score between RST and the protocol identifier is 8.5; the highest of all pairs of features. While this may seem unintuitive at the first glance, it likely stems from the fact that if the protocol identifier (\gls{tcp} or UDP) is missing, then if RST is 1 at some point of the flow, the flow has to be \gls{tcp}.
+With $\text{acc}_\text{base}$ we denote the average accuracy of the classifier with all features included, with $\text{acc}_\text{-feature\_i}$ the average accuracy if feature $i$ is omitted and with $\text{acc}_\text{-both\_features}$ the average accuracy if both features are omitted. Assuming a non-negative accuracy drop when omitting a feature, the resulting score is $\ge 0.5$. The higher it is, the larger the information that both features share. 
+
+%AH. As it can become <1, I would say it this way
+%If the score is one,  both features contain no joint information.
+For example, the score between RST and the protocol identifier is 8.5; the highest of all pairs of features. While this may seem unintuitive at the first glance, it likely stems from the fact that if the protocol identifier (\gls{tcp} or UDP) is missing, then if RST is 1 at some point of the flow, the flow has to be \gls{tcp}.
 
 \subsubsection{Mutual Information}
 \begin{figure}
@@ -581,7 +586,8 @@ With $\text{acc}_\text{base}$ we denote the average accuracy of the classifier w
 \caption{Two distributions yielding an identical accuracy drop.}
 \label{fig:mutinfo_example}
 \end{figure}
-Input Perturbation has some shortcomings when considering feature sensitivity. Assuming that the test dataset is representative for production use, for feature importance it is reasonable to equate the distribution of the perturbed feature with the feature distribution. On the other hand, when evaluating feature sensitivity, e.g. for analyzing potential for adversarial samples, the attacker is not limited by this distribution and frequently is able to choose arbitrary values in the feature space.
+Input perturbation and feature dropout mainly address feature importance.
+For example, assuming that the test dataset is representative for production use, for feature importance it is reasonable to equate the distribution for perturbing a feature with the feature distribution itself. However, when evaluating feature sensitivity, e.g. for analyzing potential for adversarial samples, the attacker is not limited by this distribution and frequently is able to choose arbitrary values in the feature space.
 
 Furthermore, let $f(A,x)$  denote the joint probability
 %\todo{Max: Ist joint probability nicht immer wenn man mehrere Ereignisse hat? Ich hätte hier probability density function geschrieben...}
@@ -672,9 +678,9 @@ To evaluate this hypothesis, we plot the classifier's prediction confidence for 
 while at the first couple of packets the confidence is not very high, towards the end of the flow it reaches values close to 1 and stays there. Hence, not only is the classifier able to make a reasonable classification after just a few packets, the figure also suggests that indeed later packets have a neglectible influence on the prediction.
 
 For investigating in more detail how features influence the prediction outcome, we extend \glspl{pdp} to the sequential setting. 
-Denoting as $X=\{\boldsymbol X^1, \ldots, \boldsymbol X^m\}$ the series of packet features $\boldsymbol X^t \in \mathbb R^n$ and $h_t(X)$ the network's hidden state at time step $t$, we define the sequential \gls{pdp} as 
+Denoting as $X=\{\boldsymbol X^1, \ldots, \boldsymbol X^m\}$ the series of packet features $\boldsymbol X^t \in \mathbb R^n$ and $h_t(X)$ the network's hidden state after time step $t$, we define the sequential \gls{pdp} as 
 \begin{align}
-\text{PD}&\text{P}_{c,i}(t,w)= \\ &\mathbb E_{X | C} \Big(f \left(h_{t-1}( X), X_1^t,\ldots,X_{i-1}^t,w,X_{i+1}^t,\ldots X_n^t \right) | c\Big). \nonumber 
+\text{se}&\text{qPDP}_{c,i}(t,w)= \\ &\mathbb E_{X | C} \Big(f \left(h_{t-1}( X), X_1^t,\ldots,X_{i-1}^t,w,X_{i+1}^t,\ldots X_n^t \right) | c\Big). \nonumber 
 \end{align}
 
 \autoref{fig:pred_plots2} shows an example together with the mean values for both unmodified samples and adversarial samples. Also in this figure we notice that mainly the first few packets are able to influence the prediction outcome and modifying features at a later time step does not change its confidence any longer. In many cases, the adversarial sample generation indeed moves packet features to areas where the network is less likely to be classified as attacks, confirming the effectiveness of \glspl{pdp}. In other cases, however, we did not observe an agreement between \gls{pdp} and adversarial modifications, hinting at dependencies which cannot be presented by \glspl{pdp}.
@@ -798,7 +804,7 @@ We have implemented a recurrent classifier based on LSTMs to detect network atta
 which can already detect attacks before they are over. Furthermore, the recurrent approach allows us to inspect the influence of single packets on the detection performance and shows which packets are \textit{characteristic} for attacks. 
 Even though the interpretation of \glspl{rnn} poses several difficulties, we have demonstrated methods for gaining insights into the model's functioning.
 
-We showed that even though our use case is very different from computer vision, adversarial samples can be found efficiently, even if only ostensibly unimportant features can be modified. We introduced the \gls{ars} as a new way to quantify the adversarial threat.
+We showed that even though our use case is very different from computer vision, adversarial samples can be found efficiently, even if only ostensibly unimportant features can be modified. We proposed the \gls{ars} for quantifying and comparing the adversarial threat for \glspl{ids}.
 Deploying an adversarial training procedure, we could significantly reduce the adversarial threat.
 
 \section*{Acknowledgements}
