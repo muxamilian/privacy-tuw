@@ -25,8 +25,9 @@ feature_names = values[0]
 group_names = group_names[1:]
 values = values[1:]
 
-#  print (group_names)
-#  print (values)
+print("feature_names", feature_names)
+print("group_names", group_names)
+print("values", values)
 values = np.array(values, dtype=float)
 
 def importance():
@@ -83,6 +84,48 @@ def adv_results():
 	plt.ylabel('Recall')
 	plt.tight_layout()
 
+def ars_original():
+	global group_names
+	global values
+
+	y_labels = [None, "Recall", "Recall", "Distance", "Distance"]
+	value_indices_to_plot = (1,3)
+
+	# plt.figure(figsize=(5,3))
+	values = [[float(item) for item in sublist] for sublist in values]
+
+	index_by_which_to_sort = 1
+	old_len = len(group_names)
+	group_names, values = list(zip(*[(group_name, value) for group_name, value in zip(group_names, values) if value[0] <= 0.5]))
+	# print(f"Dropped {old_len-len(group_names)} elements.")
+	order = list(zip(*sorted(enumerate(values), key=lambda item: item[1][index_by_which_to_sort], reverse=True)))[0]
+	# print("order", order)
+	width = 0.75 / len(value_indices_to_plot)
+
+	values = np.array(values)
+
+	x = np.arange(len(group_names), dtype=float)
+
+	fig, ax1 = plt.subplots(figsize=(5,3))
+	plt.xticks(x + width/2, [group_names[i] for i in order], rotation=45, horizontalalignment='right')
+	for tick in plt.gca().xaxis.get_major_ticks():
+		label = tick.label1
+		label.set_transform(label.get_transform() + Affine2D().translate(8,0))
+	ax2 = ax1.twinx()
+	axes = [ax1, ax2]
+
+	all_labels = []
+	for index, i in enumerate(value_indices_to_plot):
+		label = axes[index].bar(x + width*index, values[order,i], width, color=colors[index], label=feature_names[i])
+		all_labels.append(label)
+		axes[index].set_ylabel(y_labels[i])
+
+	all_legends = [item.get_label() for item in all_labels]
+
+	# plt.legend(all_legends, all_labels, loc="upper right")
+	plt.legend(all_labels, all_legends, loc='lower center', bbox_to_anchor=(0.5,1), ncol=4)
+
+	plt.tight_layout()
 
 def ars():
 	plt.figure(figsize=(5,2))
@@ -94,7 +137,7 @@ def ars():
 	ylim1,ylim2 = plt.ylim()
 	plt.ylim((ylim1,ylim2+20)) # move plots away from legend
 	plt.tight_layout()
-	
+
 def adv():
 	plt.figure(figsize=(5,2))
 	x_values = [ float(value) for value in group_names ]

@@ -1156,6 +1156,7 @@ def adv_until_less_than_half():
 	MAX = 10
 	SCALING = 0.5
 	THRESHOLD = 0.5
+	# FIXME: Max: I guess it should be < THRESHOLD not <= THRESHOLD as it is currently in the code
 	i = 0
 	prev_results = []
 	prev_flows = []
