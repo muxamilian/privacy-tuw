@@ -147,7 +147,7 @@ def adv():
 	plt.gca().set_ylabel_legend(Line2D([0],[0], color='gray'), handlelength=1.4)
 	plt.twinx()
 	plt.plot(x_values, values[:,2:], linestyle='--')
-	plt.ylabel('$\ell_1$ distance')
+	plt.ylabel('$L_1$ distance')
 	plt.gca().set_ylabel_legend(Line2D([0],[0], color='gray', linestyle='--'), handlelength=1.4)
 	plt.legend(lines, ['CIC-IDS-2017', 'UNSW-NB15'])
 	ylim1,ylim2 = plt.ylim()
