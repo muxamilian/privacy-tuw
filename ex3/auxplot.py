@@ -5,6 +5,7 @@
 import fileinput
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib.patches import Rectangle
 import sys
 from matplotlib.transforms import Affine2D
 from matplotlib.lines import Line2D
@@ -88,10 +89,9 @@ def ars_original():
 	global group_names
 	global values
 
-	y_labels = [None, "Recall", "Recall", "Distance", "Distance"]
+	y_labels = [None, "Recall", "Recall", "ARS", "ARS"]
 	value_indices_to_plot = (1,3)
 
-	# plt.figure(figsize=(5,3))
 	values = [[float(item) for item in sublist] for sublist in values]
 
 	index_by_which_to_sort = 1
@@ -101,7 +101,7 @@ def ars_original():
 	# print(f"Dropped {old_len-len(group_names)} elements.")
 	robust_groups = set(orig_group_names)-set(group_names)
 	robust_indices = [orig_group_names.index(item) for item in robust_groups]
-	print("robust attack types:", "; ".join([f"{g}: ratio={v[0]}" for g, v in zip([orig_group_names[index] for index in robust_indices], [orig_values[index] for index in robust_indices])]))
+	print("robust attack types:", "; ".join([f"{g}: orig_flow_recall={v[1]}, adv_flow_recall={v[0]}" for g, v in zip([orig_group_names[index] for index in robust_indices], [orig_values[index] for index in robust_indices])]))
 	order = list(zip(*sorted(enumerate(values), key=lambda item: item[1][index_by_which_to_sort], reverse=True)))[0]
 	# print("order", order)
 	width = 0.75 / len(value_indices_to_plot)
@@ -126,8 +126,13 @@ def ars_original():
 
 	all_legends = [item.get_label() for item in all_labels]
 
-	# plt.legend(all_legends, all_labels, loc="upper right")
-	plt.legend(all_labels, all_legends, loc='lower center', bbox_to_anchor=(0.5,1), ncol=4)
+	# ax1.legend(all_legends, all_labels, loc='upper right', bbox_to_anchor=(1,0.95))
+	#  plt.ylim((min(first_quartiles), max(third_quartiles)))
+
+	ax2.set_ylabel_legend(Rectangle((0,0), 1, 1, fc=colors[1]), handlelength=1)
+	ax1.set_ylabel_legend(Rectangle((0,0), 1, 1, fc=colors[0]), handlelength=1)
+	# ax1.set_ylabel_legend(Rectangle((0,0), 1, 1, fc='gray', alpha=0.2), handlelength=1)
+	# plt.legend(all_labels, all_legends, loc='lower center', bbox_to_anchor=(0.5,1), ncol=4)
 
 	plt.tight_layout()
 
