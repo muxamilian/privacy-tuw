@@ -277,8 +277,9 @@ Except for botnet and backdoor traffic, which is entirely controlled by an attac
 Several \gls{aml} methods have been proposed in the recent literature, achieving different speed-quality tradeoffs: 
 \cite{szegedy_intriguing_2014} shows that it is possible to create adversarial samples for an image, which look similar to the original image but are classified wrongly. \cite{goodfellow_explaining_2015} develops the \gls{fgsm}, which makes easy generation of adversarial samples possible. \cite{papernot_crafting_2016} explores the use of \gls{aml} for \glspl{rnn}, but lacks import \gls{aml} methods, which we consider in this paper.
 
-As finding adversarial flows is particularly difficult in our case, % for the reasons we discussed above,
-we preferred methods  producing high-quality adversarial samples while not being as fast as other methods. We implemented the following \gls{aml} methods.
+% Max: But FGSM is high-speed... So I removed this paragraph altogether
+%As finding adversarial flows is particularly difficult in our case, % for the reasons we discussed above,
+%we preferred methods  producing high-quality adversarial samples while not being as fast as other methods. We implemented the following \gls{aml} methods.
 
 \subsection{Carlini-Wagner}
 We implemented the \gls{cw} \cite{carlini_towards_2017}, performing gradient descent on the optimization objective
@@ -287,7 +288,7 @@ d(X,\tilde X) + \epsilon  \max(Z(\tilde X), \delta).
 \end{equation}
 Here, $d(\cdot)$ is a distance metric and $\epsilon \in \mathbb R^+$ is a parameter governing the tradeoff achieved between attack success and distance from the original flow. Furthermore, $Z(\cdot)$ denotes the neural network's logit output, $X$ denotes the original flow and $\tilde X$ the adversarial flow under optimization.
 
-$\delta \in \mathbb R$ determines the logit output of successful adversarial.
+$\delta \in \mathbb R$ is a parameter that determines how far an adversary wants to go over the decision boundary.
 In the original publication $\delta=0$, which means that the network's decision for adversarial samples is just between attack and normal traffic. In the present context, we need to make sure that the classifier's prediction would actually be normal traffic, even though a certain level of noise will be added to \glspl{iat} due to the network between attacker and victim. Hence, we introduced $\delta=-0.2$, corresponding to a confidence of 55\% for the sample to be benign.
 
 We used $L_1$ norm as distance metric and \gls{pgd} for meeting the real-world constraints discussed above.
@@ -341,7 +342,7 @@ As \autoref{fig:adv_per_family} shows, for most attack types, most samples can b
 
 Such a metric should be easy to compute, easy to interpret and robust with respect to outliers.  We thus propose the \gls{ars}, as the average of the lower half  of minimum distances of adversarial samples. Since \gls{cw} is able to find adversarial samples with minimum distance, the \gls{ars} can be found efficiently as follows: Use \gls{cw} with a small tradeoff to try to generate adversarial samples for an attack type. If more than half of the samples are now wrongly classified, stop. Otherwise increase the tradeoff of \gls{cw} and repeat. If after a predefined number of iterations -- e.g. 100 -- still not more than half of the samples are adversarial, also break. 
 
-The result is a number of adversarial samples and some that could not be made adversarial. If at least half of the samples are misclassified, we take 50\% of the samples, with those that required smaller modifications first. Of these samples, the distance of each adversarial sample to the original sample is taken and averaged. The resulting average distance is the \gls{ars}. The larger it is the better since then an adversary needs to modify the samples more to make them adversarial. If not more then half of the samples could be made adversarial, our metric is undefined since then apparently it is not possible for an adversary to reliably conduct adversarial attacks on the majority of samples. Then the ratio of samples that could be made adversarial (<50\%) can be useful metric to determine the exact extent of the adversarial threat. Setting the threshold for the \gls{ars} to 50\% is arbitrary, but
+The result is a number of adversarial samples and some that could not be made adversarial. If at least half of the samples are misclassified, we take 50\% of the samples, with those that required smaller modifications first. Of these samples, the distance of each adversarial sample to the original sample is taken and averaged. The resulting average distance is the \gls{ars}. The larger it is the better since then an adversary needs to modify the samples more to make them adversarial. If not more then half of the samples could be made adversarial, our metric is undefined since then apparently it is not possible for an adversary to reliably conduct adversarial attacks on the majority of samples. Then the ratio of samples that could be made adversarial ($<$50\%) can be useful metric to determine the exact extent of the adversarial threat. Setting the threshold for the \gls{ars} to 50\% is arbitrary, but
  % reasonable as this way the \gls{ars} approximates the median of the distances of all samples and, additionally, marks the distance where an adversarial attack is more likely to be successful than unsuccessful.
  reasonable as outliers with very large distances are ignored and if an attacker can make the majority of samples adversarial, we think that its attack is ``successful''. 
 %we think that it is reasonable since if an attacker can make the majority of samples adversarial, we think that its attack is ``successful''.
@@ -349,6 +350,7 @@ The result is a number of adversarial samples and some that could not be made ad
 \begin{figure}[h]
 \includegraphics[width=\columnwidth]{../plots/ars_original.pdf}
 \caption{Recall for each attack type and average modification per flow required by an adversary to make a flow appear benign for CIC-IDS-2017.}
+\todo{Show for which attack class not enough adversarial samples could be found.}
 \label{fig:recall_ars}
 \end{figure}
 

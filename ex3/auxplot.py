@@ -96,8 +96,12 @@ def ars_original():
 
 	index_by_which_to_sort = 1
 	old_len = len(group_names)
+	orig_group_names, orig_values = group_names, values
 	group_names, values = list(zip(*[(group_name, value) for group_name, value in zip(group_names, values) if value[0] <= 0.5]))
 	# print(f"Dropped {old_len-len(group_names)} elements.")
+	robust_groups = set(orig_group_names)-set(group_names)
+	robust_indices = [orig_group_names.index(item) for item in robust_groups]
+	print("robust attack types:", "; ".join([f"{g}: ratio={v[0]}" for g, v in zip([orig_group_names[index] for index in robust_indices], [orig_values[index] for index in robust_indices])]))
 	order = list(zip(*sorted(enumerate(values), key=lambda item: item[1][index_by_which_to_sort], reverse=True)))[0]
 	# print("order", order)
 	width = 0.75 / len(value_indices_to_plot)
