@@ -94,7 +94,7 @@ With the rise of ubiquitous \gls{ml} systems, malicious actors have been catchin
 We show that despite these completely different characteristics, adversarial samples can be reliably generated for \glspl{rnn}.
 To understand a classifier's potential for misclassification, we extend existing explainability techniques and propose new ones, suitable particularly % specifically crafted %AH most can also be used for non-sequential models, so lets not restrict applicability too much
 for sequential data. Applying them shows that already the first packets of a communication flow are of crucial importance and are likely to be targeted by attackers. Feature importance methods show that even relatively unimportant features can be effectively abused to generate adversarial samples.
-Since traditional evaluation metrics such as accuracy are not sufficient for quantifying the adversarial threat, we propose the \gls{ars} for comparing \glspl{ids}, capturing a common notion of adversarial robustness, and show that an adversarial training procedure can significantly and successfully reduce the attack surface.% and improve \gls{ars}. %as a countermeasure. % AH. the score alone is not yet a countermeasure 
+Since traditional evaluation metrics such as accuracy are not sufficient for quantifying the adversarial threat, we propose the \gls{ars} for comparing \glspl{ids}, capturing a common notion of adversarial robustness, and show that an adversarial training procedure can significantly and successfully reduce the attack surface.% and improve \gls{ars}. %as a countermeasure. % AH. the score alone is not yet a countermeasure
 %As a countermeasure, we develop an easy-to-use adversarial training procedure %and can confirm that it
 %which significantly and successfully reduces the attack surface and improves \gls{ars}.
 
@@ -116,7 +116,7 @@ Since traditional evaluation metrics such as accuracy are not sufficient for qua
 
 \section{Introduction}
 
-There is a significant body of scientific work focusing on the detection of unwanted behavior in networks. In the past, a viable way of performing intrusion detection was to inspect the content of packets themselves and detect if a packet delivers potentially harmful content. More recently, with the rise of omnipresent encryption, available features have changed. Since payload is no longer available, the focus now lies on features that are always available to network monitoring equipment such as port numbers, protocol flags or packet sizes. 
+There is a significant body of scientific work focusing on the detection of unwanted behavior in networks. In the past, a viable way of performing intrusion detection was to inspect the content of packets themselves and detect if a packet delivers potentially harmful content. More recently, with the rise of omnipresent encryption, available features have changed. Since payload is no longer available, the focus now lies on features that are always available to network monitoring equipment such as port numbers, protocol flags or packet sizes.
 
 Network communication is usually grouped into \textit{flows}, which are commonly defined as a sequence of packets sharing certain properties, between two applications potentially being located at different physical locations.
 When analyzing flows, not only the aforementioned features are available but also features related to the timing of the individual packets. % as well as their size. %AH: don't see why pkt size is not available without flows
@@ -124,7 +124,7 @@ When analyzing flows, not only the aforementioned features are available but als
 Various approaches have been proposed to extract features from flows and then perform anomaly detection with the extracted flows \cite{meghdouri_analysis_2018}.
 While these approaches frequently work well, it is problematic that the whole flow has to be received first and only afterwards an anomaly can be detected. Thus, we design a network \gls{ids} that operates on a per-packet basis and decides if a packet is anomalous based on features that are available even for traffic that is encrypted above the transport layer, like for example TLS or QUIC.
 At the same time, an \gls{rnn}-based \gls{ids} has the benefit of avoiding tedious feature selection procedures while providing any available information to the classifier.
-We show that our system has similar performance to other flow-based anomaly detection systems but can commonly detect anomalies \textit{before} the flow is over. 
+We show that our system has similar performance to other flow-based anomaly detection systems but can commonly detect anomalies \textit{before} the flow is over.
 
 However, for practical use, high accuracy is not enough. With the recent rise of interest in \gls{aml} techniques, also \gls{aml} for \glspl{ids} has been investigated. For example, \cite{bachl_walling_2019} investigates remedies for poisoning attacks on \glspl{ids}.
 In this research, we investigate whether adversarial samples can be found for our \gls{rnn}-based model, i.e. minimally different attack flows which are classified as benign. This is not a trivially answerable question since adversarial samples have mostly been analyzed in the context of computer vision. Our scenario significantly deviates from this in several ways because \begin{enumerate*}
@@ -134,23 +134,23 @@ In this research, we investigate whether adversarial samples can be found for ou
 
 Surprisingly, we can confirm that adversarial samples can be found even when considering these tight constraints. % mentioned before.
 Thus, we argue that traditional methods like, e.g., accuracy are not sufficient for evaluating security-sensitive \gls{ml} systems.
-We propose the \acrfull{ars} as a new performance score, which precisely captures the notion of how easily an adversary can generate adversarial samples. 
+We propose the \acrfull{ars} as a new performance score, which precisely captures the notion of how easily an adversary can generate adversarial samples.
 
 Due to the threat of adversarial attacks, a further crucial requirement for \gls{ml}-based \glspl{ids} is that the classifier's decisions are interpretable by humans. This recently gave increased interest in explainability methods. Also in this case, common methods are designed to work with images or tabular data but not with sequences. Hence, we extend existing explainability methods such as \glspl{pdp} \cite{friedman_greedy_2001} for sequential data. %These show the varying characteristics of different attacks and they aid with visualizing potentially vulnerable features for adversaries.
 Astonishingly, feature importance methods reveal that
 features manipulable for adversarial flows,
 %the that are manipulable features, that are left for modification by adversaries
-are not even particularly important for the \gls{rnn}'s classification outcome. %Especially the first packets of a flow are critical for determining the decision of a recurrent \gls{ids}. 
+are not even particularly important for the \gls{rnn}'s classification outcome. %Especially the first packets of a flow are critical for determining the decision of a recurrent \gls{ids}.
 
 %Since common explainability methods are designed to work with images or tabular data but not sequences, we extend existing explainability methods such as \glspl{pdp} \cite{friedman_greedy_2001} for sequential data. These show the varying characteristics of different attacks and they aid with visualizing potentially vulnerable features for adversaries.
 
 Based on the insights gained by the feature importance and explainability methods, we propose two defence methods.
 %develop a simple method for defending against adversaries who can manipulate arbitrary packets by simply leaving out potentially manipulable information from the classification process.
-On the one hand, by simply leaving out manipulable features, we obtain a classifier which is slightly less accurate but is still useful to be deployed in a real scenario. Furthermore, 
+On the one hand, by simply leaving out manipulable features, we obtain a classifier which is slightly less accurate but is still useful to be deployed in a real scenario. Furthermore,
 by deploying an adversarial training procedure,
 %AH. compared to other research about adversarial training, I dont feel that out approach is so special
 %develop a custom adversarial training procedure which especially focuses on ease of use and low resource consumption and aims to keep the number of additionally introduced training hyperparameters low. With this novel strategy
-we can reduce the attack surface and harden the resulting \gls{ids} while retaining similar classification performance. % like for the original \gls{ml} model. 
+we can reduce the attack surface and harden the resulting \gls{ids} while retaining similar classification performance. % like for the original \gls{ml} model.
 
 \section{An \gls{rnn}-based classifier}
 
@@ -225,7 +225,7 @@ Worms	&	0.01\%	\\
 }{}
 \end{table}
 
-We implemented a three-layer LSTM-based classifier with 512 neurons at each layer. As the input features we use 
+We implemented a three-layer LSTM-based classifier with 512 neurons at each layer. As the input features we use
 source port, destination port, protocol identifier, packet length, \gls{iat} to the previous packet in the flow, packet direction (if packet goes there or back) and all \gls{tcp} flags (0 if the flow is not \gls{tcp}).
 % \begin{itemize*}
 % \item source port
@@ -237,7 +237,9 @@ source port, destination port, protocol identifier, packet length, \gls{iat} to 
 % \item all \gls{tcp} flags (0 if the flow is not \gls{tcp})
 % \end{itemize*}.
 We omitted \gls{ttl} values, as they are likely to lead to unwanted prediction behaviour \cite{bachl_walling_2019}.  Among the used features, source port, destination port and protocol identifier are constant over the whole flow while the others vary.
+During flow extraction we used a usual 5-tuple flow key, which distinguishes flows based on the protocol they use and their source and destination port and IP address.
 We use Z-score normalization and a train/test split of 2:1.
+
 
 For evaluation, we use the \textit{CIC-IDS-2017} \cite{sharafaldin_toward_2018} and \textit{UNSW-NB15} \cite{moustafa_unsw-nb15:_2015} datasets which each include more than 2 million flows of network data, containing both benign traffic and a large number of different attacks. Attacks contained in the datasets are shown in \autoref{tab:occurrence}.
 \autoref{tab:performance_results} shows that our classifiers achieve an accuracy that is similar to previous work based on these datasets~\cite{meghdouri_analysis_2018,bachl_walling_2019}. However, unlike these classifiers, our recurrent classifier has the advantage of being able to detect attacks already before they are over.
@@ -252,18 +254,18 @@ For evaluation, we use the \textit{CIC-IDS-2017} \cite{sharafaldin_toward_2018} 
 \begin{tabular}{l r r r r} \toprule
 & \multicolumn{2}{c}{CIC-IDS-2017} & \multicolumn{2}{c}{UNSW-NB15} \\
 	&	Packet	&	Flow	&	Packet	&	Flow	\\	\midrule
-Accuracy	&	99.1\%	&	99.7\%	&	99.5\%	&	98.3\%	\\	
-Precision	&	97.0\%	&	99.7\%	&	83.4\%	&	78.6\%	\\	
-Recall	&	97.8\%	&	99.1\%	&	87.6\%	&	72.6\%	\\	
-F1	&	97.4\%	&	99.4\%	&	85.5\%	&	75.5\%	\\	
-Youden	&	97.2\%	&	99.0\%	&	87.3\%	&	71.9\%	\\	
+Accuracy	&	99.1\%	&	99.7\%	&	99.5\%	&	98.3\%	\\
+Precision	&	97.0\%	&	99.7\%	&	83.4\%	&	78.6\%	\\
+Recall	&	97.8\%	&	99.1\%	&	87.6\%	&	72.6\%	\\
+F1	&	97.4\%	&	99.4\%	&	85.5\%	&	75.5\%	\\
+Youden	&	97.2\%	&	99.0\%	&	87.3\%	&	71.9\%	\\
 \bottomrule
 \end{tabular}
 \end{table}
 
 \section{Adversarial attacks}
 \label{sec:adv}
-We now investigate whether known \gls{aml} methods can be used for generating adversarial flows for our \gls{rnn}. \cite{hashemi_towards_2019} previously studied the behavior of several Network \glspl{ids} under adversarial attacks but unlike us did not investigate \glspl{rnn}. 
+We now investigate whether known \gls{aml} methods can be used for generating adversarial flows for our \gls{rnn}. \cite{hashemi_towards_2019} previously studied the behavior of several Network \glspl{ids} under adversarial attacks but unlike us did not investigate \glspl{rnn}.
 
 A network packet contains significantly less features than, e.g., an image and, furthermore, most features such as \gls{tcp} flags cannot be easily manipulated, as their manipulation might violate the protocol specifications and thus cause communication to fail. We identify the packet length and the \gls{iat} as features which are most likely to be exploited, but even these features cannot be manipulated freely. Beside the non-negativity constraint,  there are also more problem-specific constraints:
 \begin{itemize}[topsep=0pt,wide,labelwidth=!,labelindent=0pt]
@@ -274,7 +276,7 @@ Except for botnet and backdoor traffic, which is entirely controlled by an attac
 \item \glspl{iat} must not decrease, as otherwise the physical speed of data transmission can be violated in some cases. An in-depth analysis of when the reduction of \glspl{iat} is possible, would come with substantial effort, so we generally disallowed it.
 \end{itemize}
 
-Several \gls{aml} methods have been proposed in the recent literature, achieving different speed-quality tradeoffs: 
+Several \gls{aml} methods have been proposed in the recent literature, achieving different speed-quality tradeoffs:
 \cite{szegedy_intriguing_2014} shows that it is possible to create adversarial samples for an image, which look similar to the original image but are classified wrongly. \cite{goodfellow_explaining_2015} develops the \gls{fgsm}, which makes easy generation of adversarial samples possible. \cite{papernot_crafting_2016} explores the use of \gls{aml} for \glspl{rnn}, but lacks import \gls{aml} methods, which we consider in this paper.
 
 % Max: But FGSM is high-speed... So I removed this paragraph altogether
@@ -294,10 +296,13 @@ In the original publication $\delta=0$, which means that the network's decision 
 We used $L_1$ norm as distance metric and \gls{pgd} for meeting the real-world constraints discussed above.
 
 \subsection{$L_\infty$-bounded Projected Gradient Descent}
-\cite{madry_towards_2018} uses a method for generating adversarial samples which deploys \gls{pgd}  to minimize the network's negative loss function while constraining the achieved $L_\infty$ distance from the original samples.
+\cite{madry_towards_2018} uses a method for generating adversarial samples which deploys \gls{pgd}  to maximizie the network's loss function while constraining the achieved $L_\infty$ distance from the original samples.
+We consider this method an interesting combination of \gls{cw} and \gls{fgsm}.
+Since its functioning is somewhat similar to \gls{cw}, we expected the generated adversarial samples to be of similar quality.
 
 \subsection{Fast Gradient Sign Method}
-Finally, we also tested the Fast Gradient Sign Method (FGSM), which was initially proposed in \cite{goodfellow_explaining_2015} and perhaps is the most frequently used method for generating adversarial samples. FGSM can be considered a single pass of \gls{pgd} on the loss function with an equality constraint on the $L_\infty$ distance, i.e. the adversarial sample is found as
+Finally, we also tested the \gls{fgsm} % which was initially proposed in
+ \cite{goodfellow_explaining_2015}, which perhaps is the most frequently used method for generating adversarial samples. FGSM can be considered a single pass of \gls{pgd} on the loss function with an equality constraint on the $L_\infty$ distance, i.e. the adversarial sample is found as
 \begin{equation}
 \tilde X = X + \epsilon \text{sgn}( \nabla_X L(X)),
 \end{equation}
@@ -311,12 +316,12 @@ where $L(X)$ denotes the network's loss function and $\epsilon$ denotes the achi
 
 
 \subsection{Evaluation}
-\autoref{fig:adv_per_family} depicts the performance for the investigated algorithms for both datasets and for each attack family in CIC-IDS-2017. 
+\autoref{fig:adv_per_family} depicts the performance for the investigated algorithms for both datasets and for each attack family in CIC-IDS-2017.
 We used \gls{cw} with a tradeoff of 1 and, to provide a fair comparison, for \gls{fgsm} and \gls{pgd} we used an average $L_\infty$ distance as observed for \gls{cw}.
 
 As expected, \gls{cw}  delivers the best performance and FGSM, while being the fastest of all investigated algorithms, delivers the worst performance.
 %\autoref{fig:adv_per_family} depicts how successful the attack is for individual attack families.
-The figure shows significant differences for detecting different attack families in the first place. However, also for generating adversarial flows some attack families are more susceptible than others. However, the results match to a high degree with our expectations. For example, SQL injection attacks apparently are closer to normal traffic than \gls{dos} attacks and, hence, finding adversarial samples should be easier.
+The figure shows significant differences for detecting different attack families in the first place. However, also for generating adversarial flows some attack families are more susceptible than others. However, the results match to a high degree with our expectations. For example, SQL injection attacks apparently are closer to benign traffic than \gls{dos} attacks and, hence, finding adversarial samples should be easier.
 
 It is interesting to note that increasing the $L_\infty$ bound for \gls{pgd} did not yield significantly improved performance. We can thus confirm the recommendation by \cite{carlini_towards_2017} to perform gradient descent on the logit output instead of the loss for good results.
 
@@ -338,13 +343,13 @@ Hence, the depicted distance increase presumably is due to samples for which no 
 
 \section{Adversarial Robustness Metric}
 
-As \autoref{fig:adv_per_family} shows, for most attack types, most samples can be modified by an adversary to be classified as benign by using \gls{cw}. High accuracy for a particular attack category does not imply that adversarial attacks are  likely to fail for these attacks. Thus we argue that beside the classical metrics such as accuracy, false positives etc., a new metric is needed, which quantifies how easily an \gls{ids} classifier can be fooled. 
+As \autoref{fig:adv_per_family} shows, for most attack types, most samples can be modified by an adversary to be classified as benign by using \gls{cw}. High accuracy for a particular attack category does not imply that adversarial attacks are  likely to fail for these attacks. Thus we argue that beside the classical metrics such as accuracy, false positives etc., a new metric is needed, which quantifies how easily an \gls{ids} classifier can be fooled.
 
-Such a metric should be easy to compute, easy to interpret and robust with respect to outliers.  We thus propose the \gls{ars}, as the average of the lower half  of minimum distances of adversarial samples. Since \gls{cw} is able to find adversarial samples with minimum distance, the \gls{ars} can be found efficiently as follows: Use \gls{cw} with a small tradeoff to try to generate adversarial samples for an attack type. If more than half of the samples are now wrongly classified, stop. Otherwise increase the tradeoff of \gls{cw} and repeat. If after a predefined number of iterations -- e.g. 100 -- still not more than half of the samples are adversarial, also break. 
+Such a metric should be easy to compute, easy to interpret and robust with respect to outliers.  We thus propose the \gls{ars}, as the average of the lower half  of minimum distances of adversarial samples. Since \gls{cw} is able to find adversarial samples with minimum distance, the \gls{ars} can be found efficiently as follows: Use \gls{cw} with a small tradeoff to try to generate adversarial samples for an attack type. If more than half of the samples are now wrongly classified, stop. Otherwise increase the tradeoff of \gls{cw} and repeat. If after a predefined number of iterations -- e.g. 100 -- still not more than half of the samples are adversarial, also break.
 
 The result is a number of adversarial samples and some that could not be made adversarial. If at least half of the samples are misclassified, we take 50\% of the samples, with those that required smaller modifications first. Of these samples, the distance of each adversarial sample to the original sample is taken and averaged. The resulting average distance is the \gls{ars}. The larger it is the better since then an adversary needs to modify the samples more to make them adversarial. If not more then half of the samples could be made adversarial, our metric is undefined since then apparently it is not possible for an adversary to reliably conduct adversarial attacks on the majority of samples. Then the ratio of samples that could be made adversarial ($<$50\%) can be useful metric to determine the exact extent of the adversarial threat. Setting the threshold for the \gls{ars} to 50\% is arbitrary, but
  % reasonable as this way the \gls{ars} approximates the median of the distances of all samples and, additionally, marks the distance where an adversarial attack is more likely to be successful than unsuccessful.
- reasonable as outliers with very large distances are ignored and if an attacker can make the majority of samples adversarial, we think that its attack is ``successful''. 
+ reasonable as outliers with very large distances are ignored and if an attacker can make the majority of samples adversarial, we think that its attack is ``successful''.
 %we think that it is reasonable since if an attacker can make the majority of samples adversarial, we think that its attack is ``successful''.
 
 \begin{figure}[h]
@@ -354,11 +359,11 @@ The result is a number of adversarial samples and some that could not be made ad
 \label{fig:recall_ars}
 \end{figure}
 
-\autoref{fig:recall_ars} shows that certain attack types, like ``DoS Slowloris'' are easy to classify for an IDS but still are also surprisingly easy for an attacker to perform adversarial modifications to make them look benign. 
+\autoref{fig:recall_ars} shows that certain attack types, like ``DoS Slowloris'' are easy to classify for an IDS but still are also surprisingly easy for an attacker to perform adversarial modifications to make them look benign.
 
 \section{Explaining Recurrent Neural Networks}
 From a naive perspective, one might be tempted to reuse explainability methods for \glspl{rnn} by considering a flow the sum of its packet features.
-We identify several difficulties which occur when trying to explain decisions made by \glspl{rnn}. 
+We identify several difficulties which occur when trying to explain decisions made by \glspl{rnn}.
 
 \begin{itemize}[topsep=0pt,wide,labelwidth=!,labelindent=0pt]
 \item
@@ -450,7 +455,7 @@ On the other hand, both adversarial machine learning and explainable machine lea
 To analyze features for our network, we use the following approaches.
 
 \subsubsection{Neural Network Weights}
-In previous works~\cite{olden_accurate_2004}, a simple method for determining feature importance in neural networks, has been summing up neural network weights leading from a certain input to the prediction outcome. The weights method can be considered for both feature importance and feature sensitivity, however, clearly, especially in the case of complex network architectures, this method is likely to provide wrong results. Hence, we provide results for the weights method mainly for comparison. Note that an LSTM cell alone has four weights leading from one input to an output. 
+In previous works~\cite{olden_accurate_2004}, a simple method for determining feature importance in neural networks, has been summing up neural network weights leading from a certain input to the prediction outcome. The weights method can be considered for both feature importance and feature sensitivity, however, clearly, especially in the case of complex network architectures, this method is likely to provide wrong results. Hence, we provide results for the weights method mainly for comparison. Note that an LSTM cell alone has four weights leading from one input to an output.
 
 \subsubsection{Input Perturbation}
 
@@ -460,10 +465,10 @@ In previous works~\cite{olden_accurate_2004}, a simple method for determining fe
 
 \subsubsection{Feature Dropout}
 While the perturbation method %of adding noise to features/randomizing them
-is convenient since it is easy to implement and understand, we argue that it has some shortcomings: 
-The \gls{rnn} was never trained for dealing with ``garbage'' values that the randomization creates. For example, completely unrealistic feature combinations could occur that were never observed during training. Furthermore, sequences of features could occur that cannot occur in reality. 
- 
-%We think that the ``ideal'' feature importance method for our scenario are Shapley values \cite{shapley_value_1953}: To analyze feature importance with them, the feature under investigation is completely omitted from the dataset and a model is trained without it. The resulting accuracy is then compared to the baseline accuracy with all features. The effort required to do this is high both in terms of storage space as well as training time since for $n$ features $n$ models need to be separately trained and stored. While this seems tractable, when also analyzing the feature importance of combinations of features, the number of models required becomes even larger: Out of $n$ features, $2^n$ unique subsets can be chosen, meaning that the computational demand rises exponentially. 
+is convenient since it is easy to implement and understand, we argue that it has some shortcomings:
+The \gls{rnn} was never trained for dealing with ``garbage'' values that the randomization creates. For example, completely unrealistic feature combinations could occur that were never observed during training. Furthermore, sequences of features could occur that cannot occur in reality.
+
+%We think that the ``ideal'' feature importance method for our scenario are Shapley values \cite{shapley_value_1953}: To analyze feature importance with them, the feature under investigation is completely omitted from the dataset and a model is trained without it. The resulting accuracy is then compared to the baseline accuracy with all features. The effort required to do this is high both in terms of storage space as well as training time since for $n$ features $n$ models need to be separately trained and stored. While this seems tractable, when also analyzing the feature importance of combinations of features, the number of models required becomes even larger: Out of $n$ features, $2^n$ unique subsets can be chosen, meaning that the computational demand rises exponentially.
 
 To evaluate true feature importance, we thus develop a more sound method %compared to input perturbation
 called \textit{feature dropout}: When training a model, for each sample, we leave out each feature  with independent probability $\frac{1}{n}$, $n \in \mathbb N$ being the number of features, by setting it to zero. On average, one feature gets zeroed out but it is also possible that none or more than one are left out. This procedure is equivalent to using dropout \cite{srivastava_dropout:_2014} with probability $\frac{1}{n}$ before the first layer.
@@ -473,14 +478,14 @@ The results in \autoref{fig:feat_imp} show that, unlike input perturbation, feat
 
 A model trained with feature dropout typically yields slightly lower accuracy than a regularly trained model, even if no features are left out (flow accuracy of 0.9943 vs.~0.9965). We thus recommend training two models: One regular one and one with feature dropout to use for the feature importance.
 
-Another method that uses dropout for feature importance is \cite{chang_dropout_2017}, applying a technique called \textit{Variational Dropout} to learn the optimal dropout rate for each feature. It tries to leave out as many features as possible and at the same time keep accuracy high. Thus important features are going to be left out less often and one can then extract the dropout probabilities for each feature and assess their significance based on them. Feature dropout can also be used as a building block for computing the accuracy of datapoints with missing features that is necessary to compute Shapley values \cite{shapley_value_1953} or KernelSHAP \cite{lundberg_unified_2017}. 
+Another method that uses dropout for feature importance is \cite{chang_dropout_2017}, applying a technique called \textit{Variational Dropout} to learn the optimal dropout rate for each feature. It tries to leave out as many features as possible and at the same time keep accuracy high. Thus important features are going to be left out less often and one can then extract the dropout probabilities for each feature and assess their significance based on them. Feature dropout can also be used as a building block for computing the accuracy of datapoints with missing features that is necessary to compute Shapley values \cite{shapley_value_1953} or KernelSHAP \cite{lundberg_unified_2017}.
 
 As it can also happen that several features are left out for a sample, our method can also be used to analyze the effect of multiple features missing and can thus show possibly correlated features or -- more general -- features that contain common information, relevant for the classification task:
-%Feature dropout also allows us to find correlated features or -- more general -- features that contain common information: 
+%Feature dropout also allows us to find correlated features or -- more general -- features that contain common information:
 \begin{equation}
 \text{score} = \frac{\text{acc}_\text{base}-\text{acc}_\text{-both\_features}}{\left(\text{acc}_\text{base}-\text{acc}_\text{-feature\_1}\right) + \left(\text{acc}_\text{base}-\text{acc}_\text{-feature\_2}\right)}
 \end{equation}
-With $\text{acc}_\text{base}$ we denote the average accuracy of the classifier with all features included, with $\text{acc}_\text{-feature\_i}$ the average accuracy if feature $i$ is omitted and with $\text{acc}_\text{-both\_features}$ the average accuracy if both features are omitted. Assuming a non-negative accuracy drop when omitting a feature, the resulting score is $\ge 0.5$. The higher it is, the larger the information that both features share. 
+With $\text{acc}_\text{base}$ we denote the average accuracy of the classifier with all features included, with $\text{acc}_\text{-feature\_i}$ the average accuracy if feature $i$ is omitted and with $\text{acc}_\text{-both\_features}$ the average accuracy if both features are omitted. Assuming a non-negative accuracy drop when omitting a feature, the resulting score is $\ge 0.5$. The higher it is, the larger the information that both features share.
 
 %AH. As it can become <1, I would say it this way
 %If the score is one,  both features contain no joint information.
@@ -501,36 +506,35 @@ Furthermore, let $f(A,x)$  denote the joint probability
 for classification as attack and a feature value $x$. Accuracy then is $\int f(A,x) dx$ for attacks and $1-\int f(A,x) dx$ for benign traffic.
 \autoref{fig:mutinfo_example} shows two different distributions
 yielding the same accuracy, but clearly the right-side distribution has a larger influence on the prediction, as in the right-side case the prediction deterministically depends on the feature value.
-To capture such dependencies, we propose to use mutual information instead of accuracy drop to determine feature sensitivity.
-Mutual Information between two random variables $X,Y$ is defined as 
+To capture such dependencies, we propose to use mutual information %instead of accuracy drop
+to determine feature sensitivity.
+Mutual Information between two random variables $X,Y$ is defined as
 \begin{equation}
 I_{X,Y} = \mathbb E \left\{ \log\left(\frac{f_{X,Y}(x,y)}{f_X(x)f_Y(y)}\right) \right\},
 \end{equation}
-with $f_X(x), f_Y(y)$ and $f_{X,Y}(x,y)$ denoting the distribution of $X,Y$ and their joint distribution, respectively. To obtain feature sensitivity, we compute mutual information between an input variable and the prediction output for one flow at one particular time step, and average over the result for the test dataset.
+with $f_X(x), f_Y(y)$ and $f_{X,Y}(x,y)$ denoting the distribution of $X,Y$ and their joint distribution, respectively. To obtain feature sensitivity, we compute mutual information between an input variable and the prediction output for one flow at one particular time step, averaging over the result for the test set.
 
-\subsubsection{Results}
+\subsubsection{Comparison}
 \begin{figure*}
 \includegraphics[width=.49\textwidth]{../plots/importance/feat_imp_flow_2017.pdf}\hspace{.02\textwidth}
 \includegraphics[width=.49\textwidth]{../plots/importance/feat_imp_flow_2015.pdf}
-\caption{Feature importance metrics considering the final flow prediction for CIC-IDS-2017 (left side) and UNSW-NB15 (right side).}
+\caption{Feature importance metrics for the flow prediction for CIC-IDS-2017 (left side) and UNSW-NB15 (right side).}
 \label{fig:feat_imp}
 \end{figure*}
 \autoref{fig:feat_imp} shows the results, which match to a large extent with domain-specific expectations for classifying network flows.
 In particular, rarely used \gls{tcp} flags like NS or URG are unimportant for the classifier. On the other hand, destination port and protocol are essential for characterizing flows by hinting at the type of traffic. \gls{iat} and packet length are important for estimating the amount of transferred information and several flags hint at certain attacks like \gls{dos} attacks.
 
-The weights method is able to reveal features with a very low importance to a certain degree, but disagrees with the other methods to a large extent. Less anticipated, however, also input perturbation does not exhibit a considerable correlation with feature dropout. Considering its functioning, feature dropout is the most reliable method for evaluating importance for removing features. It is remarkable that none of the other methods is able to depict the distinct peak of importance for the destination port. 
+The weights method is able to reveal features with a very low importance to a certain degree, but disagrees with the other methods to a large extent. Less anticipated, however, also input perturbation does not exhibit a considerable correlation with feature dropout. Considering its functioning, feature dropout is the most reliable method for evaluating importance for removing features. It is remarkable that none of the other methods is able to depict the distinct peak of importance for the destination port.
 
 It is not surprising that mutual information disagrees with feature dropout, since both their aim and their functioning are substantially different. For example, mutual information shows that the protocol field can have a substantial impact on the classification even though an identical accuracy can be achieved when omitting it.
 
-% In particular, the most important features turn out to be the used protocol, packet length and the SYN TCP flag. While the first two features are essential for characterizing flows, a high number of packets with set SYN flag is an important characteristic for port scanning or certain DoS attacks. Also the fact that most of TCP flags do not play an important role in our dataset was expected. It is interesting to note, however, that the interarrival time of packets does not play a crucial role for the detection of attacks. 
+% In particular, the most important features turn out to be the used protocol, packet length and the SYN TCP flag. While the first two features are essential for characterizing flows, a high number of packets with set SYN flag is an important characteristic for port scanning or certain DoS attacks. Also the fact that most of TCP flags do not play an important role in our dataset was expected. It is interesting to note, however, that the interarrival time of packets does not play a crucial role for the detection of attacks.
 
 Metrics for UNSW-NB15 differ substantially from CIC-IDS-2017. However, due to the large number of different network attacks and network configurations, it is easily possible that relevant features are very different. We consider the question of model transferability of substantial importance for \gls{ids} applications, but out of scope for the present research.
 
 \subsection{Explainability Plots}
 Knowing which features to investigate, it is important to analyze which feature values lead to classification as attack.
-During flow extraction we used a usual 5-tuple flow key, which distinguishes flows based on the protocol they use and their source and destination port and IP address. Hence, these features are constant for all packets in one flow, which allows us to use explainability methods which have been proposed for non-recurrent classification methods.
-
-In particular,  in literature the use of Partial Dependency Plots (\gls{pdp}) is proposed~\cite{friedman_greedy_2001}. To inspect attack types in detail, in this research we use a \textit{conditional} form of the \gls{pdp}. If $\boldsymbol X \in \mathbb R ^n$ denotes a random vector drawn from feature space, $f(\boldsymbol X) \in [0,1]$ the neural network's prediction and $c$ the attack class, we define the conditional \gls{pdp} for feature $i$  as
+In literature, the use of Partial Dependency Plots (\gls{pdp}) has been proposed~\cite{friedman_greedy_2001}. To inspect attack types in detail, in this research we use a \textit{conditional} form of the \gls{pdp}. If $\boldsymbol X \in \mathbb R ^n$ denotes a random vector drawn from feature space, $f(\boldsymbol X) \in [0,1]$ the neural network's prediction and $c$ the attack class, we define the conditional \gls{pdp} for feature $i$  as
 % \begin{equation} \label{eq:pdp}
 % \text{\gls{pdp}}_i(y) = \mathbb E_{\boldsymbol X}\left(f(X_1,\ldots,X_{i-1},y,X_{i+1},\ldots X_n)\right)
 % \end{equation}
@@ -555,11 +559,12 @@ By using a classical \gls{pdp} we would be likely to loose information due to th
 %
 %In this variant of the \gls{pdp} that we call conditional \gls{pdp}, we don't take the whole dataset for the computation for the \gls{pdp} but only a subset that belongs to a certain class. Specifically, we take each attack class and compute the \gls{pdp} only over samples of this attack class.
 
+Due to the use of a 5-tuple flow key, port numbers and the protocol identifier are constant for all packets in one flow, which allows us to use \glspl{pdp}, which have been proposed for non-recurrent classification methods.
 The results (omitted for brevity) show that for some attack classes the port numbers play an important role. When looking at the class of benign traffic %(non-attack traffic)
-it becomes apparent that traffic destined to a high source port is generally indicative of an attack. We argue that this is because most services that regular users use have low port numbers.
+it becomes apparent that traffic destined to a high destination port is generally indicative of an attack. We argue that this is because most services that regular users use have low port numbers.
 
 %AH. As ALE is removed, I case this also isnt needed
-%A known issue about \glspl{pdp} in general is that dependencies of the feature under investigation and the remaining variables are not considered, hence potentially querying the neural network for feature combinations which cannot possibly occur. For a certain value of the $i$th feature, the whole dataset is used for averaging the neural network's outcome. 
+%A known issue about \glspl{pdp} in general is that dependencies of the feature under investigation and the remaining variables are not considered, hence potentially querying the neural network for feature combinations which cannot possibly occur. For a certain value of the $i$th feature, the whole dataset is used for averaging the neural network's outcome.
 
 %For this reason, Accumulated Local Effects (ALE) plots have been proposed in literature. The basic idea for ALE is that instead of using all samples, only the closest samples are used for assessing the effects of one feature. ALE plots therefore inherently require a distance measure for finding the closest samples, which, as revealed in the above discussion, in our case is not possible in a straight-forward manner.
 
@@ -580,13 +585,13 @@ For the majority of attack types, confidence increases in the first few steps an
 To evaluate this hypothesis, we plot the classifier's prediction confidence for each time step. % for each attack class.
 %averaging over all flows. %AH. there's no averaging happening
 % and also show the first and third quartiles.
-\autoref{fig:confidence} shows that %this hypothesis is correct for most attack classes. 
+\autoref{fig:confidence} shows that %this hypothesis is correct for most attack classes.
 while at the first couple of packets the confidence is not very high, towards the end of the flow it reaches values close to 1 and stays there. Hence, not only is the classifier able to make a reasonable classification after just a few packets, the figure also suggests that indeed later packets have a neglectible influence on the prediction.
 
-For investigating in more detail how features influence the prediction outcome, we extend \glspl{pdp} to the sequential setting. 
-Denoting as $X=\{\boldsymbol X^1, \ldots, \boldsymbol X^m\}$ the series of packet features $\boldsymbol X^t \in \mathbb R^n$ and $h_t(X)$ the network's hidden state after time step $t$, we define the sequential \gls{pdp} as 
+For investigating in more detail how features influence the prediction outcome, we extend \glspl{pdp} to the sequential setting.
+Denoting as $X=\{\boldsymbol X^1, \ldots, \boldsymbol X^m\}$ the series of packet features $\boldsymbol X^t \in \mathbb R^n$ and $h_t(X)$ the network's hidden state after time step $t$, we define the sequential \gls{pdp} as
 \begin{align}
-\text{se}&\text{qPDP}_{c,i}(t,w)= \\ &\mathbb E_{X | C} \Big(f \left(h_{t-1}( X), X_1^t,\ldots,X_{i-1}^t,w,X_{i+1}^t,\ldots X_n^t \right) | c\Big). \nonumber 
+\text{se}&\text{qPDP}_{c,i}(t,w)= \\ &\mathbb E_{X | C} \Big(f \left(h_{t-1}( X), X_1^t,\ldots,X_{i-1}^t,w,X_{i+1}^t,\ldots X_n^t \right) | c\Big). \nonumber
 \end{align}
 
 \autoref{fig:pred_plots2} shows an example together with the mean values for both unmodified samples and adversarial samples. Also in this figure we notice that mainly the first few packets are able to influence the prediction outcome and modifying features at a later time step does not change its confidence any longer. In many cases, the adversarial sample generation indeed moves packet features to areas where the network is less likely to be classified as attacks, confirming the effectiveness of \glspl{pdp}. In other cases, however, we did not observe an agreement between \gls{pdp} and adversarial modifications, hinting at dependencies which cannot be presented by \glspl{pdp}.
@@ -606,7 +611,7 @@ The shaded region shows the change in confidence that occurs when the feature is
 % AH. I guess this can only be properly formulated with a formula
 %Next, we want to investigate if our classifier just memorized its inputs. The most interesting packet features that can be used to visualize this in our use case are the \gls{iat} between packets in a flows and the packet length. To depict how the model comes to a decision, we determined the total minimum and maximum for these features that ever occur for all flows. For a given flow $X$ we then varied feature values at each time step between minimum and maximum and plot how the confidence changes when the feature varies (\autoref{fig:pred_plots2}) depict the averaged predictions for different attack families.
 
-Furthermore, it seems clear that the classifier did not just memorize the inputs but actually learned appropriate space representations, as there is always a smooth decrease of confidence when modifying feature values. When memorizing, we would  instead expect a sharp decline of confidence. % to occur. 
+Furthermore, it seems clear that the classifier did not just memorize the inputs but actually learned appropriate space representations, as there is always a smooth decrease of confidence when modifying feature values. When memorizing, we would  instead expect a sharp decline of confidence. % to occur.
 %Another interesting observation is that after the first couple of packets the classifier is certain about its decision and changing features doesn't change its confidence any longer. This allows the conclusion that if an attacker is able to change the first few packets, she could change the decision of the classifier. This is consistent with our observations in \autoref{sec:adv}. %We will further investigate this question in \autoref{sec:adv}.
 
 \begin{figure}
@@ -621,7 +626,7 @@ Furthermore, it seems clear that the classifier did not just memorize the inputs
 \end{figure}
 Finally, we investigated whether our classification task involves recognizing complex patterns in the feature space.
 As example, \autoref{fig:plot_features} shows that
-%Looking at the plots of the features that vary over time (\autoref{fig:plot_features}) we see that certain 
+%Looking at the plots of the features that vary over time (\autoref{fig:plot_features}) we see that certain
 attack types indeed have a characteristic pattern in which they send packets by which they are easily recognizable.
 Other attack families similarly show characteristic patterns.
 %We want to determine how the pattern of packet sizes and \glspl{iat} is significant for the classification. \autoref{fig:plot_features} clearly shows that some attack types have very characteristic patterns of packet sizes and \glspl{iat}.
@@ -639,12 +644,11 @@ Both approaches lead to complete resistance to adversarial samples (as we left o
 
 \subsection{Adversarial training}
 As alternative to omitting manipulable features, we attempted to make the classifier more robust against adversarial samples by augmenting the training set by adversarial flows generated using  \gls{cw}, labeled as additional attacks.
-
-For this purpose, we added one adversarial sample per attack sample to the training set. Since \gls{cw} is deterministic, this is the maximum number of adversarial samples possible. With this training set we then alternated retraining of the neural network and optimization of the adversarial samples using gradient descent.
+For this purpose, we added one adversarial sample per attack sample to the training set. Since \gls{cw} is deterministic, this is the maximum number of adversarial samples possible. With this augmented training set we then alternated retraining of the neural network and optimization of the adversarial samples. % using gradient descent.
 
 A question which occurs in this process, is how many CPU cycles to spend on network training and adversarial sample optimization. As a natural approach, we decided to use as many backpropagation steps for neural network training as we use for adversarial sample optimization.  For each adversarial sample optimization step, we performed 10 iterations of gradient descent. Hence, all adversarial samples were optimized each 10 epochs of neural network training.
 
-\autoref{fig:avdistance} shows the \gls{ars} throughout the adversarial training procedure for several attack categories and clearly indicates that adversarial training is effective, as the distance gradually increases. Hence, an attacker would have to modify attack samples more and more, eventually rendering the attack unpractical.
+\autoref{fig:avdistance} shows the \gls{ars} throughout  adversarial training  for several attack categories and clearly indicates that adversarial training is effective, as the distance gradually increases. Hence, an attacker would have to modify attack samples more and more, eventually rendering the attack unpractical.
 
 %However, the figure also shows that an increase of distance can only be achieved after a considerable amount of training. It is, hence, questionable if the gained increase in robustness is enough for reliable attack detection.
 
@@ -659,7 +663,7 @@ A question which occurs in this process, is how many CPU cycles to spend on netw
 For both datasets, after a small number of epochs, it was no longer possible to create a significant number of adversarial samples for most attack categories. %For the datasets we considered, adversarial training left classification performance unaffected.
 %\todo{Max: Insert results that show that accuracy on normal data is still ok after adversarial training.}
 %\autoref{tab:adv_training_performance} depicts classification on non-adversarial data after 50 epochs of adversarial training.
-After 50 epochs of training, accuracy is essentially identical to results presented in \autoref{tab:performance_results}. Recall and Youden increased and precision slightly decreased. However, this is due to the higher proportion of attack samples in training data.
+After 50 epochs of training, accuracy is essentially identical to the results presented in \autoref{tab:performance_results}. Recall and Youden increased and precision slightly decreased. However, this is due to the higher proportion of attack samples in training data and, hence, expected.
 We conclude that adversarial training is effective for reducing the attack surface for adversarial attacks in our scenario.
 
 
@@ -707,7 +711,7 @@ We conclude that adversarial training is effective for reducing the attack surfa
 \section{Conclusion}
 
 We have implemented a recurrent classifier based on LSTMs to detect network attacks, %While attack detection performance is not necessarily better than that of non-recurrent approaches,
-which can already detect attacks before they are over. Furthermore, the recurrent approach allows us to inspect the influence of single packets on the detection performance and shows which packets are \textit{characteristic} for attacks. 
+which can already detect attacks before they are over. Furthermore, the recurrent approach allows us to inspect the influence of single packets on the detection performance and shows which packets are \textit{characteristic} for attacks.
 Even though the interpretation of \glspl{rnn} poses several difficulties, we have demonstrated methods for gaining insights into the model's functioning.
 
 We showed that even though our use case is very different from computer vision, adversarial samples can be found efficiently, even if only ostensibly unimportant features can be modified. We proposed the \gls{ars} for quantifying and comparing the adversarial threat for \glspl{ids}.
