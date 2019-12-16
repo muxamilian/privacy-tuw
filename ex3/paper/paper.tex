@@ -286,9 +286,9 @@ Several \gls{aml} methods have been proposed in the recent literature, achieving
 \subsection{Carlini-Wagner}
 We implemented the \gls{cw} \cite{carlini_towards_2017}, performing gradient descent on the optimization objective
 \begin{equation} \label{eq:carliniWagner}
-d(X,\tilde X) + \epsilon  \max(Z(\tilde X), \delta).
+d(X,\tilde X) + c  \max(Z(\tilde X), \delta).
 \end{equation}
-Here, $d(\cdot)$ is a distance metric and $\epsilon \in \mathbb R^+$ is a parameter governing the tradeoff achieved between attack success and distance from the original flow. Furthermore, $Z(\cdot)$ denotes the neural network's logit output, $X$ denotes the original flow and $\tilde X$ the adversarial flow under optimization.
+Here, $d(\cdot)$ is a distance metric and $c \in \mathbb R^+$ is a parameter governing the tradeoff achieved between attack success and distance from the original flow. Furthermore, $Z(\cdot)$ denotes the neural network's logit output, $X$ denotes the original flow and $\tilde X$ the adversarial flow under optimization.
 
 $\delta \in \mathbb R$ is a parameter that determines how far an adversary wants to go over the decision boundary.
 In the original publication $\delta=0$, which means that the network's decision for adversarial samples is just between attack and normal traffic. In the present context, we need to make sure that the classifier's prediction would actually be normal traffic, even though a certain level of noise will be added to \glspl{iat} due to the network between attacker and victim. Hence, we introduced $\delta=-0.2$, corresponding to a confidence of 55\% for the sample to be benign.
@@ -325,19 +325,19 @@ The figure shows significant differences for detecting different attack families
 
 It is interesting to note that increasing the $L_\infty$ bound for \gls{pgd} did not yield significantly improved performance. We can thus confirm the recommendation by \cite{carlini_towards_2017} to perform gradient descent on the logit output instead of the loss for good results.
 
-\autoref{fig:adv_cw} depicts the success ratio and average distance for \gls{cw} for different tradeoffs $\epsilon$.
+\autoref{fig:adv_cw} depicts the success ratio and average distance for \gls{cw} for different tradeoffs $c$.
 %\autoref{fig:adv_cw} depicts the ratio of attack flows which were successfully misclassified as benign with respect to the final packet along with the resulting distance from the original sample.
-Evidently, the larger the tradeoff $\epsilon$, the better the attack works, but also distances from original flows become higher.
+Evidently, the larger the tradeoff $c$, the better the attack works, but also distances from original flows become higher.
 Hence, with acceptable distance values we were able to generate adversarial samples for about 80\% of attack samples.
 The figure suggests that a tradeoff value between 0.5 and 1 would be ideal to find adversarial samples with a low enough distance from real samples.
 This conclusion might be misleading, however, as due to the objective function \eqref{eq:carliniWagner} the distance cannot become larger anymore for one sample as soon as an adversarial sample has been found. %, when performing optimization as depicted by the objective function .
-Hence, the depicted distance increase presumably is due to samples for which no adversarial sample could be found for lower $\epsilon$ values.
+Hence, the depicted distance increase presumably is due to samples for which no adversarial sample could be found for lower $c$ values.
 
 \begin{figure}[b]
 \includegraphics[width=\columnwidth]{../plots/adv_comparison/tradeoff.pdf}
 % \includegraphics[width=0.49\textwidth]{adv_plots/cwl1.pdf}
 % \includegraphics[width=0.49\textwidth]{adv_plots/cwl2.pdf}
-\caption{Performance of \gls{cw} with different $\epsilon$ values.}
+\caption{Performance of \gls{cw} with different $c$ values.}
 \label{fig:adv_cw}
 \end{figure}
 
@@ -346,7 +346,7 @@ Hence, the depicted distance increase presumably is due to samples for which no 
 As \autoref{fig:adv_per_family} shows, for most attack types, most samples can be modified by an adversary to be classified as benign by using \gls{cw}. High accuracy for a particular attack category does not imply that adversarial attacks are  likely to fail for these attacks. Thus we argue that beside the classical metrics such as accuracy, false positives etc., a new metric is needed, which quantifies how easily an \gls{ids} classifier can be fooled.
 Such a metric should be easy to compute, easy to interpret and robust with respect to outliers.  We thus propose the \gls{ars}, as the average of the lower half  of minimum distances of adversarial samples. Since \gls{cw} is able to find adversarial samples with minimum distance, it can be used for finding the \gls{ars}  efficiently. 
 
-When using a large $\epsilon$ in \autoref{eq:carliniWagner}, it is necessary to reduce the gradient descent learning rate  to avoid numerical issues. However, since the distance term is not affected by $\epsilon$, it is necessary to scale the iteration count inversely with the learning rate. \gls{cw} with a large $\epsilon$ therefore needs more time than with a low tradeoff. For neural networks, the \gls{ars} can be efficiently found as follows: Use \gls{cw} with a small tradeoff, trying to generate adversarial samples for an attack type. If more than half of the samples are now wrongly classified, stop. Otherwise increase the tradeoff of \gls{cw} and repeat. If after a predefined number of iterations -- e.g. 100 -- still not more than half of the samples are adversarial, also break.
+When using a large $c$ in \autoref{eq:carliniWagner}, it is necessary to reduce the gradient descent learning rate  to avoid numerical issues. However, since the distance term is not affected by $c$, it is necessary to scale the iteration count inversely with the learning rate. \gls{cw} with a large $c$ therefore needs more time than with a low tradeoff. For neural networks, the \gls{ars} can be efficiently found as follows: Use \gls{cw} with a small tradeoff, trying to generate adversarial samples for an attack type. If more than half of the samples are now wrongly classified, stop. Otherwise increase the tradeoff of \gls{cw} and repeat. If after a predefined number of iterations -- e.g. 100 -- still not more than half of the samples are adversarial, also break.
 
 
 The result is a number of adversarial samples and some that could not be made adversarial. If at least half of the samples are misclassified, we take 50\% of the samples, with those that required smaller modifications first. Of these samples, the distance of each adversarial sample to the original sample is taken and averaged. The resulting average distance is the \gls{ars}. The larger it is the better since then an adversary needs to modify the samples more to make them adversarial. If not more then half of the samples could be made adversarial, our metric is undefined since then apparently it is not possible for an adversary to reliably conduct adversarial attacks on the majority of samples. Then the ratio of samples that could be made adversarial ($<$50\%) can be useful metric to determine the exact extent of the adversarial threat. Setting the threshold for the \gls{ars} to 50\% is arbitrary, but
