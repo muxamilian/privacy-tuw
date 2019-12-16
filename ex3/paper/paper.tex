@@ -295,7 +295,7 @@ In the original publication $\delta=0$, which means that the network's decision 
 We used $L_1$ distance as distance metric, as we consider it to represent practically relevant differences of network flows best. We used \gls{pgd} for meeting the real-world constraints discussed above.
 
 \subsection{$L_\infty$-bounded Projected Gradient Descent}
-\cite{madry_towards_2018} uses a method for generating adversarial samples which deploys \gls{pgd}  to maximizie the network's loss function while constraining the achieved $L_\infty$ distance from the original samples.
+\cite{madry_towards_2018} uses a method for generating adversarial samples which deploys \gls{pgd}  to maximize the network's loss function while constraining the achieved $L_\infty$ distance from the original samples.
 We consider this method an interesting combination of \gls{cw} and \gls{fgsm}.
 Since its functioning is somewhat similar to \gls{cw}, we expected the generated adversarial samples to be of similar quality.
 
@@ -309,7 +309,7 @@ where $L(X)$ denotes the network's loss function and $\epsilon$ denotes the achi
 
 \begin{figure}[t]
 \includegraphics[width=\columnwidth]{../plots/adv_comparison/adv_comparison_17.pdf}
-\caption{Attack success ratios for both dataset and per attack family for CIC-IDS-2017. Depicted are flow detection accuracies for adversarial flows and for unmodified flows.}
+\caption{Attack success ratios for both datasets and per attack family for CIC-IDS-2017. Depicted are flow detection accuracies for adversarial flows and for unmodified attack flows.}
 \label{fig:adv_per_family}
 \end{figure}
 
@@ -484,9 +484,9 @@ Another method that uses dropout for feature importance is \cite{chang_dropout_2
 As it can also happen that several features are left out for a sample, our method can also be used to analyze the effect of multiple features missing and can thus show possibly correlated features or -- more general -- features that contain common information, relevant for the classification task:
 %Feature dropout also allows us to find correlated features or -- more general -- features that contain common information:
 \begin{equation}
-\text{score} = \frac{\text{acc}_\text{base}-\text{acc}_\text{-both\_features}}{\left(\text{acc}_\text{base}-\text{acc}_\text{-feature\_1}\right) + \left(\text{acc}_\text{base}-\text{acc}_\text{-feature\_2}\right)}
+\text{score} = \frac{\text{acc}_{\text{base}}-\text{acc}_{\text{-both\_features}}}{\left(\text{acc}_{\text{base}}-\text{acc}_{\text{-feature\_1}}\right) + \left(\text{acc}_{\text{base}}-\text{acc}_{\text{-feature\_2}}\right)}
 \end{equation}
-With $\text{acc}_\text{base}$ we denote the accuracy of the classifier with all features included, with $\text{acc}_\text{-feature\_i}$ the accuracy if feature $i$ is omitted and with $\text{acc}_\text{-both\_features}$ the accuracy if both features are omitted. Assuming a non-negative accuracy drop when omitting a feature, the resulting score is $\ge 0.5$. The higher it is, the larger the information that both features share.
+With $\text{acc}_{\text{base}}$ we denote the accuracy of the classifier with all features included, with $\text{acc}_{\text{-feature\_i}}$ the accuracy if feature $i$ is omitted and with $\text{acc}_{\text{-both\_features}}$ the accuracy if both features are omitted. Assuming a non-negative accuracy drop when omitting a feature, the resulting score is $\ge 0.5$. The higher it is, the larger the information that both features share.
 
 %AH. As it can become <1, I would say it this way
 %If the score is one,  both features contain no joint information.
@@ -590,7 +590,7 @@ To evaluate this hypothesis, we plot the classifier's prediction confidence for 
 %averaging over all flows. %AH. there's no averaging happening
 % and also show the first and third quartiles.
 \autoref{fig:confidence} shows that %this hypothesis is correct for most attack classes.
-while at the first couple of packets the confidence is not very high, towards the end of the flow it reaches values close to 1 and stays there. Hence, not only is the classifier able to make a reasonable classification after just a few packets, the figure also suggests that indeed later packets have a neglectible influence on the prediction.
+while at the first couple of packets the confidence is not very high, towards the end of the flow it reaches values close to 1 and stays there. Hence, not only is the classifier able to make a reasonable classification after just a few packets, the figure also suggests that indeed later packets have a neglectable influence on the prediction.
 
 For investigating in more detail how features influence the prediction outcome, we extend \glspl{pdp} to the sequential setting.
 Denoting as $X=\{\boldsymbol X^1, \ldots, \boldsymbol X^m\}$ the series of packet features $\boldsymbol X^t \in \mathbb R^n$ and $h_t(X)$ the network's hidden state after time step $t$, we define the sequential \gls{pdp} as
