@@ -240,7 +240,6 @@ We omitted \gls{ttl} values, as they are likely to lead to unwanted prediction b
 During flow extraction we used a usual 5-tuple flow key, which distinguishes flows based on the protocol they use and their source and destination port and IP address.
 We use Z-score normalization and a train/test split of 2:1.
 
-
 For evaluation, we use the \textit{CIC-IDS-2017} \cite{sharafaldin_toward_2018} and \textit{UNSW-NB15} \cite{moustafa_unsw-nb15:_2015} datasets which each include more than 2 million flows of network data, containing both benign traffic and a large number of different attacks. Attacks contained in the datasets are shown in \autoref{tab:occurrence}.
 \autoref{tab:performance_results} shows that our classifiers achieve an accuracy that is similar to previous work based on these datasets~\cite{meghdouri_analysis_2018,bachl_walling_2019}. However, unlike these classifiers, our recurrent classifier has the advantage of being able to detect attacks already before they are over.
 
@@ -293,7 +292,7 @@ Here, $d(\cdot)$ is a distance metric and $c \in \mathbb R^+$ is a parameter gov
 $\delta \in \mathbb R$ is a parameter that determines how far an adversary wants to go over the decision boundary.
 In the original publication $\delta=0$, which means that the network's decision for adversarial samples is just between attack and normal traffic. In the present context, we need to make sure that the classifier's prediction would actually be normal traffic, even though a certain level of noise will be added to \glspl{iat} due to the network between attacker and victim. Hence, we introduced $\delta=-0.2$, corresponding to a confidence of 55\% for the sample to be benign.
 
-We used $L_1$ norm as distance metric and \gls{pgd} for meeting the real-world constraints discussed above.
+We used $L_1$ distance as distance metric, as we consider it to represent practically relevant differences of network flows best. We used \gls{pgd} for meeting the real-world constraints discussed above.
 
 \subsection{$L_\infty$-bounded Projected Gradient Descent}
 \cite{madry_towards_2018} uses a method for generating adversarial samples which deploys \gls{pgd}  to maximizie the network's loss function while constraining the achieved $L_\infty$ distance from the original samples.
@@ -480,19 +479,23 @@ The results in \autoref{fig:feat_imp} show that, unlike input perturbation, feat
 
 A model trained with feature dropout typically yields slightly lower accuracy than a regularly trained model, even if no features are left out (flow accuracy of 0.9943 vs.~0.9965). We thus recommend training two models: One regular one and one with feature dropout to use for the feature importance.
 
-Another method that uses dropout for feature importance is \cite{chang_dropout_2017}, applying a technique called \textit{Variational Dropout} to learn the optimal dropout rate for each feature. It tries to leave out as many features as possible and at the same time keep accuracy high. Thus important features are going to be left out less often and one can then extract the dropout probabilities for each feature and assess their significance based on them. Feature dropout can also be used as a building block for computing the accuracy of datapoints with missing features that is necessary to compute Shapley values \cite{shapley_value_1953} or KernelSHAP \cite{lundberg_unified_2017}.
+Another method that uses dropout for feature importance is \cite{chang_dropout_2017}, applying a technique called \textit{Variational Dropout} to learn the optimal dropout rate for each feature. It tries to leave out as many features as possible and at the same time keep accuracy high. Thus important features are going to be left out less often and one can then extract the dropout probabilities for each feature and assess their significance based on them.
+%Feature dropout can also be used as a building block for computing the accuracy of datapoints with missing features that is necessary to compute Shapley values \cite{shapley_value_1953} or KernelSHAP \cite{lundberg_unified_2017}.
 
 As it can also happen that several features are left out for a sample, our method can also be used to analyze the effect of multiple features missing and can thus show possibly correlated features or -- more general -- features that contain common information, relevant for the classification task:
 %Feature dropout also allows us to find correlated features or -- more general -- features that contain common information:
 \begin{equation}
 \text{score} = \frac{\text{acc}_\text{base}-\text{acc}_\text{-both\_features}}{\left(\text{acc}_\text{base}-\text{acc}_\text{-feature\_1}\right) + \left(\text{acc}_\text{base}-\text{acc}_\text{-feature\_2}\right)}
 \end{equation}
-With $\text{acc}_\text{base}$ we denote the average accuracy of the classifier with all features included, with $\text{acc}_\text{-feature\_i}$ the average accuracy if feature $i$ is omitted and with $\text{acc}_\text{-both\_features}$ the average accuracy if both features are omitted. Assuming a non-negative accuracy drop when omitting a feature, the resulting score is $\ge 0.5$. The higher it is, the larger the information that both features share.
+With $\text{acc}_\text{base}$ we denote the accuracy of the classifier with all features included, with $\text{acc}_\text{-feature\_i}$ the accuracy if feature $i$ is omitted and with $\text{acc}_\text{-both\_features}$ the accuracy if both features are omitted. Assuming a non-negative accuracy drop when omitting a feature, the resulting score is $\ge 0.5$. The higher it is, the larger the information that both features share.
 
 %AH. As it can become <1, I would say it this way
 %If the score is one,  both features contain no joint information.
-For example, the score between RST and the protocol identifier is 8.5; the highest of all pairs of features. While this may seem unintuitive at the first glance, it likely stems from the fact that if the protocol identifier (\gls{tcp} or UDP) is missing, then if RST is 1 at some point of the flow, the flow has to be \gls{tcp}.
+For example, the score between RST and the protocol identifier is 8.5; the highest of all pairs of features. While this may be unintuitive at the first glance, it likely stems from the fact that if the protocol identifier (\gls{tcp} or UDP) is missing, then 
+%if RST is 1 at some point of a flow, it has to be \gls{tcp}.
+RST being 1 at some point indicates that the flow is \gls{tcp}.
 
+Feature dropout might constitute a building block for methods based on Shapley values \cite{shapley_value_1953} like KernelSHAP \cite{lundberg_unified_2017}. Due to space limitations, we leave this for future work.
 \subsubsection{Mutual Information}
 \begin{figure}
 \includegraphics[width=\columnwidth]{../plots/mutinfo_example.pdf}
