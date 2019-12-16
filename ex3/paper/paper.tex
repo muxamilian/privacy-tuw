@@ -638,7 +638,7 @@ Other attack families similarly show characteristic patterns.
 \section{Defences}
 We now propose two approaches to increase robustness of the \gls{rnn} against adversarial attacks.
 \subsection{Reducing features}
-The most obvious defence, which is only possible because of the nature of the dataset, is to simply leave out features which the attacker can manipulate. For this, we try two different approaches:
+The most obvious defence, which is only possible because of the nature of the dataset, is to simply omitting features an attacker can manipulate. We try two different approaches:
 \begin{itemize}[topsep=0pt,wide,labelwidth=!,labelindent=0pt]
 \item Leaving out all manipulable features: packet size and \gls{iat}
 \item Leaving out manipulable features when the attacker can manipulate them: only in the direction from the attacker to the victim (This, however does not prevent adversarial samples for botnets, for which both sides are malicious)
