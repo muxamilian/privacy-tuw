@@ -237,7 +237,9 @@ source port, destination port, protocol identifier, packet length, \gls{iat} to 
 % \item all \gls{tcp} flags (0 if the flow is not \gls{tcp})
 % \end{itemize*}.
 We omitted \gls{ttl} values, as they are likely to lead to unwanted prediction behaviour \cite{bachl_walling_2019}.  Among the used features, source port, destination port and protocol identifier are constant over the whole flow while the others vary.
+During flow extraction we used a usual 5-tuple flow key, which distinguishes flows based on the protocol they use and their source and destination port and IP address.
 We use Z-score normalization and a train/test split of 2:1.
+
 
 For evaluation, we use the \textit{CIC-IDS-2017} \cite{sharafaldin_toward_2018} and \textit{UNSW-NB15} \cite{moustafa_unsw-nb15:_2015} datasets which each include more than 2 million flows of network data, containing both benign traffic and a large number of different attacks. Attacks contained in the datasets are shown in \autoref{tab:occurrence}.
 \autoref{tab:performance_results} shows that our classifiers achieve an accuracy that is similar to previous work based on these datasets~\cite{meghdouri_analysis_2018,bachl_walling_2019}. However, unlike these classifiers, our recurrent classifier has the advantage of being able to detect attacks already before they are over.
@@ -293,10 +295,13 @@ In the original publication $\delta=0$, which means that the network's decision 
 We used $L_1$ norm as distance metric and \gls{pgd} for meeting the real-world constraints discussed above.
 
 \subsection{$L_\infty$-bounded Projected Gradient Descent}
-\cite{madry_towards_2018} uses a method for generating adversarial samples which deploys \gls{pgd}  to minimize the network's negative loss function while constraining the achieved $L_\infty$ distance from the original samples.
+\cite{madry_towards_2018} uses a method for generating adversarial samples which deploys \gls{pgd}  to maximizie the network's loss function while constraining the achieved $L_\infty$ distance from the original samples.
+We consider this method an interesting combination of \gls{cw} and \gls{fgsm}.
+Since its functioning is somewhat similar to \gls{cw}, we expected the generated adversarial samples to be of similar quality. 
 
 \subsection{Fast Gradient Sign Method}
-Finally, we also tested the Fast Gradient Sign Method (FGSM), which was initially proposed in \cite{goodfellow_explaining_2015} and perhaps is the most frequently used method for generating adversarial samples. FGSM can be considered a single pass of \gls{pgd} on the loss function with an equality constraint on the $L_\infty$ distance, i.e. the adversarial sample is found as
+Finally, we also tested the \gls{fgsm} % which was initially proposed in
+ \cite{goodfellow_explaining_2015}, which perhaps is the most frequently used method for generating adversarial samples. FGSM can be considered a single pass of \gls{pgd} on the loss function with an equality constraint on the $L_\infty$ distance, i.e. the adversarial sample is found as
 \begin{equation}
 \tilde X = X + \epsilon \text{sgn}( \nabla_X L(X)),
 \end{equation}
@@ -499,18 +504,19 @@ Furthermore, let $f(A,x)$  denote the joint probability
 for classification as attack and a feature value $x$. Accuracy then is $\int f(A,x) dx$ for attacks and $1-\int f(A,x) dx$ for benign traffic.
 \autoref{fig:mutinfo_example} shows two different distributions
 yielding the same accuracy, but clearly the right-side distribution has a larger influence on the prediction, as in the right-side case the prediction deterministically depends on the feature value.
-To capture such dependencies, we propose to use mutual information instead of accuracy drop to determine feature sensitivity.
+To capture such dependencies, we propose to use mutual information %instead of accuracy drop 
+to determine feature sensitivity.
 Mutual Information between two random variables $X,Y$ is defined as 
 \begin{equation}
 I_{X,Y} = \mathbb E \left\{ \log\left(\frac{f_{X,Y}(x,y)}{f_X(x)f_Y(y)}\right) \right\},
 \end{equation}
-with $f_X(x), f_Y(y)$ and $f_{X,Y}(x,y)$ denoting the distribution of $X,Y$ and their joint distribution, respectively. To obtain feature sensitivity, we compute mutual information between an input variable and the prediction output for one flow at one particular time step, and average over the result for the test dataset.
+with $f_X(x), f_Y(y)$ and $f_{X,Y}(x,y)$ denoting the distribution of $X,Y$ and their joint distribution, respectively. To obtain feature sensitivity, we compute mutual information between an input variable and the prediction output for one flow at one particular time step, averaging over the result for the test set.
 
-\subsubsection{Results}
+\subsubsection{Comparison}
 \begin{figure*}
 \includegraphics[width=.49\textwidth]{../plots/importance/feat_imp_flow_2017.pdf}\hspace{.02\textwidth}
 \includegraphics[width=.49\textwidth]{../plots/importance/feat_imp_flow_2015.pdf}
-\caption{Feature importance metrics considering the final flow prediction for CIC-IDS-2017 (left side) and UNSW-NB15 (right side).}
+\caption{Feature importance metrics for the flow prediction for CIC-IDS-2017 (left side) and UNSW-NB15 (right side).}
 \label{fig:feat_imp}
 \end{figure*}
 \autoref{fig:feat_imp} shows the results, which match to a large extent with domain-specific expectations for classifying network flows.
@@ -526,9 +532,7 @@ Metrics for UNSW-NB15 differ substantially from CIC-IDS-2017. However, due to th
 
 \subsection{Explainability Plots}
 Knowing which features to investigate, it is important to analyze which feature values lead to classification as attack.
-During flow extraction we used a usual 5-tuple flow key, which distinguishes flows based on the protocol they use and their source and destination port and IP address. Hence, these features are constant for all packets in one flow, which allows us to use explainability methods which have been proposed for non-recurrent classification methods.
-
-In particular,  in literature the use of Partial Dependency Plots (\gls{pdp}) is proposed~\cite{friedman_greedy_2001}. To inspect attack types in detail, in this research we use a \textit{conditional} form of the \gls{pdp}. If $\boldsymbol X \in \mathbb R ^n$ denotes a random vector drawn from feature space, $f(\boldsymbol X) \in [0,1]$ the neural network's prediction and $c$ the attack class, we define the conditional \gls{pdp} for feature $i$  as
+In literature, the use of Partial Dependency Plots (\gls{pdp}) has been proposed~\cite{friedman_greedy_2001}. To inspect attack types in detail, in this research we use a \textit{conditional} form of the \gls{pdp}. If $\boldsymbol X \in \mathbb R ^n$ denotes a random vector drawn from feature space, $f(\boldsymbol X) \in [0,1]$ the neural network's prediction and $c$ the attack class, we define the conditional \gls{pdp} for feature $i$  as
 % \begin{equation} \label{eq:pdp}
 % \text{\gls{pdp}}_i(y) = \mathbb E_{\boldsymbol X}\left(f(X_1,\ldots,X_{i-1},y,X_{i+1},\ldots X_n)\right)
 % \end{equation}
@@ -553,8 +557,9 @@ By using a classical \gls{pdp} we would be likely to loose information due to th
 %
 %In this variant of the \gls{pdp} that we call conditional \gls{pdp}, we don't take the whole dataset for the computation for the \gls{pdp} but only a subset that belongs to a certain class. Specifically, we take each attack class and compute the \gls{pdp} only over samples of this attack class.
 
+Due to the use of a 5-tuple flow key, port numbers and the protocol identifier are constant for all packets in one flow, which allows us to use \glspl{pdp}, which have been proposed for non-recurrent classification methods.
 The results (omitted for brevity) show that for some attack classes the port numbers play an important role. When looking at the class of benign traffic %(non-attack traffic)
-it becomes apparent that traffic destined to a high source port is generally indicative of an attack. We argue that this is because most services that regular users use have low port numbers.
+it becomes apparent that traffic destined to a high destination port is generally indicative of an attack. We argue that this is because most services that regular users use have low port numbers.
 
 %AH. As ALE is removed, I case this also isnt needed
 %A known issue about \glspl{pdp} in general is that dependencies of the feature under investigation and the remaining variables are not considered, hence potentially querying the neural network for feature combinations which cannot possibly occur. For a certain value of the $i$th feature, the whole dataset is used for averaging the neural network's outcome. 
