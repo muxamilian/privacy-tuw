@@ -136,7 +136,7 @@ Surprisingly, we can confirm that adversarial samples can be found even when con
 Thus, we argue that traditional methods like, e.g., accuracy are not sufficient for evaluating security-sensitive \gls{ml} systems.
 We propose the \acrfull{ars} as a new performance score, which precisely captures the notion of how easily an adversary can generate adversarial samples.
 
-Due to the threat of adversarial attacks, a further crucial requirement for \gls{ml}-based \glspl{ids} is that the classifier's decisions are interpretable by humans. This recently gave increased interest in explainability methods. Also in this case, common methods are designed to work with images or tabular data but not with sequences. Hence, we extend existing explainability methods such as \glspl{pdp} \cite{friedman_greedy_2001} for sequential data. %These show the varying characteristics of different attacks and they aid with visualizing potentially vulnerable features for adversaries.
+Due to the threat of adversarial attacks, a further crucial requirement for \gls{ml}-based \glspl{ids} is that the classifier's decisions are interpretable by humans. This recently stirred up increased interest in explainability methods. Also in this case, common methods are designed to work with images or tabular data but not with sequences. Hence, we extend existing explainability methods such as \glspl{pdp} \cite{friedman_greedy_2001} for sequential data. %These show the varying characteristics of different attacks and they aid with visualizing potentially vulnerable features for adversaries.
 Astonishingly, feature importance methods reveal that
 features manipulable for adversarial flows,
 %the that are manipulable features, that are left for modification by adversaries
@@ -318,9 +318,9 @@ where $L(X)$ denotes the network's loss function and $\epsilon$ denotes the achi
 \autoref{fig:adv_per_family} depicts the performance for the investigated algorithms for both datasets and for each attack family in CIC-IDS-2017.
 We used \gls{cw} with a tradeoff of 1 and, to provide a fair comparison, for \gls{fgsm} and \gls{pgd} we used an average $L_\infty$ distance as observed for \gls{cw}.
 
-As expected, \gls{cw}  delivers the best performance and FGSM, while being the fastest of all investigated algorithms, delivers the worst performance.
+As expected, \gls{cw} delivers the best performance and FGSM, while being the fastest of all investigated algorithms, delivers the worst performance.
 %\autoref{fig:adv_per_family} depicts how successful the attack is for individual attack families.
-The figure shows significant differences for detecting different attack families in the first place. However, also for generating adversarial flows some attack families are more susceptible than others. However, the results match to a high degree with our expectations. For example, SQL injection attacks apparently are closer to benign traffic than \gls{dos} attacks and, hence, finding adversarial samples should be easier.
+The figure shows significant differences for detecting different attack families in the first place. Also for generating adversarial flows some attack families are more susceptible than others. However, the results match to a high degree with our expectations. For example, SQL injection attacks apparently are closer to benign traffic than \gls{dos} attacks and, hence, finding adversarial samples should be easier.
 
 It is interesting to note that increasing the $L_\infty$ bound for \gls{pgd} did not yield significantly improved performance. We can thus confirm the recommendation by \cite{carlini_towards_2017} to perform gradient descent on the logit output instead of the loss for good results.
 
@@ -343,12 +343,11 @@ Hence, the depicted distance increase presumably is due to samples for which no 
 \section{Adversarial Robustness Metric}
 
 As \autoref{fig:adv_per_family} shows, for most attack types, most samples can be modified by an adversary to be classified as benign by using \gls{cw}. High accuracy for a particular attack category does not imply that adversarial attacks are  likely to fail for these attacks. Thus we argue that beside the classical metrics such as accuracy, false positives etc., a new metric is needed, which quantifies how easily an \gls{ids} classifier can be fooled.
-Such a metric should be easy to compute, easy to interpret and robust with respect to outliers.  We thus propose the \gls{ars}, as the average of the lower half  of minimum distances of adversarial samples. Since \gls{cw} is able to find adversarial samples with minimum distance, it can be used for finding the \gls{ars}  efficiently. 
+Such a metric should be easy to compute, easy to interpret and robust with respect to outliers. We thus propose the \gls{ars} as the average distance of the adversarial samples to the original samples for the 50\% of the samples which an adversary could successfully modified and which have the smallest distances. Since \gls{cw} is able to find adversarial samples with minimum distance, it can be used for finding the \gls{ars} efficiently. 
 
-When using a large $c$ in \autoref{eq:carliniWagner}, it is necessary to reduce the gradient descent learning rate  to avoid numerical issues. However, since the distance term is not affected by $c$, it is necessary to scale the iteration count inversely with the learning rate. \gls{cw} with a large $c$ therefore needs more time than with a low tradeoff. For neural networks, the \gls{ars} can be efficiently found as follows: Use \gls{cw} with a small tradeoff, trying to generate adversarial samples for an attack type. If more than half of the samples are now wrongly classified, stop. Otherwise increase the tradeoff of \gls{cw} and repeat. If after a predefined number of iterations -- e.g. 100 -- still not more than half of the samples are adversarial, also break.
+When using a large $c$ in \autoref{eq:carliniWagner}, it is necessary to reduce the gradient descent learning rate to avoid overly large steps that impede convergence. However, since the distance term is not affected by $c$, it is necessary to scale the iteration count inversely with the learning rate. \gls{cw} with a large $c$ therefore needs more time than with a low tradeoff. For neural networks, the \gls{ars} can be efficiently found as follows: Use \gls{cw} with a small tradeoff, trying to generate adversarial samples for an attack type. If more than half of the samples are now wrongly classified, stop. Otherwise increase the tradeoff of \gls{cw} and repeat. If after a predefined number of iterations -- e.g. 100 -- still not more than half of the samples are adversarial, stop.
 
-
-The result is a number of adversarial samples and some that could not be made adversarial. If at least half of the samples are misclassified, we take 50\% of the samples, with those that required smaller modifications first. Of these samples, the distance of each adversarial sample to the original sample is taken and averaged. The resulting average distance is the \gls{ars}. The larger it is the better since then an adversary needs to modify the samples more to make them adversarial. If not more then half of the samples could be made adversarial, our metric is undefined since then apparently it is not possible for an adversary to reliably conduct adversarial attacks on the majority of samples. Then the ratio of samples that could be made adversarial ($<$50\%) can be useful metric to determine the exact extent of the adversarial threat. Setting the threshold for the \gls{ars} to 50\% is arbitrary, but
+The result is a number of adversarial samples and some that could not be made adversarial. If at least half of the samples are misclassified, we sort the adversarial samples by ascending distance to the original samples. Then we take samples by ascending distance until we took 50\% of all samples. Of these samples, the distance of each adversarial sample to the original sample is taken and averaged. The resulting average distance is the \gls{ars}. The larger it is the better since then an adversary needs to modify the samples more to make them adversarial. If not more than half of the samples could be made adversarial, our metric is $\infty$ since then apparently it is not possible for an adversary to reliably conduct adversarial attacks on the majority of samples. Then the ratio of samples that could be made adversarial ($<$50\%) can be a useful metric to determine the exact extent of the adversarial threat. Setting the threshold for the \gls{ars} to 50\% is arbitrary, but
  % reasonable as this way the \gls{ars} approximates the median of the distances of all samples and, additionally, marks the distance where an adversarial attack is more likely to be successful than unsuccessful.
  reasonable as outliers with very large distances are ignored and if an attacker can make the majority of samples adversarial, we think that its attack is ``successful''.
 %we think that it is reasonable since if an attacker can make the majority of samples adversarial, we think that its attack is ``successful''.
@@ -359,7 +358,7 @@ The result is a number of adversarial samples and some that could not be made ad
 \label{fig:recall_ars}
 \end{figure}
 
-\autoref{fig:recall_ars} shows that certain attack types, like ``DoS Slowloris'' are easy to classify for an IDS but still are also surprisingly easy for an attacker to perform adversarial modifications to make them look benign.
+\autoref{fig:recall_ars} shows that certain attack types, like ``DoS SlowHTTPTest'', are easy to classify for an IDS but still are also surprisingly easy for an attacker to perform adversarial modifications to make them look benign.
 
 \section{Explaining Recurrent Neural Networks}
 From a naive perspective, one might be tempted to reuse explainability methods for \glspl{rnn} by considering a flow the sum of its packet features.
@@ -383,7 +382,7 @@ If we, for example, consider a classification problem as in this document, we ex
 \textbf{Multiple prediction outputs.}
 Often an \gls{rnn} produces an output at each time step. When  applying explainability methods, the question arises which output to consider for the method. The natural choice is to base the methods on the prediction output which occurs at the same time step as the feature under investigation. Not only does this approach require a substantially lower amount of computational resources compared to predictions occurring at a later time step, but we also expect the immediately occurring prediction outcome to exhibit a stronger dependence of the investigated feature, compared to a prediction outcome occurring many time steps later.
 However, due to the complex decision processes of deep neural networks,
-it is absolutely  uncertain if the network's final prediction is correctly depicted when following this approach.
+this does not hold true and a feature might influence a decision many time steps later.
 \end{itemize}
 
 Many explainability methods proposed recently are local and thus provide explanations for a particular data sample \cite{shapley_value_1953,lundberg_unified_2017,dhurandhar_model_2018,ribeiro_why_2016}. However, for the particular problem of network traffic, due to the high number of flows and the characteristics of data, analyzing individual samples is of low interest. Explainability methods presented in this paper therefore aim to understand a model by analyzing which features are important, at which time step they are important and which feature values lead to classification as attack.
@@ -476,7 +475,7 @@ called \textit{feature dropout}: When training a model, for each sample, we leav
 An important implementation detail is that for each feature we add another input which is 1 if the feature is suppressed and 0 otherwise. This is necessary for the neural network to be able to distinguish between a feature missing and a feature genuinely being zero. The overall outcome is a classifier being able to deal with missing features.
 The results in \autoref{fig:feat_imp} show that, unlike input perturbation, feature dropout  does not vastly overestimate features' importance. With feature dropout, it becomes apparent that only very few features  actually contain unique information, affecting accuracy when left out: the destination port and the source port.
 
-A model trained with feature dropout typically yields slightly lower accuracy than a regularly trained model, even if no features are left out (flow accuracy of 0.9943 vs.~0.9965). We thus recommend training two models: One regular one and one with feature dropout to use for the feature importance.
+A model trained with feature dropout typically yields slightly lower accuracy than a regularly trained model, even if no features are left out (flow accuracy of 99.43\% vs.99.65\%). We thus recommend training two models: One regular one and one with feature dropout to use for the feature importance.
 
 Another method that uses dropout for feature importance is \cite{chang_dropout_2017}, applying a technique called \textit{Variational Dropout} to learn the optimal dropout rate for each feature. It tries to leave out as many features as possible and at the same time keep accuracy high. Thus important features are going to be left out less often and one can then extract the dropout probabilities for each feature and assess their significance based on them.
 %Feature dropout can also be used as a building block for computing the accuracy of datapoints with missing features that is necessary to compute Shapley values \cite{shapley_value_1953} or KernelSHAP \cite{lundberg_unified_2017}.
@@ -494,7 +493,8 @@ For example, the score between RST and the protocol identifier is 8.5; the highe
 %if RST is 1 at some point of a flow, it has to be \gls{tcp}.
 RST being 1 at some point indicates that the flow is \gls{tcp}.
 
-Feature dropout might constitute a building block for methods based on Shapley values \cite{shapley_value_1953} like KernelSHAP \cite{lundberg_unified_2017}. Due to space limitations, we leave this for future work.
+Feature dropout might constitute a building block for methods based on Shapley values \cite{shapley_value_1953} like KernelSHAP \cite{lundberg_unified_2017}. 
+%Due to space limitations, we leave this for future work.
 \subsubsection{Mutual Information}
 \begin{figure}
 \includegraphics[width=\columnwidth]{../plots/mutinfo_example.pdf}
@@ -549,28 +549,11 @@ In literature, the use of Partial Dependency Plots (\gls{pdp}) has been proposed
 \end{equation}
 empirically approximating the conditional distribution by the observed subset that belongs to a certain class.
 
-By using a classical \gls{pdp} we would be likely to loose information due to the averaging over very different types of traffic. However, for network traffic in particular, investigating each sample individually is not possible. Hence, the conditional \gls{pdp} provides the ideal compromise for our application.
-
-%
-%\begin{figure*}
-%\includegraphics[width=0.48\textwidth]{{"../plots/plot_pdp/flows_full_no_ttl_pdp_outcomes_0_3.pickle_8_DoS - DDoS-Heartbleed"}.pdf}
-%\includegraphics[width=0.48\textwidth]{{"../plots/plot_pdp/flows_full_no_ttl_pdp_outcomes_0_3.pickle_10_Normal"}.pdf}
-%
-%\caption{Examples of conditional PD plots for source and destination port. We only analyze these features with the \gls{pdp} since it is not straightforward to define the \gls{pdp} for features that can vary for each packet in a flow. The y-axis shows the probability for malicious traffic.}
-%\todo{Max: Remove these? Not really interesting or related to the rest of the paper. Refer to other paper where we talk about this already.}
-%\label{fig:pdp}
-%\end{figure*}
-%
-%In this variant of the \gls{pdp} that we call conditional \gls{pdp}, we don't take the whole dataset for the computation for the \gls{pdp} but only a subset that belongs to a certain class. Specifically, we take each attack class and compute the \gls{pdp} only over samples of this attack class.
+By using a classical \gls{pdp} we would be likely to lose information due to the averaging over very different types of traffic. However, for network traffic in particular, investigating each sample individually is not possible. Hence, the conditional \gls{pdp} provides the ideal compromise for our application.
 
 Due to the use of a 5-tuple flow key, port numbers and the protocol identifier are constant for all packets in one flow, which allows us to use \glspl{pdp}, which have been proposed for non-recurrent classification methods.
 The results (omitted for brevity) show that for some attack classes the port numbers play an important role. When looking at the class of benign traffic %(non-attack traffic)
 it becomes apparent that traffic destined to a high destination port is generally indicative of an attack. We argue that this is because most services that regular users use have low port numbers.
-
-%AH. As ALE is removed, I case this also isnt needed
-%A known issue about \glspl{pdp} in general is that dependencies of the feature under investigation and the remaining variables are not considered, hence potentially querying the neural network for feature combinations which cannot possibly occur. For a certain value of the $i$th feature, the whole dataset is used for averaging the neural network's outcome.
-
-%For this reason, Accumulated Local Effects (ALE) plots have been proposed in literature. The basic idea for ALE is that instead of using all samples, only the closest samples are used for assessing the effects of one feature. ALE plots therefore inherently require a distance measure for finding the closest samples, which, as revealed in the above discussion, in our case is not possible in a straight-forward manner.
 
 \subsection{Plots for Sequences}
 
@@ -615,7 +598,8 @@ The shaded region shows the change in confidence that occurs when the feature is
 % AH. I guess this can only be properly formulated with a formula
 %Next, we want to investigate if our classifier just memorized its inputs. The most interesting packet features that can be used to visualize this in our use case are the \gls{iat} between packets in a flows and the packet length. To depict how the model comes to a decision, we determined the total minimum and maximum for these features that ever occur for all flows. For a given flow $X$ we then varied feature values at each time step between minimum and maximum and plot how the confidence changes when the feature varies (\autoref{fig:pred_plots2}) depict the averaged predictions for different attack families.
 
-Furthermore, it seems clear that the classifier did not just memorize the inputs but actually learned appropriate space representations, as there is always a smooth decrease of confidence when modifying feature values. When memorizing, we would  instead expect a sharp decline of confidence. % to occur.
+Furthermore, it seems clear that the classifier did not just memorize the inputs but actually learned appropriate space representations, as there is always a smooth decrease of confidence when modifying feature values. When memorizing, we would  instead expect a sharp decline of confidence. 
+% to occur.
 %Another interesting observation is that after the first couple of packets the classifier is certain about its decision and changing features doesn't change its confidence any longer. This allows the conclusion that if an attacker is able to change the first few packets, she could change the decision of the classifier. This is consistent with our observations in \autoref{sec:adv}. %We will further investigate this question in \autoref{sec:adv}.
 
 \begin{figure}
